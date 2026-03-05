@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
-const GEMINI_KEY = 'AIzaSyA9kVvvkB-Kn167MG63Fnig_EyG4uMaNAg'
-
 export default function AiChat() {
     const [messages, setMessages] = useState([
-        { role: 'ai', text: 'Hey Chef! 👋 I\'ve got all your recipes loaded up. Ask me anything — ingredients, quantities, procedures, you name it.' }
+        { role: 'assistant', text: 'Hey Chef! 👋 I\'ve got all your recipes loaded up. Ask me anything — ingredients, quantities, procedures, you name it.' }
     ])
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
@@ -26,41 +23,19 @@ export default function AiChat() {
         setLoading(true)
 
         try {
-            // Fetch all workbook chunks for context
-            const { data: chunks } = await supabase
-                .from('workbook_chunks')
-                .select('content')
-                .limit(100)
-
-            const context = (chunks || []).map(c => c.content).join('\n\n---\n\n')
-
-            const systemPrompt = `You are a helpful kitchen assistant for a restaurant crew. You have access to the restaurant's recipe workbooks and operational data. Answer questions accurately based on the workbook data provided below. If the answer isn't in the data, say so honestly. Be concise and practical — these are busy kitchen workers.
-
-WORKBOOK DATA:
-${context || '(No workbooks uploaded yet)'}`
-
-            const response = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [
-                        { role: 'user', parts: [{ text: systemPrompt + '\n\nQuestion: ' + question }] }
-                    ],
-                    generationConfig: {
-                        temperature: 0.3,
-                        maxOutputTokens: 1024
-                    }
-                })
+            const { data, error } = await supabase.functions.invoke('kitchen-assistant', {
+                body: { question },
             })
 
-            const data = await response.json()
-            const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text
+            if (error) throw error
+
+            const answer = data?.answer
                 || 'Sorry, I couldn\'t generate a response. Please try again.'
 
-            setMessages(prev => [...prev, { role: 'ai', text: aiText }])
+            setMessages(prev => [...prev, { role: 'assistant', text: answer }])
         } catch (err) {
-            console.error('Gemini error:', err)
-            setMessages(prev => [...prev, { role: 'ai', text: '⚠️ Something went wrong. Check the console for details.' }])
+            console.error('Assistant error:', err)
+            setMessages(prev => [...prev, { role: 'assistant', text: '⚠️ Something went wrong. Check the console for details.' }])
         }
 
         setLoading(false)
@@ -69,7 +44,7 @@ ${context || '(No workbooks uploaded yet)'}`
     return (
         <div>
             <div className="page-header">
-                <h1 className="page-title">Ask AI</h1>
+                <h1 className="page-title">Knowledge Base</h1>
                 <p className="page-subtitle">Ask questions about your recipes — ingredients, quantities, procedures, and more.</p>
             </div>
 
@@ -82,7 +57,7 @@ ${context || '(No workbooks uploaded yet)'}`
                             </div>
                         ))}
                         {loading && (
-                            <div className="chat-bubble ai" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div className="chat-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                                 <span className="spinner" /> Thinking...
                             </div>
                         )}
