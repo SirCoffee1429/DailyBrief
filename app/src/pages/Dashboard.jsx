@@ -39,76 +39,111 @@ export default function Dashboard() {
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !isCompleted } : t))
     }
 
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+
     return (
-        <div>
-            {/* BRIEFING HERO — the first thing you see */}
-            {latestBriefing ? (
-                <Link to="/briefings" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="briefing-hero">
-                        <div className="briefing-hero-label">📋 Today's Briefing</div>
-                        <div className="briefing-hero-date">
-                            {new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                        </div>
-                        <div className="briefing-hero-title">{latestBriefing.title}</div>
-                        {latestBriefing.body && (
-                            <div className="briefing-hero-body">{latestBriefing.body}</div>
-                        )}
-                        {tasks.length > 0 && (
-                            <div className="briefing-hero-tasks" onClick={e => e.preventDefault()}>
-                                <div className="briefing-hero-tasks-label">
-                                    Tasks ({tasks.filter(t => t.is_completed).length}/{tasks.length})
-                                </div>
-                                {tasks.map(task => (
-                                    <div key={task.id} className="task-item">
-                                        <input
-                                            type="checkbox"
-                                            className="task-checkbox"
-                                            checked={task.is_completed}
-                                            onChange={() => toggleTask(task.id, task.is_completed)}
-                                            onClick={e => e.stopPropagation()}
-                                        />
-                                        <span className={`task-text ${task.is_completed ? 'completed' : ''}`}>
-                                            {task.description}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+        <div className="dashboard-container">
+            <header className="dashboard-header">
+                <div className="header-left">
+                    <h1 className="header-title"><span className="title-icon">☼</span> Today's Briefing</h1>
+                    <p className="header-date">
+                        {latestBriefing
+                            ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                            : today
+                        }
+                    </p>
+                </div>
+                <div className="header-actions">
+                    <button className="header-icon-btn">🔔</button>
+                    <button className="header-icon-btn">⚙️</button>
+                    <div className="header-avatar">👤</div>
+                </div>
+            </header>
+
+            <div className="dashboard-grid">
+                <div className="dash-card morning-notes-card">
+                    <div className="card-header-row">
+                        <h2 className="dash-card-heading">≡ MORNING NOTES</h2>
+                        <div className="illustration-icon">📝</div>
+                    </div>
+                    {latestBriefing ? (
+                        <>
+                            <ul className="notes-list">
+                                {latestBriefing.body ? (
+                                    latestBriefing.body.split('\n').filter(line => line.trim()).map((line, i) => (
+                                        <li key={i}>{line.replace(/^- /, '')}</li>
+                                    ))
+                                ) : (
+                                    <li>No notes for today.</li>
+                                )}
+                            </ul>
+                            <Link to={`/briefings/${latestBriefing.id}/edit`} className="btn btn-primary btn-orange mt-auto inline-flex">Edit Notes</Link>
+                        </>
+                    ) : (
+                        <>
+                            <div className="notes-list empty">Nothing posted for the crew</div>
+                            <Link to="/briefings/new" className="btn btn-primary btn-orange mt-auto inline-flex">Create Briefing</Link>
+                        </>
+                    )}
+                </div>
+
+                <div className="dash-card tasks-card">
+                    <div className="card-header-row">
+                        <h2 className="dash-card-heading">✓ TASKS</h2>
+                        <span className="task-count-badge">
+                            {tasks.filter(t => t.is_completed).length}/{Math.max(tasks.length, 1)}
+                        </span>
+                    </div>
+
+                    <div className="task-list">
+                        {tasks.length > 0 ? (
+                            tasks.map(task => (
+                                <label key={task.id} className="task-row">
+                                    <input
+                                        type="checkbox"
+                                        className="task-box"
+                                        checked={task.is_completed}
+                                        onChange={() => toggleTask(task.id, task.is_completed)}
+                                    />
+                                    <span className={`task-label ${task.is_completed ? 'completed' : ''}`}>
+                                        {task.description}
+                                    </span>
+                                </label>
+                            ))
+                        ) : (
+                            <div className="empty-task-list">No tasks.</div>
                         )}
                     </div>
+                    {latestBriefing && <div className="updated-text">Updated 5m ago</div>}
+                </div>
+
+                <div className="dash-card active-recipes-card">
+                    <div className="recipes-top-row">
+                        <div className="recipes-icon-box">🍽️</div>
+                        <div className="arrow-top-right">↗</div>
+                    </div>
+                    <div className="recipes-number">{stats.workbooks}</div>
+                    <div className="recipes-subtitle">Active Recipes</div>
+                </div>
+
+                <Link to="/workbooks/upload" className="dash-card add-recipes-card" style={{ textDecoration: 'none' }}>
+                    <div className="upload-cloud-icon">☁️</div>
+                    <div className="add-recipes-label">Add Recipes</div>
+                    <div className="drag-drop-text">Drag & drop files here</div>
                 </Link>
-            ) : (
-                <div className="briefing-hero" style={{ borderLeftColor: 'var(--text-muted)' }}>
-                    <div className="briefing-hero-label" style={{ color: 'var(--text-muted)' }}>📋 No Briefing Yet</div>
-                    <div className="briefing-hero-title" style={{ color: 'var(--text-secondary)' }}>Nothing posted for the crew</div>
-                    <Link to="/briefings/new" className="btn btn-primary" style={{ marginTop: 'var(--space-3)' }} onClick={e => e.stopPropagation()}>
-                        Create First Briefing
+            </div>
+
+            <div className="dash-card kb-section">
+                <h2 className="dash-card-heading">💡 KNOWLEDGE BASE</h2>
+                <div className="kb-search-container">
+                    <div className="kb-input-wrapper">
+                        <span className="kb-search-icon">🔍</span>
+                        <input className="kb-search-input" placeholder="Ask a question about kitchen procedures..." />
+                    </div>
+                    <Link to="/chat" className="btn kb-assistant-btn">
+                        <span>ASSISTANT</span>
                     </Link>
                 </div>
-            )}
-
-            {/* Navigation Tiles */}
-            <div className="dash-tiles">
-                <Link to="/workbooks" className="dash-tile">
-                    <span className="dash-tile-icon">📁</span>
-                    <div className="dash-tile-info">
-                        <span className="dash-tile-value">{stats.workbooks}</span>
-                        <span className="dash-tile-label">Recipes</span>
-                    </div>
-                </Link>
-                <Link to="/workbooks/upload" className="dash-tile">
-                    <span className="dash-tile-icon">📤</span>
-                    <div className="dash-tile-info">
-                        <span className="dash-tile-value">Upload</span>
-                        <span className="dash-tile-label">Add recipes</span>
-                    </div>
-                </Link>
-                <Link to="/chat" className="dash-tile">
-                    <span className="dash-tile-icon">🤖</span>
-                    <div className="dash-tile-info">
-                        <span className="dash-tile-value">Ask a question</span>
-                        <span className="dash-tile-label">Knowledge base</span>
-                    </div>
-                </Link>
             </div>
         </div>
     )

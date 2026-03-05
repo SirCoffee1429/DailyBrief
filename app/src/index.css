@@ -4,7 +4,6 @@
    ============================================ */
 
 :root {
-  /* Colors — warm dark theme */
   --bg-primary: #0f1117;
   --bg-secondary: #1a1d27;
   --bg-card: #1e2130;
@@ -26,7 +25,6 @@
 
   --orange: #f97316;
   --orange-bg: rgba(249, 115, 22, 0.12);
-  --orange-glow: rgba(249, 115, 22, 0.25);
 
   --success: #34d399;
   --success-bg: rgba(52, 211, 153, 0.1);
@@ -35,7 +33,6 @@
   --danger: #f87171;
   --danger-bg: rgba(248, 113, 113, 0.1);
 
-  /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -44,9 +41,7 @@
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 2rem;
-  --font-size-4xl: 2.5rem;
 
-  /* Spacing */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -58,30 +53,22 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
   --radius-full: 999px;
 
-  /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px var(--accent-glow);
 
-  /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
-
-  /* Top bar */
-  --topbar-height: 56px;
 }
 
-/* ============================================
-   Reset & Base
-   ============================================ */
+/* Reset */
 *,
 *::before,
 *::after {
@@ -118,85 +105,61 @@ a:hover {
 }
 
 /* ============================================
-   Top Bar
+   Layout & Bottom Tab Bar
    ============================================ */
 .app-shell {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-}
-
-.top-bar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  height: var(--topbar-height);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-6);
-  gap: var(--space-8);
-  backdrop-filter: blur(16px);
-}
-
-.top-bar-logo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.top-bar-logo-icon {
-  font-size: 1.3rem;
-}
-
-.top-bar-logo-text {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--text-bright);
-  letter-spacing: -0.02em;
-}
-
-.top-bar-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.top-nav-link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  text-decoration: none;
-}
-
-.top-nav-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-}
-
-.top-nav-link.active {
-  background: var(--accent-subtle);
-  color: var(--accent-hover);
-}
-
-.top-nav-icon {
-  font-size: 1rem;
+  padding-bottom: 72px;
 }
 
 .main-content {
   flex: 1;
-  padding: var(--space-8) var(--space-8);
+  padding: var(--space-6);
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+}
+
+.bottom-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-10);
+  z-index: 50;
+}
+
+.bottom-tab-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  padding: var(--space-2);
+}
+
+.bottom-tab-link span {
+  font-size: 1.5rem;
+  opacity: 0.6;
+}
+
+.bottom-tab-link:hover span {
+  opacity: 1;
+}
+
+.bottom-tab-link.active span {
+  color: var(--orange);
+  opacity: 1;
 }
 
 /* ============================================
@@ -247,124 +210,392 @@ a:hover {
 }
 
 /* ============================================
-   Briefing Hero (Dashboard)
+   Dashboard Redesign
    ============================================ */
-.briefing-hero {
-  background: linear-gradient(135deg, #1e2130 0%, #252a40 100%);
-  border: 1px solid var(--border-color);
-  border-left: 4px solid var(--orange);
-  border-radius: var(--radius-lg);
-  padding: var(--space-8);
-  margin-bottom: var(--space-8);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
-.briefing-hero:hover {
-  border-color: var(--orange);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(249, 115, 22, 0.1);
-  transform: translateY(-2px);
-}
-
-.briefing-hero-label {
-  display: inline-flex;
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--orange);
-  margin-bottom: var(--space-3);
-}
-
-.briefing-hero-date {
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
   margin-bottom: var(--space-2);
 }
 
-.briefing-hero-title {
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--text-bright);
-  margin-bottom: var(--space-4);
 }
 
-.briefing-hero-body {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  line-height: 1.8;
-  white-space: pre-wrap;
+.title-icon {
+  color: var(--orange);
 }
 
-.briefing-hero-tasks {
-  margin-top: var(--space-5);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--border-color);
-}
-
-.briefing-hero-tasks-label {
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.header-date {
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
-  margin-bottom: var(--space-3);
-  font-weight: 600;
+  margin-top: var(--space-1);
 }
 
-/* ============================================
-   Dashboard Nav Tiles
-   ============================================ */
-.dash-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
-}
-
-.dash-tile {
+.header-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
+}
+
+.header-icon-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.header-icon-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+
+.header-avatar {
+  width: 40px;
+  height: 40px;
+  background: #fbcfe8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: auto auto;
+  gap: var(--space-5);
+  grid-template-areas:
+    "notes tasks"
+    "add   recipes";
+}
+
+.dash-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-6);
-  text-decoration: none;
-  color: inherit;
-  transition: all var(--transition-fast);
-  cursor: pointer;
-}
-
-.dash-tile:hover {
-  border-color: var(--accent);
-  background: var(--bg-card-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow);
-}
-
-.dash-tile-icon {
-  font-size: 1.8rem;
-  flex-shrink: 0;
-}
-
-.dash-tile-info {
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
 }
 
-.dash-tile-value {
-  font-size: var(--font-size-xl);
+.dash-card-heading {
+  font-size: var(--font-size-sm);
   font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 0.05em;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* Morning Notes */
+.morning-notes-card {
+  grid-area: notes;
+}
+
+.illustration-icon {
+  font-size: 1.5rem;
+  opacity: 0.7;
+}
+
+.notes-list {
+  list-style: none;
+  margin-bottom: var(--space-6);
+}
+
+.notes-list li {
+  position: relative;
+  padding-left: var(--space-4);
+  margin-bottom: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.notes-list li::before {
+  content: '•';
+  color: var(--orange);
+  position: absolute;
+  left: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.notes-list.empty {
+  color: var(--text-muted);
+}
+
+.mt-auto {
+  margin-top: auto;
+}
+
+.inline-flex {
+  display: inline-flex;
+  width: fit-content;
+}
+
+.btn-orange {
+  background: var(--orange);
+  color: white;
+  border-color: var(--orange);
+}
+
+.btn-orange:hover {
+  background: #ea580c;
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.4);
+}
+
+/* Tasks */
+.tasks-card {
+  grid-area: tasks;
+}
+
+.task-count-badge {
+  background: rgba(249, 115, 22, 0.2);
+  color: var(--orange);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-glass);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.task-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
+}
+
+.task-box {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-input);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.task-box:checked {
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.task-box:checked::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.updated-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: auto;
+}
+
+.empty-task-list {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* Add Recipes */
+.add-recipes-card {
+  grid-area: add;
+  border-style: dashed;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.add-recipes-card:hover {
+  border-color: var(--orange);
+  background: var(--bg-card-hover);
+}
+
+.upload-cloud-icon {
+  color: var(--orange);
+  font-size: 1.8rem;
+}
+
+.add-recipes-label {
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+.drag-drop-text {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Active Recipes */
+.active-recipes-card {
+  grid-area: recipes;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipes-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+.recipes-icon-box {
+  width: 48px;
+  height: 48px;
+  background: #7c2d12;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.arrow-top-right {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+.recipes-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  line-height: 1;
+  margin-bottom: var(--space-1);
+}
+
+.recipes-subtitle {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Knowledge Base / Assistant Section */
+.kb-section {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+}
+
+.kb-section .dash-card-heading {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--text-bright);
 }
 
-.dash-tile-label {
-  font-size: var(--font-size-xs);
+.kb-search-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.kb-input-wrapper {
+  position: relative;
+  flex: 0 1 500px;
+}
+
+.kb-search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-muted);
-  text-transform: uppercase;
+}
+
+.kb-search-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-3) var(--space-3) 2.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.kb-search-input:focus {
+  border-color: var(--orange);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.kb-assistant-btn {
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--orange);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  padding: var(--space-2) var(--space-4);
   letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kb-assistant-btn:hover {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: var(--orange);
 }
 
 /* ============================================
@@ -556,7 +787,7 @@ a:hover {
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--topbar-height) - 180px);
+  height: calc(100vh - 180px);
 }
 
 .chat-messages {
@@ -584,7 +815,7 @@ a:hover {
   border-bottom-right-radius: var(--radius-sm);
 }
 
-.chat-bubble.ai {
+.chat-bubble.assistant {
   align-self: flex-start;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -811,9 +1042,7 @@ a:hover {
   color: var(--danger);
 }
 
-/* ============================================
-   Empty States
-   ============================================ */
+/* Empty States */
 .empty-state {
   text-align: center;
   padding: var(--space-12);
@@ -830,9 +1059,7 @@ a:hover {
   font-size: var(--font-size-base);
 }
 
-/* ============================================
-   Upload Progress
-   ============================================ */
+/* Upload Progress */
 .upload-file-list {
   margin-top: var(--space-5);
   display: flex;
@@ -861,9 +1088,7 @@ a:hover {
   color: var(--text-muted);
 }
 
-/* ============================================
-   Spinner
-   ============================================ */
+/* Spinner */
 .spinner {
   width: 20px;
   height: 20px;
@@ -873,9 +1098,7 @@ a:hover {
   animation: spin 0.6s linear infinite;
 }
 
-/* ============================================
-   Animations
-   ============================================ */
+/* Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -894,24 +1117,37 @@ a:hover {
   }
 }
 
-/* ============================================
-   Responsive
-   ============================================ */
+/* Responsive */
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "notes"
+      "tasks"
+      "add"
+      "recipes";
+  }
+
+  .kb-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .kb-search-container {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kb-input-wrapper {
+    flex: none;
+  }
+}
+
 @media (max-width: 768px) {
-  .top-bar-nav {
-    overflow-x: auto;
-  }
-
-  .top-nav-label {
-    display: none;
-  }
-
   .main-content {
     padding: var(--space-4);
-  }
-
-  .dash-tiles {
-    grid-template-columns: 1fr;
   }
 
   .workbook-grid {
@@ -920,9 +1156,5 @@ a:hover {
 
   .chat-bubble {
     max-width: 90%;
-  }
-
-  .briefing-hero {
-    padding: var(--space-5);
   }
 }
