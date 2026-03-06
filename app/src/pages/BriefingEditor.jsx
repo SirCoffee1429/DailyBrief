@@ -100,7 +100,7 @@ export default function BriefingEditor() {
                 )
             }
 
-            navigate('/briefings')
+            navigate('/office/briefings')
         } catch (err) {
             console.error('Save error:', err)
             alert('Failed to save briefing')
@@ -116,7 +116,7 @@ export default function BriefingEditor() {
     return (
         <div>
             <div className="page-header">
-                <Link to="/briefings" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>← Back to Briefings</Link>
+                <Link to="/office/briefings" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>← Back to Briefings</Link>
                 <h1 className="page-title" style={{ marginTop: 'var(--space-2)' }}>
                     {isEditing ? 'Edit Briefing' : 'New Briefing'}
                 </h1>
@@ -182,7 +182,7 @@ export default function BriefingEditor() {
                     </div>
 
                     <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-5)' }}>
-                        <Link to="/briefings" className="btn btn-secondary">Cancel</Link>
+                        <Link to="/office/briefings" className="btn btn-secondary">Cancel</Link>
                         <button type="submit" className="btn btn-primary" disabled={saving || !title.trim()}>
                             {saving ? 'Saving...' : (isEditing ? 'Update Briefing' : 'Create Briefing')}
                         </button>

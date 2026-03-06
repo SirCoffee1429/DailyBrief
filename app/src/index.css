@@ -1158,3 +1158,369 @@ a:hover {
     max-width: 90%;
   }
 }
+
+/* ============================================
+   Role Select (Landing Page)
+   ============================================ */
+.role-select-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  padding: var(--space-6);
+  gap: var(--space-8);
+}
+
+.role-select-header {
+  text-align: center;
+}
+
+.role-select-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.role-select-subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+}
+
+.role-select-cards {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 260px;
+  height: 280px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.role-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.kitchen-card:hover {
+  border-color: var(--accent-orange);
+  box-shadow: 0 12px 40px rgba(255, 149, 0, 0.15);
+}
+
+.office-card:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 12px 40px rgba(10, 132, 255, 0.15);
+}
+
+.role-card-icon {
+  font-size: 4rem;
+}
+
+.role-card-label {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.role-card-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0 var(--space-3);
+}
+
+/* ============================================
+   Password Gate
+   ============================================ */
+.password-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  padding: var(--space-6);
+}
+
+.password-gate-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+}
+
+.password-gate-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.password-gate-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: var(--space-2);
+}
+
+.password-gate-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+.password-gate-input {
+  width: 100%;
+  text-align: center;
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-3);
+}
+
+.password-gate-error {
+  color: var(--status-error);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-3);
+}
+
+.password-gate-btn {
+  width: 100%;
+}
+
+/* ============================================
+   Office Dashboard
+   ============================================ */
+.office-dashboard {
+  padding: var(--space-4);
+}
+
+.office-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.office-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.25s ease;
+}
+
+.office-tile:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.office-tile-icon {
+  font-size: 2rem;
+}
+
+.office-tile-info {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.office-tile-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.office-tile-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.office-tile-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* ============================================
+   History Page
+   ============================================ */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.history-day-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+}
+
+.history-day-header {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.history-day-date {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.history-briefing {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.history-briefing:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.history-briefing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.history-briefing-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.task-count-badge.all-done {
+  background: var(--status-success);
+  color: #fff;
+}
+
+.history-briefing-body {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.history-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.history-task-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.history-task-status {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.history-task-status.done {
+  background: rgba(48, 209, 88, 0.15);
+  color: var(--status-success);
+}
+
+.history-task-status.missed {
+  background: rgba(255, 69, 58, 0.15);
+  color: var(--status-error);
+}
+
+.history-task-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.history-task-text.completed {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ============================================
+   Empty State
+   ============================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-5);
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.empty-state-text {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+}
+
+/* Responsive adjustments for new pages */
+@media (max-width: 640px) {
+  .role-select-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .role-card {
+    width: 100%;
+    max-width: 300px;
+    height: 220px;
+  }
+
+  .office-grid {
+    grid-template-columns: 1fr;
+  }
+}
