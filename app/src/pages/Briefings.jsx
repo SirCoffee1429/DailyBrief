@@ -52,14 +52,14 @@ export default function Briefings() {
                     <h1 className="page-title">Briefings</h1>
                     <p className="page-subtitle">Shift notes and tasks for the crew</p>
                 </div>
-                <Link to="/briefings/new" className="btn btn-primary">📋 New Briefing</Link>
+                <Link to="/office/briefings/new" className="btn btn-primary">📋 New Briefing</Link>
             </div>
 
             {briefings.length === 0 ? (
                 <div className="empty-state">
                     <div className="empty-state-icon">📋</div>
                     <div className="empty-state-text">No briefings yet. Create one for the crew.</div>
-                    <Link to="/briefings/new" className="btn btn-primary" style={{ marginTop: 'var(--space-5)' }}>
+                    <Link to="/office/briefings/new" className="btn btn-primary" style={{ marginTop: 'var(--space-5)' }}>
                         📋 Create Briefing
                     </Link>
                 </div>
@@ -75,7 +75,7 @@ export default function Briefings() {
                                     <div className="briefing-card-title">{b.title}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                    <Link to={`/briefings/${b.id}/edit`} className="btn btn-sm btn-secondary">✏️ Edit</Link>
+                                    <Link to={`/office/briefings/${b.id}/edit`} className="btn btn-sm btn-secondary">✏️ Edit</Link>
                                     <button className="btn btn-sm btn-danger" onClick={() => deleteBriefing(b.id)}>🗑</button>
                                 </div>
                             </div>

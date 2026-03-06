@@ -77,12 +77,12 @@ export default function Dashboard() {
                                     <li>No notes for today.</li>
                                 )}
                             </ul>
-                            <Link to={`/briefings/${latestBriefing.id}/edit`} className="btn btn-primary btn-orange mt-auto inline-flex">Edit Notes</Link>
+                            <Link to={`/office/briefings/${latestBriefing.id}/edit`} className="btn btn-primary btn-orange mt-auto inline-flex">Edit Notes</Link>
                         </>
                     ) : (
                         <>
                             <div className="notes-list empty">Nothing posted for the crew</div>
-                            <Link to="/briefings/new" className="btn btn-primary btn-orange mt-auto inline-flex">Create Briefing</Link>
+                            <Link to="/office/briefings/new" className="btn btn-primary btn-orange mt-auto inline-flex">Create Briefing</Link>
                         </>
                     )}
                 </div>
@@ -126,7 +126,7 @@ export default function Dashboard() {
                     <div className="recipes-subtitle">Active Recipes</div>
                 </div>
 
-                <Link to="/workbooks/upload" className="dash-card add-recipes-card" style={{ textDecoration: 'none' }}>
+                <Link to="/office/workbooks/upload" className="dash-card add-recipes-card" style={{ textDecoration: 'none' }}>
                     <div className="upload-cloud-icon">☁️</div>
                     <div className="add-recipes-label">Add Recipes</div>
                     <div className="drag-drop-text">Drag & drop files here</div>
@@ -140,7 +140,7 @@ export default function Dashboard() {
                         <span className="kb-search-icon">🔍</span>
                         <input className="kb-search-input" placeholder="Ask a question about kitchen procedures..." />
                     </div>
-                    <Link to="/chat" className="btn kb-assistant-btn">
+                    <Link to="/kitchen/chat" className="btn kb-assistant-btn">
                         <span>ASSISTANT</span>
                     </Link>
                 </div>
