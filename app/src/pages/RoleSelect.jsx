@@ -10,13 +10,13 @@ export default function RoleSelect() {
 
             <div className="role-select-cards">
                 <Link to="/kitchen" className="role-card kitchen-card">
-                    <div className="role-card-icon">🍳</div>
+                    <div className="role-card-icon"><i className="fa-solid fa-fire-burner" /></div>
                     <div className="role-card-label">Kitchen</div>
                     <div className="role-card-desc">Today's briefing, tasks & recipes</div>
                 </Link>
 
                 <Link to="/office" className="role-card office-card">
-                    <div className="role-card-icon">🏢</div>
+                    <div className="role-card-icon"><i className="fa-solid fa-building" /></div>
                     <div className="role-card-label">Office</div>
                     <div className="role-card-desc">Manage briefings, workbooks & history</div>
                 </Link>

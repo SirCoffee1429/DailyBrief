@@ -25,7 +25,7 @@ export default function OfficeGate({ children }) {
     return (
         <div className="password-gate">
             <div className="password-gate-card">
-                <div className="password-gate-icon">🔒</div>
+                <div className="password-gate-icon"><i className="fa-solid fa-lock" /></div>
                 <h2 className="password-gate-title">Office Access</h2>
                 <p className="password-gate-desc">Enter the manager password to continue</p>
                 <form onSubmit={handleSubmit}>
