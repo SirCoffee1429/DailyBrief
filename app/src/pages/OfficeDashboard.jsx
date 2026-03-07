@@ -30,17 +30,17 @@ export default function OfficeDashboard() {
         <div className="office-dashboard">
             <header className="dashboard-header">
                 <div className="header-left">
-                    <h1 className="header-title"><span className="title-icon">🏢</span> Office Dashboard</h1>
+                    <h1 className="header-title"><i className="fa-solid fa-building title-icon" /> Office Dashboard</h1>
                     <p className="header-date">Manage briefings, recipes, and track daily progress</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={handleLogout}>🔒 Lock</button>
+                    <button className="btn btn-secondary btn-sm" onClick={handleLogout}><i className="fa-solid fa-lock" /> Lock</button>
                 </div>
             </header>
 
             <div className="office-grid">
                 <Link to="/office/briefings" className="office-tile">
-                    <div className="office-tile-icon">📋</div>
+                    <div className="office-tile-icon"><i className="fa-solid fa-clipboard-list" /></div>
                     <div className="office-tile-info">
                         <span className="office-tile-value">{stats.briefings}</span>
                         <span className="office-tile-label">Briefings</span>
@@ -49,7 +49,7 @@ export default function OfficeDashboard() {
                 </Link>
 
                 <Link to="/office/workbooks" className="office-tile">
-                    <div className="office-tile-icon">📁</div>
+                    <div className="office-tile-icon"><i className="fa-solid fa-folder-open" /></div>
                     <div className="office-tile-info">
                         <span className="office-tile-value">{stats.workbooks}</span>
                         <span className="office-tile-label">Workbooks</span>
@@ -58,7 +58,7 @@ export default function OfficeDashboard() {
                 </Link>
 
                 <Link to="/office/history" className="office-tile">
-                    <div className="office-tile-icon">📊</div>
+                    <div className="office-tile-icon"><i className="fa-solid fa-chart-bar" /></div>
                     <div className="office-tile-info">
                         <span className="office-tile-value">{stats.tasks}</span>
                         <span className="office-tile-label">Task History</span>
@@ -67,7 +67,7 @@ export default function OfficeDashboard() {
                 </Link>
 
                 <Link to="/office/chat" className="office-tile">
-                    <div className="office-tile-icon">💡</div>
+                    <div className="office-tile-icon"><i className="fa-solid fa-brain" /></div>
                     <div className="office-tile-info">
                         <span className="office-tile-value">Ask</span>
                         <span className="office-tile-label">Assistant</span>
