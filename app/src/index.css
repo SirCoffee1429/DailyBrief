@@ -284,11 +284,11 @@ a:hover {
 .dashboard-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   gap: var(--space-5);
   grid-template-areas:
     "notes tasks"
-    "add   recipes";
+    ".     recipes";
 }
 
 .dash-card {
@@ -449,37 +449,6 @@ a:hover {
   font-size: var(--font-size-sm);
   text-align: center;
   padding: var(--space-4);
-}
-
-/* Add Recipes */
-.add-recipes-card {
-  grid-area: add;
-  border-style: dashed;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  text-decoration: none;
-  transition: all var(--transition-fast);
-}
-
-.add-recipes-card:hover {
-  border-color: var(--orange);
-  background: var(--bg-card-hover);
-}
-
-.upload-cloud-icon {
-  color: var(--orange);
-  font-size: 1.8rem;
-}
-
-.add-recipes-label {
-  color: var(--text-bright);
-  font-weight: 600;
-}
-
-.drag-drop-text {
-  color: var(--text-muted);
-  font-size: var(--font-size-xs);
 }
 
 /* Active Recipes */

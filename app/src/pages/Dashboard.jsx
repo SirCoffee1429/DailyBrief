@@ -117,20 +117,16 @@ export default function Dashboard() {
                     {latestBriefing && <div className="updated-text">Updated 5m ago</div>}
                 </div>
 
-                <div className="dash-card active-recipes-card">
+                <Link to="/kitchen/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="recipes-top-row">
                         <div className="recipes-icon-box">🍽️</div>
                         <div className="arrow-top-right">↗</div>
                     </div>
                     <div className="recipes-number">{stats.workbooks}</div>
                     <div className="recipes-subtitle">Active Recipes</div>
-                </div>
-
-                <Link to="/office/workbooks/upload" className="dash-card add-recipes-card" style={{ textDecoration: 'none' }}>
-                    <div className="upload-cloud-icon">☁️</div>
-                    <div className="add-recipes-label">Add Recipes</div>
-                    <div className="drag-drop-text">Drag & drop files here</div>
                 </Link>
+
+
             </div>
 
             <div className="dash-card kb-section">
