@@ -82,21 +82,30 @@ export default function WorkbookUpload() {
                 const sheetsToInsert = []
                 const chunksToInsert = []
 
+                // Parsing ranges: rows 1-23 => columns A-E, rows 24-32 => column A only
+                const MAX_ROW = 32
+                const FULL_COLS = 5  // A-E (indices 0-4)
+                const ASSEMBLY_START = 23 // array index for row 24
+                const headers = ['A', 'B', 'C', 'D', 'E']
+
                 workbook.SheetNames.forEach((sheetName, sheetIndex) => {
                     const worksheet = workbook.Sheets[sheetName]
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
                     if (jsonData.length === 0) return
 
-                    // Find max columns to ensure we don't drop data like "Measure"
-                    let maxCols = 0
-                    jsonData.forEach(row => {
-                        if (row.length > maxCols) maxCols = row.length
-                    })
-
-                    // Generate true column headers A, B, C to cover the max length
-                    const headers = Array.from({ length: maxCols }, (_, i) => XLSX.utils.encode_col(i))
-                    const rows = jsonData
+                    // Restrict rows to 1-32 and trim columns per range
+                    const rows = []
+                    for (let r = 0; r < Math.min(jsonData.length, MAX_ROW); r++) {
+                        const srcRow = jsonData[r] || []
+                        if (r < ASSEMBLY_START) {
+                            // Rows 1-23: columns A-E
+                            rows.push(srcRow.slice(0, FULL_COLS))
+                        } else {
+                            // Rows 24-32: column A only
+                            rows.push([srcRow[0] !== undefined ? srcRow[0] : ''])
+                        }
+                    }
 
                     sheetsToInsert.push({
                         workbook_id: wbData.id,
@@ -112,7 +121,8 @@ export default function WorkbookUpload() {
                         const chunkRows = rows.slice(r, r + chunkSize)
                         const textLines = chunkRows.map((row, idx) => {
                             const cellVals = []
-                            for (let i = 0; i < maxCols; i++) {
+                            const colCount = r + idx < ASSEMBLY_START ? FULL_COLS : 1
+                            for (let i = 0; i < colCount; i++) {
                                 if (row[i] !== undefined && row[i] !== null && row[i] !== '') {
                                     cellVals.push(`Col ${headers[i]}: ${row[i]}`)
                                 }

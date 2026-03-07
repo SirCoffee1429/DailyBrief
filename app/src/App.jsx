@@ -6,6 +6,7 @@ import WorkbookUpload from './pages/WorkbookUpload.jsx'
 import WorkbookLibrary from './pages/WorkbookLibrary.jsx'
 import WorkbookViewer from './pages/WorkbookViewer.jsx'
 import AiChat from './pages/AiChat.jsx'
+import KitchenRecipes from './pages/KitchenRecipes.jsx'
 import Briefings from './pages/Briefings.jsx'
 import BriefingEditor from './pages/BriefingEditor.jsx'
 import History from './pages/History.jsx'
@@ -20,6 +21,8 @@ export default function App() {
 
             {/* Kitchen routes */}
             <Route path="/kitchen" element={<KitchenLayout><Dashboard /></KitchenLayout>} />
+            <Route path="/kitchen/recipes" element={<KitchenLayout><KitchenRecipes /></KitchenLayout>} />
+            <Route path="/kitchen/recipes/:id" element={<KitchenLayout><WorkbookViewer /></KitchenLayout>} />
             <Route path="/kitchen/chat" element={<KitchenLayout><AiChat /></KitchenLayout>} />
 
             {/* Office routes — password protected */}
