@@ -738,8 +738,8 @@ a:hover {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
-  min-width: 100px;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .data-table tr:last-child td {
