@@ -5,33 +5,63 @@ import { supabase } from '../lib/supabase.js'
 export default function Dashboard() {
     const navigate = useNavigate()
     const [stats, setStats] = useState({ workbooks: 0, briefings: 0 })
-    const [latestBriefing, setLatestBriefing] = useState(null)
+    const [todaysBriefings, setTodaysBriefings] = useState([])
+    const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
 
+    const latestBriefing = todaysBriefings[activeIndex] || null
+
     useEffect(() => {
         async function load() {
-            const [wbRes, brRes, latestRes] = await Promise.all([
+            const [wbRes, brRes, latestDateRes] = await Promise.all([
                 supabase.from('workbooks').select('id', { count: 'exact', head: true }),
                 supabase.from('briefings').select('id', { count: 'exact', head: true }),
-                supabase.from('briefings').select('*').order('date', { ascending: false }).limit(1).maybeSingle(),
+                supabase.from('briefings').select('date').order('date', { ascending: false }).limit(1).maybeSingle(),
             ])
             setStats({
                 workbooks: wbRes.count || 0,
                 briefings: brRes.count || 0,
             })
-            if (latestRes.data) {
-                setLatestBriefing(latestRes.data)
-                const { data: taskData } = await supabase
-                    .from('briefing_tasks')
+            if (latestDateRes.data) {
+                const { data: dayBriefings } = await supabase
+                    .from('briefings')
                     .select('*')
-                    .eq('briefing_id', latestRes.data.id)
-                    .order('sort_order')
-                setTasks(taskData || [])
+                    .eq('date', latestDateRes.data.date)
+                    .order('created_at', { ascending: true })
+
+                setTodaysBriefings(dayBriefings || [])
+                setActiveIndex(0)
             }
         }
         load()
+    }, [])
+
+    // Load tasks whenever the active briefing changes
+    useEffect(() => {
+        async function loadTasks() {
+            if (!latestBriefing) {
+                setTasks([])
+                return
+            }
+            const { data: taskData } = await supabase
+                .from('briefing_tasks')
+                .select('*')
+                .eq('briefing_id', latestBriefing.id)
+                .order('sort_order')
+            setTasks(taskData || [])
+        }
+        loadTasks()
+    }, [latestBriefing])
+
+    // Close settings menu on outside click
+    useEffect(() => {
+        function handleClick(e) {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false)
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
     }, [])
 
     async function toggleTask(taskId, isCompleted) {
@@ -49,12 +79,21 @@ export default function Dashboard() {
             <header className="dashboard-header">
                 <div className="header-left">
                     <h1 className="header-title"><i className="fa-solid fa-sun title-icon" /> Today's Briefing</h1>
-                    <p className="header-date">
-                        {latestBriefing
-                            ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-                            : today
-                        }
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-1)' }}>
+                        <p className="header-date" style={{ marginTop: 0 }}>
+                            {latestBriefing
+                                ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                                : today
+                            }
+                        </p>
+                        {todaysBriefings.length > 1 && (
+                            <div className="briefing-cycler" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.05)', padding: '2px 10px', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-color)' }}>
+                                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: activeIndex > 0 ? 'pointer' : 'default', opacity: activeIndex > 0 ? 1 : 0.3 }} onClick={() => activeIndex > 0 && setActiveIndex(activeIndex - 1)} aria-label="Previous Briefing"><i className="fa-solid fa-chevron-left" /></button>
+                                <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{activeIndex + 1} OF {todaysBriefings.length}</span>
+                                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: activeIndex < todaysBriefings.length - 1 ? 'pointer' : 'default', opacity: activeIndex < todaysBriefings.length - 1 ? 1 : 0.3 }} onClick={() => activeIndex < todaysBriefings.length - 1 && setActiveIndex(activeIndex + 1)} aria-label="Next Briefing"><i className="fa-solid fa-chevron-right" /></button>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div className="header-actions" ref={menuRef}>
                     <button className="header-icon-btn" aria-label="Settings" onClick={() => setShowMenu(prev => !prev)}>
@@ -78,6 +117,11 @@ export default function Dashboard() {
                     </div>
                     {latestBriefing ? (
                         <>
+                            {latestBriefing.title && (
+                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: 'var(--space-3)', paddingBottom: 'var(--space-2)', borderBottom: '1px solid var(--border-color)', fontSize: 'var(--font-size-lg)' }}>
+                                    {latestBriefing.title}
+                                </div>
+                            )}
                             <ul className="notes-list">
                                 {latestBriefing.body ? (
                                     latestBriefing.body.split('\n').filter(line => line.trim()).map((line, i) => (
