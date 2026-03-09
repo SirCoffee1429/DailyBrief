@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import { WORKBOOK_CATEGORIES, formatFileSize } from '../lib/workbooks.js'
 
 export default function KitchenRecipes() {
     const [workbooks, setWorkbooks] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('All')
-
-    const CATEGORIES = ['All', 'Salad', 'Fry', 'Sauces', 'BBQ', 'Grill', 'Sautee', 'Add-Ons', 'Uncategorized']
 
     useEffect(() => {
         async function load() {
@@ -20,13 +19,6 @@ export default function KitchenRecipes() {
         }
         load()
     }, [])
-
-    function formatSize(bytes) {
-        if (!bytes) return '—'
-        if (bytes < 1024) return bytes + ' B'
-        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
-        return (bytes / 1048576).toFixed(1) + ' MB'
-    }
 
     if (loading) {
         return (
@@ -50,7 +42,7 @@ export default function KitchenRecipes() {
             </div>
 
             <div style={{ marginBottom: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                {CATEGORIES.map(c => (
+                {WORKBOOK_CATEGORIES.map(c => (
                     <button
                         key={c}
                         onClick={() => setFilter(c)}
@@ -76,7 +68,7 @@ export default function KitchenRecipes() {
                                 <div className="workbook-card-name">{wb.file_name}</div>
                                 <div className="workbook-card-meta">
                                     <span>{wb.sheet_count} sheet{wb.sheet_count !== 1 ? 's' : ''}</span>
-                                    <span>{formatSize(wb.file_size)}</span>
+                                    <span>{formatFileSize(wb.file_size)}</span>
                                     <span>{new Date(wb.uploaded_at).toLocaleDateString()}</span>
                                 </div>
                                 <div style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-2)' }}>
