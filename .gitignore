@@ -1,5 +1,23 @@
-node_modules/
-dist/
+# Secrets & credentials
+secrets.txt
+supabasepassword/
+*.key
+*.pem
 .env
-.env.local
-*.log
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vercel/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db
