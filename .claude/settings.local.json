@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx knip:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run:*)",
+      "Bash(supabase secrets:*)",
+      "Bash(git filter-repo:*)",
+      "Bash(pip install:*)",
+      "Bash(\"C:/Old Hawthorne Projects/DailyBrief/.gitignore\":*)"
+    ]
+  }
+}
