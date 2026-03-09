@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 export default function WorkbookViewer() {
     const { id } = useParams()
+    const location = useLocation()
+    const backLink = location.pathname.startsWith('/kitchen') ? '/kitchen/recipes' : '/office/workbooks'
+
     const [workbook, setWorkbook] = useState(null)
     const [sheets, setSheets] = useState([])
     const [activeSheet, setActiveSheet] = useState(0)
@@ -36,7 +39,7 @@ export default function WorkbookViewer() {
             <div className="empty-state">
                 <div className="empty-state-icon">❌</div>
                 <div className="empty-state-text">Workbook not found</div>
-                <Link to="/workbooks" className="btn btn-secondary" style={{ marginTop: 'var(--space-4)' }}>← Back</Link>
+                <Link to={backLink} className="btn btn-secondary" style={{ marginTop: 'var(--space-4)' }}>← Back</Link>
             </div>
         )
     }
@@ -55,7 +58,7 @@ export default function WorkbookViewer() {
         <div>
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                    <Link to="/workbooks" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>← Back to Recipes</Link>
+                    <Link to={backLink} style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>← Back to Recipes</Link>
                     <h1 className="page-title" style={{ marginTop: 'var(--space-2)' }}>{workbook.file_name}</h1>
                     <p className="page-subtitle">{sheets.length} sheet{sheets.length !== 1 ? 's' : ''} · {rows.length} rows</p>
                 </div>

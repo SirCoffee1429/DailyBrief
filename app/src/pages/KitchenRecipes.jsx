@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase.js'
 export default function KitchenRecipes() {
     const [workbooks, setWorkbooks] = useState([])
     const [loading, setLoading] = useState(true)
+    const [filter, setFilter] = useState('All')
+
+    const CATEGORIES = ['All', 'Salad', 'Fry', 'Sauces', 'BBQ', 'Grill', 'Sautee', 'Add-Ons', 'Uncategorized']
 
     useEffect(() => {
         async function load() {
@@ -33,23 +36,40 @@ export default function KitchenRecipes() {
         )
     }
 
+    const filteredWorkbooks = filter === 'All'
+        ? workbooks
+        : workbooks.filter(wb => wb.category === filter)
+
     return (
         <div>
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                     <h1 className="page-title">Recipes</h1>
-                    <p className="page-subtitle">{workbooks.length} recipe{workbooks.length !== 1 ? 's' : ''} uploaded</p>
+                    <p className="page-subtitle">{filteredWorkbooks.length} recipe{filteredWorkbooks.length !== 1 ? 's' : ''} {filter !== 'All' ? `in ${filter}` : 'available'}</p>
                 </div>
             </div>
 
-            {workbooks.length === 0 ? (
+            <div style={{ marginBottom: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {CATEGORIES.map(c => (
+                    <button
+                        key={c}
+                        onClick={() => setFilter(c)}
+                        className={`btn btn-sm ${filter === c ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ borderRadius: '20px' }}
+                    >
+                        {c}
+                    </button>
+                ))}
+            </div>
+
+            {filteredWorkbooks.length === 0 ? (
                 <div className="empty-state">
                     <div className="empty-state-icon">📁</div>
-                    <div className="empty-state-text">No recipes available yet.</div>
+                    <div className="empty-state-text">No recipes available in this category.</div>
                 </div>
             ) : (
                 <div className="workbook-grid">
-                    {workbooks.map(wb => (
+                    {filteredWorkbooks.map(wb => (
                         <Link key={wb.id} to={`/kitchen/recipes/${wb.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                             <div className="workbook-card">
                                 <div className="workbook-card-icon">📊</div>
@@ -59,10 +79,15 @@ export default function KitchenRecipes() {
                                     <span>{formatSize(wb.file_size)}</span>
                                     <span>{new Date(wb.uploaded_at).toLocaleDateString()}</span>
                                 </div>
-                                <div style={{ marginTop: 'var(--space-3)' }}>
+                                <div style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-2)' }}>
                                     <span className={`badge ${wb.status === 'parsed' ? 'badge-success' : wb.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}>
                                         {wb.status}
                                     </span>
+                                    {wb.category && (
+                                        <span className="badge badge-info" style={{ backgroundColor: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
+                                            {wb.category}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </Link>

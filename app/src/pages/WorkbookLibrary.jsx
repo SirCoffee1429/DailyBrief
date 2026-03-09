@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase.js'
 export default function WorkbookLibrary() {
     const [workbooks, setWorkbooks] = useState([])
     const [loading, setLoading] = useState(true)
+    const [filter, setFilter] = useState('All')
+
+    const CATEGORIES = ['All', 'Salad', 'Fry', 'Sauces', 'BBQ', 'Grill', 'Sautee', 'Add-Ons', 'Uncategorized']
 
     useEffect(() => {
         async function load() {
@@ -41,28 +44,47 @@ export default function WorkbookLibrary() {
         )
     }
 
+    const filteredWorkbooks = filter === 'All'
+        ? workbooks
+        : workbooks.filter(wb => wb.category === filter)
+
     return (
         <div>
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                     <h1 className="page-title">Recipes</h1>
-                    <p className="page-subtitle">{workbooks.length} recipe{workbooks.length !== 1 ? 's' : ''} uploaded</p>
+                    <p className="page-subtitle">{filteredWorkbooks.length} recipe{filteredWorkbooks.length !== 1 ? 's' : ''} {filter !== 'All' ? `in ${filter}` : 'uploaded'}</p>
                 </div>
-                <Link to="/workbooks/upload" className="btn btn-primary">📤 Upload</Link>
+                <Link to="/office/workbooks/upload" className="btn btn-primary">📤 Upload</Link>
             </div>
 
-            {workbooks.length === 0 ? (
+            <div style={{ marginBottom: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                {CATEGORIES.map(c => (
+                    <button
+                        key={c}
+                        onClick={() => setFilter(c)}
+                        className={`btn btn-sm ${filter === c ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ borderRadius: '20px' }}
+                    >
+                        {c}
+                    </button>
+                ))}
+            </div>
+
+            {filteredWorkbooks.length === 0 ? (
                 <div className="empty-state">
                     <div className="empty-state-icon">📁</div>
-                    <div className="empty-state-text">No recipes yet. Upload some .xlsx files to get started.</div>
-                    <Link to="/workbooks/upload" className="btn btn-primary" style={{ marginTop: 'var(--space-5)' }}>
-                        📤 Upload Recipes
-                    </Link>
+                    <div className="empty-state-text">No recipes found in this category.</div>
+                    {filter === 'All' && (
+                        <Link to="/office/workbooks/upload" className="btn btn-primary" style={{ marginTop: 'var(--space-5)' }}>
+                            📤 Upload Recipes
+                        </Link>
+                    )}
                 </div>
             ) : (
                 <div className="workbook-grid">
-                    {workbooks.map(wb => (
-                        <Link key={wb.id} to={`/workbooks/${wb.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    {filteredWorkbooks.map(wb => (
+                        <Link key={wb.id} to={`/office/workbooks/${wb.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                             <div className="workbook-card">
                                 <div className="workbook-card-icon">📊</div>
                                 <div className="workbook-card-name">{wb.file_name}</div>
@@ -72,9 +94,16 @@ export default function WorkbookLibrary() {
                                     <span>{new Date(wb.uploaded_at).toLocaleDateString()}</span>
                                 </div>
                                 <div style={{ marginTop: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span className={`badge ${wb.status === 'parsed' ? 'badge-success' : wb.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}>
-                                        {wb.status}
-                                    </span>
+                                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                        <span className={`badge ${wb.status === 'parsed' ? 'badge-success' : wb.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}>
+                                            {wb.status}
+                                        </span>
+                                        {wb.category && (
+                                            <span className="badge badge-info" style={{ backgroundColor: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
+                                                {wb.category}
+                                            </span>
+                                        )}
+                                    </div>
                                     <button className="btn btn-sm btn-danger" onClick={(e) => deleteWorkbook(wb.id, e)}>
                                         🗑
                                     </button>

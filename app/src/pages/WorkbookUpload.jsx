@@ -63,22 +63,7 @@ export default function WorkbookUpload() {
                 const arrayBuffer = await item.file.arrayBuffer()
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' })
 
-                // Insert workbook record
-                const { data: wbData, error: wbError } = await supabase
-                    .from('workbooks')
-                    .insert({
-                        file_name: item.name,
-                        file_url: urlData.publicUrl,
-                        file_size: item.file.size,
-                        sheet_count: workbook.SheetNames.length,
-                        status: 'parsed'
-                    })
-                    .select()
-                    .single()
-
-                if (wbError) throw wbError
-
-                // Insert each sheet
+                // Insert each sheet and build chunk text for categorization
                 const sheetsToInsert = []
                 const chunksToInsert = []
 
@@ -108,7 +93,6 @@ export default function WorkbookUpload() {
                     }
 
                     sheetsToInsert.push({
-                        workbook_id: wbData.id,
                         sheet_name: sheetName,
                         sheet_index: sheetIndex,
                         headers: headers,
@@ -122,15 +106,14 @@ export default function WorkbookUpload() {
                         const textLines = chunkRows.map((row, idx) => {
                             const cellVals = []
                             const colCount = r + idx < ASSEMBLY_START ? FULL_COLS : 1
-                            for (let i = 0; i < colCount; i++) {
-                                if (row[i] !== undefined && row[i] !== null && row[i] !== '') {
-                                    cellVals.push(`Col ${headers[i]}: ${row[i]}`)
+                            for (let idx2 = 0; idx2 < colCount; idx2++) {
+                                if (row[idx2] !== undefined && row[idx2] !== null && row[idx2] !== '') {
+                                    cellVals.push(`Col ${headers[idx2]}: ${row[idx2]}`)
                                 }
                             }
                             return `Row ${r + idx + 1} -> ` + cellVals.join(' | ')
                         })
                         chunksToInsert.push({
-                            workbook_id: wbData.id,
                             sheet_name: sheetName,
                             content: `File: ${item.name}\nSheet: ${sheetName}\n${textLines.join('\n')}`,
                             row_start: r + 1,
@@ -138,6 +121,42 @@ export default function WorkbookUpload() {
                         })
                     }
                 })
+
+                // Determine category from first chunk
+                let category = 'Uncategorized'
+                if (chunksToInsert.length > 0) {
+                    try {
+                        const { data, error } = await supabase.functions.invoke('categorize-recipe', {
+                            body: { text: chunksToInsert[0].content }
+                        })
+                        if (!error && data?.category) {
+                            category = data.category
+                        }
+                    } catch (catErr) {
+                        console.error('Categorization error:', catErr)
+                    }
+                }
+
+                // Insert workbook record
+                const { data: wbData, error: wbError } = await supabase
+                    .from('workbooks')
+                    .insert({
+                        file_name: item.name,
+                        file_url: urlData.publicUrl,
+                        file_size: item.file.size,
+                        sheet_count: workbook.SheetNames.length,
+                        status: 'parsed',
+                        category: category
+                    })
+                    .select()
+                    .single()
+
+                if (wbError) throw wbError
+
+                // Append workbook id to sheets and chunks
+                sheetsToInsert.forEach(s => s.workbook_id = wbData.id)
+                chunksToInsert.forEach(c => c.workbook_id = wbData.id)
+
 
                 if (sheetsToInsert.length > 0) {
                     await supabase.from('workbook_sheets').insert(sheetsToInsert)
