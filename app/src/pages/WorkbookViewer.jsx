@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import { useCategories } from '../lib/useCategories.js'
 
 export default function WorkbookViewer() {
     const { id } = useParams()
@@ -12,6 +13,9 @@ export default function WorkbookViewer() {
     const [activeSheet, setActiveSheet] = useState(0)
     const [filter, setFilter] = useState('')
     const [loading, setLoading] = useState(true)
+    const [updatingCategory, setUpdatingCategory] = useState(false)
+
+    const { categories } = useCategories()
 
     useEffect(() => {
         async function load() {
@@ -25,6 +29,23 @@ export default function WorkbookViewer() {
         }
         load()
     }, [id])
+
+    async function handleCategoryChange(e) {
+        const newCategory = e.target.value
+        setUpdatingCategory(true)
+
+        const { error } = await supabase
+            .from('workbooks')
+            .update({ category: newCategory })
+            .eq('id', id)
+
+        if (!error) {
+            setWorkbook(prev => ({ ...prev, category: newCategory }))
+        } else {
+            alert('Error updating category: ' + error.message)
+        }
+        setUpdatingCategory(false)
+    }
 
     if (loading) {
         return (
@@ -59,7 +80,21 @@ export default function WorkbookViewer() {
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                     <Link to={backLink} style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>← Back to Recipes</Link>
-                    <h1 className="page-title" style={{ marginTop: 'var(--space-2)' }}>{workbook.file_name}</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+                        <h1 className="page-title" style={{ margin: 0 }}>{workbook.file_name}</h1>
+                        <select
+                            value={workbook.category || 'Uncategorized'}
+                            onChange={handleCategoryChange}
+                            disabled={updatingCategory}
+                            className="category-select"
+                        >
+                            <option value="Uncategorized">Uncategorized</option>
+                            {categories.map(c => (
+                                c.name !== 'Uncategorized' && <option key={c.id} value={c.name}>{c.name}</option>
+                            ))}
+                        </select>
+                        {updatingCategory && <span className="spinner" style={{ width: 14, height: 14 }} />}
+                    </div>
                     <p className="page-subtitle">{sheets.length} sheet{sheets.length !== 1 ? 's' : ''} · {rows.length} rows</p>
                 </div>
             </div>

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { WORKBOOK_CATEGORIES, formatFileSize } from '../lib/workbooks.js'
+import { formatFileSize } from '../lib/workbooks.js'
+import { useCategories } from '../lib/useCategories.js'
 
 export default function KitchenRecipes() {
+    const { categories, loading: categoriesLoading } = useCategories()
     const [workbooks, setWorkbooks] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('All')
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         async function load() {
@@ -28,9 +31,11 @@ export default function KitchenRecipes() {
         )
     }
 
-    const filteredWorkbooks = filter === 'All'
-        ? workbooks
-        : workbooks.filter(wb => wb.category === filter)
+    const filteredWorkbooks = workbooks.filter(wb => {
+        const matchesCategory = filter === 'All' || wb.category === filter
+        const matchesSearch = wb.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+        return matchesCategory && matchesSearch
+    })
 
     return (
         <div>
@@ -41,17 +46,34 @@ export default function KitchenRecipes() {
                 </div>
             </div>
 
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+                <div className="kb-input-wrapper" style={{ flex: 'none', maxWidth: '400px', width: '100%' }}>
+                    <span className="kb-search-icon"><i className="fa-solid fa-magnifying-glass" /></span>
+                    <input
+                        type="text"
+                        placeholder="Search recipes..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="kb-search-input"
+                    />
+                </div>
+            </div>
+
             <div style={{ marginBottom: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                {WORKBOOK_CATEGORIES.map(c => (
-                    <button
-                        key={c}
-                        onClick={() => setFilter(c)}
-                        className={`btn btn-sm ${filter === c ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ borderRadius: '20px' }}
-                    >
-                        {c}
-                    </button>
-                ))}
+                {categoriesLoading ? (
+                    <span className="text-muted">Loading categories...</span>
+                ) : (
+                    ['All', ...categories.map(c => c.name)].map(c => (
+                        <button
+                            key={c}
+                            onClick={() => setFilter(c)}
+                            className={`btn btn-sm ${filter === c ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ borderRadius: '20px' }}
+                        >
+                            {c}
+                        </button>
+                    ))
+                )}
             </div>
 
             {filteredWorkbooks.length === 0 ? (

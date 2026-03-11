@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { WORKBOOK_CATEGORIES, formatFileSize } from '../lib/workbooks.js'
+import { formatFileSize } from '../lib/workbooks.js'
+import { useCategories } from '../lib/useCategories.js'
+import CategoryManager from '../components/CategoryManager.jsx'
 
 export default function WorkbookLibrary() {
+    const { categories, loading: categoriesLoading, refetch: refetchCategories } = useCategories()
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
     const [workbooks, setWorkbooks] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('All')
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         async function load() {
@@ -28,6 +33,23 @@ export default function WorkbookLibrary() {
         setWorkbooks(prev => prev.filter(w => w.id !== id))
     }
 
+    async function deleteAllWorkbooks() {
+        if (!confirm('Are you absolutely sure you want to delete ALL recipes? This cannot be undone.')) return
+
+        const idsToDelete = workbooks.map(wb => wb.id)
+        if (idsToDelete.length === 0) return
+
+        const { error } = await supabase.from('workbooks').delete().in('id', idsToDelete)
+
+        if (!error) {
+            setWorkbooks([])
+            setSearchQuery('')
+        } else {
+            console.error(error)
+            alert('Failed to delete all recipes.')
+        }
+    }
+
     if (loading) {
         return (
             <div className="empty-state">
@@ -36,9 +58,11 @@ export default function WorkbookLibrary() {
         )
     }
 
-    const filteredWorkbooks = filter === 'All'
-        ? workbooks
-        : workbooks.filter(wb => wb.category === filter)
+    const filteredWorkbooks = workbooks.filter(wb => {
+        const matchesCategory = filter === 'All' || wb.category === filter
+        const matchesSearch = wb.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+        return matchesCategory && matchesSearch
+    })
 
     return (
         <div>
@@ -47,20 +71,45 @@ export default function WorkbookLibrary() {
                     <h1 className="page-title">Recipes</h1>
                     <p className="page-subtitle">{filteredWorkbooks.length} recipe{filteredWorkbooks.length !== 1 ? 's' : ''} {filter !== 'All' ? `in ${filter}` : 'uploaded'}</p>
                 </div>
-                <Link to="/office/workbooks/upload" className="btn btn-primary">📤 Upload</Link>
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <button onClick={deleteAllWorkbooks} className="btn btn-danger" disabled={workbooks.length === 0}>
+                        <i className="fa-solid fa-trash" /> Delete All
+                    </button>
+                    <button onClick={() => setIsCategoryModalOpen(true)} className="btn btn-secondary">
+                        <i className="fa-solid fa-list" /> Manage Categories
+                    </button>
+                    <Link to="/office/workbooks/upload" className="btn btn-primary">📤 Upload</Link>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+                <div className="kb-input-wrapper" style={{ flex: 'none', maxWidth: '400px', width: '100%' }}>
+                    <span className="kb-search-icon"><i className="fa-solid fa-magnifying-glass" /></span>
+                    <input
+                        type="text"
+                        placeholder="Search recipes..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="kb-search-input"
+                    />
+                </div>
             </div>
 
             <div style={{ marginBottom: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                {WORKBOOK_CATEGORIES.map(c => (
-                    <button
-                        key={c}
-                        onClick={() => setFilter(c)}
-                        className={`btn btn-sm ${filter === c ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ borderRadius: '20px' }}
-                    >
-                        {c}
-                    </button>
-                ))}
+                {categoriesLoading ? (
+                    <span className="text-muted">Loading categories...</span>
+                ) : (
+                    ['All', ...categories.map(c => c.name)].map(c => (
+                        <button
+                            key={c}
+                            onClick={() => setFilter(c)}
+                            className={`btn btn-sm ${filter === c ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ borderRadius: '20px' }}
+                        >
+                            {c}
+                        </button>
+                    ))
+                )}
             </div>
 
             {filteredWorkbooks.length === 0 ? (
@@ -105,6 +154,13 @@ export default function WorkbookLibrary() {
                     ))}
                 </div>
             )}
+
+            <CategoryManager
+                isOpen={isCategoryModalOpen}
+                onClose={() => setIsCategoryModalOpen(false)}
+                categories={categories}
+                refetchCategories={refetchCategories}
+            />
         </div>
     )
 }

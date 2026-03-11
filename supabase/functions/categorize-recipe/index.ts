@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { text } = await req.json();
+    const { text, categories } = await req.json();
 
     if (!text || typeof text !== "string") {
       return new Response(
@@ -38,10 +38,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Default to the old categories if none provided, for backward compatibility
+    const allowedCategories = Array.isArray(categories) && categories.length > 0
+      ? categories
+      : ALLOWED_CATEGORIES;
+
     const systemPrompt = `You are an expert culinary categorization assistant. 
 You will be given raw text extracted from a restaurant recipe workbook (Excel file). 
 Your ONLY job is to determine which of the following categories this recipe belongs to:
-${ALLOWED_CATEGORIES.join(", ")}
+${allowedCategories.join(", ")}
 
 Respond with EXACTLY ONE word/phrase from the list above. Do not include any other text, punctuation, or explanation.
 If you cannot determine the category, respond with "Uncategorized".
@@ -63,20 +68,32 @@ ${text.substring(0, 1500)} // Analyze up to first 1500 chars to avoid token limi
         ],
         generationConfig: {
           temperature: 0.1, // Low temp for more deterministic output
-          maxOutputTokens: 10,
+          maxOutputTokens: 1000,
         },
       }),
     });
 
     const geminiData = await geminiRes.json();
-    let category = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Uncategorized";
+    console.log("Gemini API Response:", JSON.stringify(geminiData));
+
+    if (!geminiRes.ok) {
+      console.error("Gemini API Error:", geminiData);
+      return new Response(JSON.stringify({ category: "Uncategorized", error: "Gemini API Error", details: geminiData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let rawCategory = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Uncategorized";
 
     // Clean up response just in case the AI adds punctuation
-    category = category.replace(/[^a-zA-Z-]/g, "");
+    let category = rawCategory.replace(/[^a-zA-Z- ]/g, ""); // Allow spaces in categories now
+    category = category.trim();
 
     // Validate that it returned one of our allowed categories
-    const matchedCategory = ALLOWED_CATEGORIES.find(c => c.toLowerCase() === category.toLowerCase());
+    const matchedCategory = allowedCategories.find((c: string) => c.toLowerCase() === category.toLowerCase());
     const finalCategory = matchedCategory || "Uncategorized";
+
+    console.log(`Raw: "${rawCategory}", Cleaned: "${category}", Final: "${finalCategory}"`);
 
     return new Response(JSON.stringify({ category: finalCategory }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

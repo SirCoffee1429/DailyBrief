@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 import * as XLSX from 'xlsx'
+import { useCategories } from '../lib/useCategories.js'
 
 export default function WorkbookUpload() {
+    const { categories } = useCategories()
     const [files, setFiles] = useState([])
     const [uploading, setUploading] = useState(false)
     const [dragging, setDragging] = useState(false)
@@ -39,7 +41,23 @@ export default function WorkbookUpload() {
 
         for (let i = 0; i < files.length; i++) {
             const item = files[i]
+            if (item.status !== 'pending') continue
+
             try {
+                // Check for duplicates first
+                setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'checking' } : f))
+
+                const { data: existing } = await supabase
+                    .from('workbooks')
+                    .select('id')
+                    .eq('file_name', item.name)
+                    .maybeSingle()
+
+                if (existing) {
+                    setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'duplicate', error: 'File already exists' } : f))
+                    continue
+                }
+
                 // Update status to uploading
                 setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'uploading' } : f))
 
@@ -127,7 +145,10 @@ export default function WorkbookUpload() {
                 if (chunksToInsert.length > 0) {
                     try {
                         const { data, error } = await supabase.functions.invoke('categorize-recipe', {
-                            body: { text: chunksToInsert[0].content }
+                            body: {
+                                text: chunksToInsert[0].content,
+                                categories: categories.map(c => c.name)
+                            }
                         })
                         if (!error && data?.category) {
                             category = data.category
@@ -165,7 +186,7 @@ export default function WorkbookUpload() {
                     await supabase.from('workbook_chunks').insert(chunksToInsert)
                 }
 
-                setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done' } : f))
+                setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done', category: category, workbookId: wbData.id } : f))
             } catch (err) {
                 console.error('Upload error:', err)
                 setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error', error: err.message } : f))
@@ -173,6 +194,27 @@ export default function WorkbookUpload() {
         }
 
         setUploading(false)
+    }
+
+    async function handleCategoryChange(index, newCategory) {
+        const fileItem = files[index]
+        if (!fileItem.workbookId) return
+
+        // Update local state optimistically
+        setFiles(prev => prev.map((f, idx) => idx === index ? { ...f, category: newCategory } : f))
+
+        try {
+            const { error } = await supabase
+                .from('workbooks')
+                .update({ category: newCategory })
+                .eq('id', fileItem.workbookId)
+
+            if (error) {
+                console.error('Failed to update category:', error)
+            }
+        } catch (err) {
+            console.error('Error changing category:', err)
+        }
     }
 
     return (
@@ -215,12 +257,29 @@ export default function WorkbookUpload() {
                                 <span className="upload-file-name">{f.name}</span>
                                 <span className="upload-file-status">
                                     {f.status === 'pending' && '⏳ Ready'}
+                                    {f.status === 'checking' && <><span className="spinner" /> Checking...</>}
                                     {f.status === 'uploading' && <><span className="spinner" /> Uploading...</>}
                                     {f.status === 'parsing' && <><span className="spinner" /> Parsing...</>}
-                                    {f.status === 'done' && <span className="badge badge-success">✓ Done</span>}
+                                    {f.status === 'done' && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                            <span className="badge badge-success">✓ Done</span>
+                                            <select
+                                                className="input"
+                                                style={{ padding: '0.1rem 0.5rem', fontSize: '0.85rem', width: 'auto', minWidth: '150px' }}
+                                                value={f.category || 'Uncategorized'}
+                                                onChange={(e) => handleCategoryChange(i, e.target.value)}
+                                            >
+                                                <option value="Uncategorized">Uncategorized</option>
+                                                {categories.map(c => (
+                                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                     {f.status === 'error' && <span className="badge badge-danger">✗ Error</span>}
+                                    {f.status === 'duplicate' && <span className="badge badge-warning" style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}>⚠️ Duplicate</span>}
                                 </span>
-                                {f.status === 'pending' && (
+                                {(f.status === 'pending' || f.status === 'duplicate' || f.status === 'error') && (
                                     <button className="btn btn-sm btn-danger" onClick={() => removeFile(i)}>✕</button>
                                 )}
                             </div>
