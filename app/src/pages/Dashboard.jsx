@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import AssistantWidget from '../components/AssistantWidget.jsx'
 
 export default function Dashboard() {
     const navigate = useNavigate()
@@ -193,6 +194,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+            <AssistantWidget />
         </div>
     )
 }

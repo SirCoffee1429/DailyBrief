@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import AssistantWidget from '../components/AssistantWidget.jsx'
 
 export default function OfficeDashboard() {
     const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0 })
@@ -75,6 +76,7 @@ export default function OfficeDashboard() {
                     <div className="office-tile-desc">Knowledge base & recipe questions</div>
                 </Link>
             </div>
+            <AssistantWidget />
         </div>
     )
 }

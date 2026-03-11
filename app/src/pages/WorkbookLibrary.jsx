@@ -163,7 +163,19 @@ export default function WorkbookLibrary() {
                 <div className="workbook-grid">
                     {filteredWorkbooks.map(wb => (
                         <Link key={wb.id} to={`/office/workbooks/${wb.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            <div className="workbook-card">
+                            <div className="workbook-card" style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', top: 'var(--space-3)', right: 'var(--space-3)', display: 'flex', gap: 'var(--space-1)', zIndex: 10 }}>
+                                    <button className="btn btn-sm btn-secondary" onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingWorkbook(wb);
+                                    }} style={{ padding: 'var(--space-1) var(--space-2)' }}>
+                                        <i className="fa-solid fa-pencil" />
+                                    </button>
+                                    <button className="btn btn-sm btn-danger" onClick={(e) => deleteWorkbook(wb.id, e)} style={{ padding: 'var(--space-1) var(--space-2)' }}>
+                                        <i className="fa-solid fa-trash" />
+                                    </button>
+                                </div>
                                 <div className="workbook-card-icon">📊</div>
                                 <div className="workbook-card-name">{wb.file_name}</div>
                                 <div className="workbook-card-meta">
@@ -171,8 +183,8 @@ export default function WorkbookLibrary() {
                                     <span>{formatFileSize(wb.file_size)}</span>
                                     <span>{new Date(wb.uploaded_at).toLocaleDateString()}</span>
                                 </div>
-                                <div style={{ marginTop: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <div style={{ marginTop: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', flex: 1 }}>
                                         <span className={`badge ${wb.status === 'parsed' ? 'badge-success' : wb.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}>
                                             {wb.status}
                                         </span>
@@ -197,18 +209,6 @@ export default function WorkbookLibrary() {
                                                 </span>
                                             ));
                                         })()}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                        <button className="btn btn-sm btn-secondary" onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setEditingWorkbook(wb);
-                                        }}>
-                                            <i className="fa-solid fa-pencil" />
-                                        </button>
-                                        <button className="btn btn-sm btn-danger" onClick={(e) => deleteWorkbook(wb.id, e)}>
-                                            <i className="fa-solid fa-trash" />
-                                        </button>
                                     </div>
                                 </div>
                             </div>
