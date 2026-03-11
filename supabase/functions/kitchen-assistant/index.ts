@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
 
     const context = (chunks || []).map((c: { content: string }) => c.content).join("\n\n---\n\n");
 
-    const systemPrompt = `You are a helpful kitchen assistant for a restaurant crew. You have access to the restaurant's recipe workbooks and operational data. Answer questions accurately based on the workbook data provided below. If the answer isn't in the data, say so honestly. Be concise and practical — these are busy kitchen workers. IMPORTANT FORMATTING RULE: Do NOT use Markdown formatting (no **bolding**, no bullet points, no asterisks). Provide your answer as clean, plain text.
+    const systemPrompt = `You are a helpful kitchen assistant for a restaurant crew. You have access to the restaurant's recipe workbooks and operational data. Answer questions accurately based on the workbook data provided below. If the answer isn't in the data, say so honestly. Be concise and practical — these are busy kitchen workers. IMPORTANT FORMATTING RULE: Do NOT use markdown formatting like **bold** or *italics*. However, you MUST use line breaks and simple dashes (-) to create clean, readable lists for ingredients and steps.
 
 WORKBOOK DATA:
 ${context || "(No workbooks uploaded yet)"}`;

@@ -865,6 +865,7 @@ a:hover {
   border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
   line-height: 1.7;
+  white-space: pre-wrap;
   animation: fadeInUp 0.3s ease;
 }
 
@@ -1591,12 +1592,14 @@ a:hover {
    ============================================ */
 .category-select {
   appearance: none;
-  background-color: rgba(255, 255, 255, 0.05); /* slightly more opaque glass */
+  background-color: rgba(255, 255, 255, 0.05);
+  /* slightly more opaque glass */
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 6px 32px 6px 14px;
-  border-radius: var(--radius-full); /* Pill shape */
+  border-radius: var(--radius-full);
+  /* Pill shape */
   font-size: var(--font-size-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -1690,6 +1693,7 @@ a:hover {
     opacity: 0;
     transform: scale(0.9) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
