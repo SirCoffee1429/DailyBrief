@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     const { data: chunks } = await supabase
       .from("workbook_chunks")
       .select("content")
-      .limit(100);
+      .limit(10000);
 
     const context = (chunks || []).map((c: { content: string }) => c.content).join("\n\n---\n\n");
 
