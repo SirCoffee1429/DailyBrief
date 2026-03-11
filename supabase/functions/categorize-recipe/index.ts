@@ -39,16 +39,23 @@ Deno.serve(async (req: Request) => {
     }
 
     // Default to the old categories if none provided, for backward compatibility
-    const allowedCategories = Array.isArray(categories) && categories.length > 0
+    let allowedCategories = Array.isArray(categories) && categories.length > 0
       ? categories
       : ALLOWED_CATEGORIES;
+
+    // RULE: Only allow "Add-Ons" if "Add" is in the file name
+    const fileMatch = text.match(/File:\s*([^\n]+)/);
+    const fileName = fileMatch ? fileMatch[1].toLowerCase() : "";
+    if (!fileName.includes("add")) {
+      allowedCategories = allowedCategories.filter((c: string) => c.toLowerCase() !== "add-ons");
+    }
 
     const systemPrompt = `You are an expert culinary categorization assistant. 
 You will be given raw text extracted from a restaurant recipe workbook (Excel file). 
 Your ONLY job is to determine which of the following categories this recipe belongs to:
 ${allowedCategories.join(", ")}
 
-Respond with EXACTLY ONE word/phrase from the list above. Do not include any other text, punctuation, or explanation.
+Respond with a comma-separated list of applicable categories from the list above (up to a maximum of 3). Do not include any other text, punctuation, or explanation.
 If you cannot determine the category, respond with "Uncategorized".
 
 RECIPE TEXT TO CATEGORIZE:
@@ -78,24 +85,31 @@ ${text.substring(0, 1500)} // Analyze up to first 1500 chars to avoid token limi
 
     if (!geminiRes.ok) {
       console.error("Gemini API Error:", geminiData);
-      return new Response(JSON.stringify({ category: "Uncategorized", error: "Gemini API Error", details: geminiData }), {
+      return new Response(JSON.stringify({ category: ["Uncategorized"], error: "Gemini API Error", details: geminiData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     let rawCategory = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Uncategorized";
 
-    // Clean up response just in case the AI adds punctuation
-    let category = rawCategory.replace(/[^a-zA-Z- ]/g, ""); // Allow spaces in categories now
-    category = category.trim();
+    // Because we asked for comma separated, split and clean.
+    const rawCategories = rawCategory.split(',').map((c: string) => c.trim().replace(/[^a-zA-Z- ]/g, ""));
 
-    // Validate that it returned one of our allowed categories
-    const matchedCategory = allowedCategories.find((c: string) => c.toLowerCase() === category.toLowerCase());
-    const finalCategory = matchedCategory || "Uncategorized";
+    const finalCategories: string[] = [];
+    rawCategories.forEach((cat: string) => {
+      const matchedCategory = allowedCategories.find((c: string) => c.toLowerCase() === cat.toLowerCase());
+      if (matchedCategory && !finalCategories.includes(matchedCategory)) {
+        finalCategories.push(matchedCategory);
+      }
+    });
 
-    console.log(`Raw: "${rawCategory}", Cleaned: "${category}", Final: "${finalCategory}"`);
+    if (finalCategories.length === 0) {
+      finalCategories.push("Uncategorized");
+    }
 
-    return new Response(JSON.stringify({ category: finalCategory }), {
+    console.log(`Raw: "${rawCategory}", Final: ${JSON.stringify(finalCategories)}`);
+
+    return new Response(JSON.stringify({ category: finalCategories }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

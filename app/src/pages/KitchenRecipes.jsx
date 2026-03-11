@@ -32,7 +32,26 @@ export default function KitchenRecipes() {
     }
 
     const filteredWorkbooks = workbooks.filter(wb => {
-        const matchesCategory = filter === 'All' || wb.category === filter
+        let matchesCategory = false;
+        if (filter === 'All') {
+            matchesCategory = true;
+        } else if (Array.isArray(wb.category)) {
+            // Case-insensitive check of array contents
+            matchesCategory = wb.category.some(c => c.toLowerCase() === filter.toLowerCase());
+        } else if (typeof wb.category === 'string') {
+            try {
+                // Try parsing if it's a stringified array
+                if (wb.category.startsWith('[')) {
+                    const parsed = JSON.parse(wb.category);
+                    matchesCategory = parsed.some(c => c.toLowerCase() === filter.toLowerCase());
+                } else {
+                    matchesCategory = wb.category.toLowerCase() === filter.toLowerCase();
+                }
+            } catch {
+                matchesCategory = wb.category.toLowerCase() === filter.toLowerCase();
+            }
+        }
+
         const matchesSearch = wb.file_name.toLowerCase().includes(searchQuery.toLowerCase())
         return matchesCategory && matchesSearch
     })
@@ -93,15 +112,31 @@ export default function KitchenRecipes() {
                                     <span>{formatFileSize(wb.file_size)}</span>
                                     <span>{new Date(wb.uploaded_at).toLocaleDateString()}</span>
                                 </div>
-                                <div style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-2)' }}>
+                                <div style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                                     <span className={`badge ${wb.status === 'parsed' ? 'badge-success' : wb.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}>
                                         {wb.status}
                                     </span>
-                                    {wb.category && (
-                                        <span className="badge badge-info" style={{ backgroundColor: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
-                                            {wb.category}
-                                        </span>
-                                    )}
+                                    {(() => {
+                                        let cats = [];
+                                        if (Array.isArray(wb.category)) {
+                                            cats = wb.category;
+                                        } else if (typeof wb.category === 'string') {
+                                            try {
+                                                if (wb.category.startsWith('[')) {
+                                                    cats = JSON.parse(wb.category);
+                                                } else {
+                                                    cats = [wb.category];
+                                                }
+                                            } catch {
+                                                cats = [wb.category];
+                                            }
+                                        }
+                                        return cats.map((cat, idx) => (
+                                            <span key={idx} className="badge badge-info" style={{ backgroundColor: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
+                                                {cat}
+                                            </span>
+                                        ));
+                                    })()}
                                 </div>
                             </div>
                         </Link>

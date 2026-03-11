@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 import { formatFileSize } from '../lib/workbooks.js'
 import { useCategories } from '../lib/useCategories.js'
 import CategoryManager from '../components/CategoryManager.jsx'
+import EditRecipeModal from '../components/EditRecipeModal.jsx'
 
 export default function WorkbookLibrary() {
     const { categories, loading: categoriesLoading, refetch: refetchCategories } = useCategories()
@@ -12,6 +13,7 @@ export default function WorkbookLibrary() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('All')
     const [searchQuery, setSearchQuery] = useState('')
+    const [editingWorkbook, setEditingWorkbook] = useState(null)
 
     useEffect(() => {
         async function load() {
@@ -31,6 +33,22 @@ export default function WorkbookLibrary() {
         if (!confirm('Delete this recipe and all its data?')) return
         await supabase.from('workbooks').delete().eq('id', id)
         setWorkbooks(prev => prev.filter(w => w.id !== id))
+    }
+
+    async function updateWorkbook(id, newName, newCategories) {
+        const { error } = await supabase
+            .from('workbooks')
+            .update({ file_name: newName, category: JSON.stringify(newCategories) })
+            .eq('id', id)
+
+        if (!error) {
+            setWorkbooks(prev => prev.map(w =>
+                w.id === id ? { ...w, file_name: newName, category: newCategories } : w
+            ))
+        } else {
+            console.error("Failed to update workbook:", error)
+            alert("Failed to save changes.")
+        }
     }
 
     async function deleteAllWorkbooks() {
@@ -59,7 +77,26 @@ export default function WorkbookLibrary() {
     }
 
     const filteredWorkbooks = workbooks.filter(wb => {
-        const matchesCategory = filter === 'All' || wb.category === filter
+        let matchesCategory = false;
+        if (filter === 'All') {
+            matchesCategory = true;
+        } else if (Array.isArray(wb.category)) {
+            // Case-insensitive check of array contents
+            matchesCategory = wb.category.some(c => c.toLowerCase() === filter.toLowerCase());
+        } else if (typeof wb.category === 'string') {
+            try {
+                // Try parsing if it's a stringified array
+                if (wb.category.startsWith('[')) {
+                    const parsed = JSON.parse(wb.category);
+                    matchesCategory = parsed.some(c => c.toLowerCase() === filter.toLowerCase());
+                } else {
+                    matchesCategory = wb.category.toLowerCase() === filter.toLowerCase();
+                }
+            } catch {
+                matchesCategory = wb.category.toLowerCase() === filter.toLowerCase();
+            }
+        }
+
         const matchesSearch = wb.file_name.toLowerCase().includes(searchQuery.toLowerCase())
         return matchesCategory && matchesSearch
     })
@@ -139,15 +176,40 @@ export default function WorkbookLibrary() {
                                         <span className={`badge ${wb.status === 'parsed' ? 'badge-success' : wb.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}>
                                             {wb.status}
                                         </span>
-                                        {wb.category && (
-                                            <span className="badge badge-info" style={{ backgroundColor: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
-                                                {wb.category}
-                                            </span>
-                                        )}
+                                        {(() => {
+                                            let cats = [];
+                                            if (Array.isArray(wb.category)) {
+                                                cats = wb.category;
+                                            } else if (typeof wb.category === 'string') {
+                                                try {
+                                                    if (wb.category.startsWith('[')) {
+                                                        cats = JSON.parse(wb.category);
+                                                    } else {
+                                                        cats = [wb.category];
+                                                    }
+                                                } catch {
+                                                    cats = [wb.category];
+                                                }
+                                            }
+                                            return cats.map((cat, idx) => (
+                                                <span key={idx} className="badge badge-info" style={{ backgroundColor: 'var(--bg-accent)', color: 'var(--text-accent)' }}>
+                                                    {cat}
+                                                </span>
+                                            ));
+                                        })()}
                                     </div>
-                                    <button className="btn btn-sm btn-danger" onClick={(e) => deleteWorkbook(wb.id, e)}>
-                                        🗑
-                                    </button>
+                                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                        <button className="btn btn-sm btn-secondary" onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setEditingWorkbook(wb);
+                                        }}>
+                                            <i className="fa-solid fa-pencil" />
+                                        </button>
+                                        <button className="btn btn-sm btn-danger" onClick={(e) => deleteWorkbook(wb.id, e)}>
+                                            <i className="fa-solid fa-trash" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </Link>
@@ -160,6 +222,14 @@ export default function WorkbookLibrary() {
                 onClose={() => setIsCategoryModalOpen(false)}
                 categories={categories}
                 refetchCategories={refetchCategories}
+            />
+
+            <EditRecipeModal
+                isOpen={!!editingWorkbook}
+                onClose={() => setEditingWorkbook(null)}
+                workbook={editingWorkbook}
+                categories={categories}
+                onSave={updateWorkbook}
             />
         </div>
     )

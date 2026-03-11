@@ -141,7 +141,7 @@ export default function WorkbookUpload() {
                 })
 
                 // Determine category from first chunk
-                let category = 'Uncategorized'
+                let category = ['Uncategorized']
                 if (chunksToInsert.length > 0) {
                     try {
                         const { data, error } = await supabase.functions.invoke('categorize-recipe', {
@@ -150,7 +150,7 @@ export default function WorkbookUpload() {
                                 categories: categories.map(c => c.name)
                             }
                         })
-                        if (!error && data?.category) {
+                        if (!error && data?.category && Array.isArray(data.category)) {
                             category = data.category
                         }
                     } catch (catErr) {
@@ -196,24 +196,53 @@ export default function WorkbookUpload() {
         setUploading(false)
     }
 
-    async function handleCategoryChange(index, newCategory) {
-        const fileItem = files[index]
-        if (!fileItem.workbookId) return
+    async function toggleCategory(index, categoryName) {
+        let fileItem = files[index]
+        let targetId = fileItem.workbookId
+
+        let currentCategories = Array.isArray(fileItem.category) ? [...fileItem.category] : [fileItem.category || 'Uncategorized']
+
+        if (currentCategories.includes(categoryName)) {
+            // Remove it
+            currentCategories = currentCategories.filter(c => c !== categoryName)
+            // If empty, default to Uncategorized
+            if (currentCategories.length === 0) currentCategories = ['Uncategorized']
+        } else {
+            // Add it and remove 'Uncategorized' if present
+            currentCategories.push(categoryName)
+            currentCategories = currentCategories.filter(c => c !== 'Uncategorized')
+        }
+
+        // If the workbook ID is missing from state (e.g. uploaded before a hot refresh), fetch it.
+        if (!targetId) {
+            const { data } = await supabase
+                .from('workbooks')
+                .select('id')
+                .eq('file_name', fileItem.name)
+                .maybeSingle()
+
+            if (data?.id) {
+                targetId = data.id
+            } else {
+                console.error('Could not determine workbook ID for', fileItem.name)
+                return
+            }
+        }
 
         // Update local state optimistically
-        setFiles(prev => prev.map((f, idx) => idx === index ? { ...f, category: newCategory } : f))
+        setFiles(prev => prev.map((f, idx) => idx === index ? { ...f, category: currentCategories, workbookId: targetId } : f))
 
         try {
             const { error } = await supabase
                 .from('workbooks')
-                .update({ category: newCategory })
-                .eq('id', fileItem.workbookId)
+                .update({ category: currentCategories })
+                .eq('id', targetId)
 
             if (error) {
-                console.error('Failed to update category:', error)
+                console.error('Failed to update categories:', error)
             }
         } catch (err) {
-            console.error('Error changing category:', err)
+            console.error('Error changing categories:', err)
         }
     }
 
@@ -261,18 +290,37 @@ export default function WorkbookUpload() {
                                     {f.status === 'uploading' && <><span className="spinner" /> Uploading...</>}
                                     {f.status === 'parsing' && <><span className="spinner" /> Parsing...</>}
                                     {f.status === 'done' && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                                             <span className="badge badge-success">✓ Done</span>
+
+                                            {/* Render selected categories as badges */}
+                                            {Array.isArray(f.category) && f.category.map((cat, idx) => (
+                                                <span key={idx} className="badge badge-primary">{cat}</span>
+                                            ))}
+                                            {!Array.isArray(f.category) && f.category && (
+                                                <span className="badge badge-primary">{f.category}</span>
+                                            )}
+
+                                            {/* Multi-select dropdown */}
                                             <select
                                                 className="input"
                                                 style={{ padding: '0.1rem 0.5rem', fontSize: '0.85rem', width: 'auto', minWidth: '150px' }}
-                                                value={f.category || 'Uncategorized'}
-                                                onChange={(e) => handleCategoryChange(i, e.target.value)}
+                                                value="Add/Remove..."
+                                                onChange={(e) => {
+                                                    if (e.target.value && e.target.value !== "Add/Remove...") {
+                                                        toggleCategory(i, e.target.value)
+                                                    }
+                                                }}
                                             >
-                                                <option value="Uncategorized">Uncategorized</option>
-                                                {categories.map(c => (
-                                                    <option key={c.id} value={c.name}>{c.name}</option>
-                                                ))}
+                                                <option disabled>Add/Remove...</option>
+                                                {categories.map(c => {
+                                                    const isSelected = Array.isArray(f.category) ? f.category.includes(c.name) : f.category === c.name;
+                                                    return (
+                                                        <option key={c.id} value={c.name}>
+                                                            {isSelected ? `✓ Remove ${c.name}` : `+ Add ${c.name}`}
+                                                        </option>
+                                                    )
+                                                })}
                                             </select>
                                         </div>
                                     )}
