@@ -158,6 +158,15 @@ a:hover {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
+@media (max-width: 600px) {
+  .bottom-tab-bar {
+    width: calc(100% - 32px);
+    gap: 0;
+    justify-content: space-around;
+    padding: var(--space-2);
+  }
+}
+
 .bottom-tab-link {
   display: flex;
   flex-direction: column;
@@ -1644,6 +1653,13 @@ a:hover {
   flex-direction: column;
   align-items: flex-end;
   gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .assistant-widget-container {
+    bottom: 100px;
+    right: 16px;
+  }
 }
 
 .assistant-widget-fab {
