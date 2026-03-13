@@ -1862,9 +1862,35 @@ a:hover {
 
 .forecast-icon {
     font-size: 24px;
-    color: var(--text-primary);
     margin-bottom: var(--space-2);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.weather-color-sunny {
+    color: #FFB347; /* Bright Sun Orange */
+    filter: drop-shadow(0 0 8px rgba(255, 179, 71, 0.4));
+}
+
+.weather-color-partly {
+    color: #87CEEB; /* Sky Blue */
+}
+
+.weather-color-cloudy {
+    color: #A0AEC0; /* Light Grey Blue */
+}
+
+.weather-color-rainy {
+    color: #4A90E2; /* Deep Rain Blue */
+    filter: drop-shadow(0 2px 4px rgba(74, 144, 226, 0.3));
+}
+
+.weather-color-snowy {
+    color: #FFFFFF;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.weather-color-thunder {
+    color: #F6AD55;
+    filter: drop-shadow(0 0 12px rgba(246, 173, 85, 0.6));
 }
 
 .forecast-temps {

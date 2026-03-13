@@ -32,11 +32,13 @@ export default function WeatherWidget() {
 
                 if (invokeError) throw invokeError
                 
-                // The API returns { days: [...] }
-                if (data && data.days && data.days.length > 0) {
-                    setForecastData(data.days)
+                // The Google Weather API returns { forecastDays: [...] }
+                if (data && data.forecastDays && data.forecastDays.length > 0) {
+                    setForecastData(data.forecastDays)
                 } else if (data && data.error) {
                     throw new Error(data.error)
+                } else {
+                    throw new Error("No forecast data available for this location.")
                 }
             } catch (err) {
                 console.error("DEBUG: Weather Fetch Error:", err)
@@ -63,6 +65,17 @@ export default function WeatherWidget() {
         if (typeUpper.includes('PARTLY') || typeUpper.includes('SCATTERED')) return 'fa-cloud-sun'
         if (typeUpper.includes('CLOUDY')) return 'fa-cloud'
         return 'fa-cloud'
+    }
+
+    function getWeatherColor(type) {
+        if (!type) return 'weather-color-cloudy'
+        const typeUpper = type.toUpperCase()
+        if (typeUpper.includes('CLEAR') || typeUpper.includes('SUNNY')) return 'weather-color-sunny'
+        if (typeUpper.includes('RAIN') || typeUpper.includes('DRIZZLE')) return 'weather-color-rainy'
+        if (typeUpper.includes('SNOW')) return 'weather-color-snowy'
+        if (typeUpper.includes('THUNDER')) return 'weather-color-thunder'
+        if (typeUpper.includes('PARTLY') || typeUpper.includes('SCATTERED')) return 'weather-color-partly'
+        return 'weather-color-cloudy'
     }
 
     // Helper to get day string (e.g., "Mon")
@@ -116,6 +129,7 @@ export default function WeatherWidget() {
                     const conditionType = day.daytimeForecast?.weatherCondition?.type
                     const conditionDesc = day.daytimeForecast?.weatherCondition?.description?.text || ''
                     const iconClass = getWeatherIcon(conditionType)
+                    const colorClass = getWeatherColor(conditionType)
                     
                     const precip = day.daytimeForecast?.precipitation?.probability?.percent || 0
                     const rawCloudCoverage = day.daytimeForecast?.cloudCover || 0 // Default to 0
@@ -126,7 +140,7 @@ export default function WeatherWidget() {
                     return (
                         <div key={index} className="forecast-block">
                             <h3 className="forecast-day-label">{dateLabel}</h3>
-                            <div className="forecast-icon">
+                            <div className={`forecast-icon ${colorClass}`}>
                                 <i className={`fa-solid ${iconClass}`} title={conditionDesc}></i>
                             </div>
                             <div className="forecast-temps">
