@@ -10,6 +10,7 @@ export default function Dashboard() {
     const [todaysBriefings, setTodaysBriefings] = useState([])
     const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
+    const [kbSearch, setKbSearch] = useState('')
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
 
@@ -72,6 +73,12 @@ export default function Dashboard() {
             .update({ is_completed: !isCompleted })
             .eq('id', taskId)
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, is_completed: !isCompleted } : t))
+    }
+
+    function handleKbSearch(e) {
+        e.preventDefault()
+        if (!kbSearch.trim()) return
+        navigate(`/kitchen/chat?q=${encodeURIComponent(kbSearch.trim())}`)
     }
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
@@ -186,15 +193,20 @@ export default function Dashboard() {
 
                 <div className="dash-card kb-section">
                     <h2 className="dash-card-heading"><i className="fa-solid fa-brain" style={{ color: 'var(--accent)' }} /> KNOWLEDGE BASE</h2>
-                    <div className="kb-search-container">
+                    <form className="kb-search-container" onSubmit={handleKbSearch}>
                         <div className="kb-input-wrapper">
                             <span className="kb-search-icon"><i className="fa-solid fa-magnifying-glass" /></span>
-                            <input className="kb-search-input" placeholder="Ask a question about kitchen procedures..." />
+                            <input 
+                                className="kb-search-input" 
+                                placeholder="Ask a question about kitchen procedures..." 
+                                value={kbSearch}
+                                onChange={(e) => setKbSearch(e.target.value)}
+                            />
                         </div>
-                        <Link to="/kitchen/chat" className="btn kb-assistant-btn">
+                        <button type="submit" className="btn kb-assistant-btn">
                             <span>ASK</span>
-                        </Link>
-                    </div>
+                        </button>
+                    </form>
                 </div>
             </div>
             <AssistantWidget />

@@ -367,19 +367,25 @@ a:hover {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto auto auto;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(160px, auto);
   gap: var(--space-5);
   grid-template-areas:
-    "notes notes tasks"
-    "notes notes recipes"
-    "kb    kb    kb";
+    "weather weather weather"
+    "notes   notes   tasks"
+    "notes   notes   recipes"
+    "kb      kb      kb";
+}
+
+.weather-forecast-card {
+  grid-area: weather;
 }
 
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
+      "weather"
       "notes"
       "tasks"
       "recipes"
@@ -593,39 +599,29 @@ a:hover {
   font-size: var(--font-size-sm);
 }
 
-/* Knowledge Base / Assistant Section */
+/* Knowledge Base */
 .kb-section {
   grid-area: kb;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-6);
-}
-
-.kb-section .dash-card-heading {
-  margin-bottom: 0;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.05), rgba(0, 0, 0, 0.2));
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-bright);
+  flex-direction: column;
 }
 
 .kb-search-container {
   display: flex;
-  align-items: center;
   gap: var(--space-4);
-  flex: 1;
-  justify-content: flex-end;
+  margin-top: var(--space-4);
+  width: 100%;
 }
 
 .kb-input-wrapper {
   position: relative;
-  flex: 0 1 500px;
+  flex: 1;
 }
 
 .kb-search-icon {
   position: absolute;
-  left: var(--space-3);
+  left: var(--space-4);
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-muted);
@@ -633,39 +629,43 @@ a:hover {
 
 .kb-search-input {
   width: 100%;
-  padding: var(--space-3) var(--space-3) var(--space-3) 2.5rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-4) var(--space-4) 3rem;
   color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  outline: none;
+  font-size: var(--font-size-md);
   transition: all var(--transition-fast);
 }
 
 .kb-search-input:focus {
   border-color: var(--orange);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
 }
 
 .kb-assistant-btn {
-  background: rgba(249, 115, 22, 0.1);
-  color: var(--orange);
-  border: 1px solid rgba(249, 115, 22, 0.2);
-  border-radius: var(--radius-md);
+  background: var(--orange);
+  color: white;
+  padding: 0 var(--space-8);
   font-weight: 700;
-  font-size: var(--font-size-xs);
-  padding: var(--space-2) var(--space-4);
-  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.3s ease;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .kb-assistant-btn:hover {
-  background: rgba(249, 115, 22, 0.2);
-  border-color: var(--orange);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(249, 115, 22, 0.4);
 }
+
+
 
 /* ============================================
    Buttons

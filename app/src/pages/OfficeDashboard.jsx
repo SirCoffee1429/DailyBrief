@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import AssistantWidget from '../components/AssistantWidget.jsx'
+import WeatherWidget from '../components/WeatherWidget.jsx'
 
 export default function OfficeDashboard() {
     const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0 })
@@ -40,6 +41,7 @@ export default function OfficeDashboard() {
             </header>
 
             <div className="office-grid">
+                <WeatherWidget />
                 <Link to="/office/briefings" className="office-tile">
                     <div className="office-tile-icon"><i className="fa-solid fa-clipboard-list" /></div>
                     <div className="office-tile-info">

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 export default function AiChat() {
@@ -9,17 +10,25 @@ export default function AiChat() {
     const [loading, setLoading] = useState(false)
     const messagesEndRef = useRef(null)
 
+    const [searchParams] = useSearchParams()
+    const initialQuery = searchParams.get('q')
+    const hasProcessedInitialQuery = useRef(false)
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
 
-    async function handleSend(e) {
-        e.preventDefault()
-        const question = input.trim()
+    useEffect(() => {
+        if (initialQuery && !hasProcessedInitialQuery.current) {
+            hasProcessedInitialQuery.current = true
+            submitQuestion(initialQuery)
+        }
+    }, [initialQuery])
+
+    async function submitQuestion(question) {
         if (!question || loading) return
 
         setMessages(prev => [...prev, { role: 'user', text: question }])
-        setInput('')
         setLoading(true)
 
         try {
@@ -39,6 +48,15 @@ export default function AiChat() {
         }
 
         setLoading(false)
+    }
+
+    async function handleSend(e) {
+        e.preventDefault()
+        const question = input.trim()
+        if (!question) return
+        
+        setInput('')
+        await submitQuestion(question)
     }
 
     return (
