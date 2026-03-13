@@ -39,8 +39,8 @@ export default function WeatherWidget() {
                     throw new Error(data.error)
                 }
             } catch (err) {
-                console.error("Error fetching weather:", err)
-                setError(err.message)
+                console.error("DEBUG: Weather Fetch Error:", err)
+                setError(err.message || String(err))
             } finally {
                 setLoading(false)
             }
@@ -90,7 +90,17 @@ export default function WeatherWidget() {
     }
 
     if (error || forecastData.length === 0) {
-        return null 
+        return (
+            <div className="weather-forecast-card">
+                <h2 className="weather-card-title">
+                    <i className="fa-solid fa-cloud-sun" /> 5-Day Forecast
+                </h2>
+                <div style={{ padding: 'var(--space-4)', textAlign: 'center', width: '100%', color: 'var(--text-secondary)' }}>
+                    <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--warning)' }}></i>
+                    <p style={{ margin: 0, fontSize: '14px' }}>Weather unavailable: {error || 'No data returned'}</p>
+                </div>
+            </div>
+        )
     }
 
     return (
