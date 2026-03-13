@@ -1,0 +1,143 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase.js'
+
+export default function WeatherWidget() {
+    const [forecastData, setForecastData] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    useEffect(() => {
+        function getLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        fetchWeatherData(position.coords.latitude, position.coords.longitude)
+                    },
+                    (err) => {
+                        console.warn("Geolocation denied or failed. Using default location.", err)
+                        fetchWeatherData(38.9517, -92.3341) // Default: Columbia, MO
+                    },
+                    { timeout: 10000 }
+                )
+            } else {
+                fetchWeatherData(38.9517, -92.3341)
+            }
+        }
+
+        async function fetchWeatherData(lat, lng) {
+            try {
+                const { data, error: invokeError } = await supabase.functions.invoke('get-weather', {
+                    body: { lat, lng }
+                })
+
+                if (invokeError) throw invokeError
+                
+                // The API returns { days: [...] }
+                if (data && data.days && data.days.length > 0) {
+                    setForecastData(data.days)
+                } else if (data && data.error) {
+                    throw new Error(data.error)
+                }
+            } catch (err) {
+                console.error("Error fetching weather:", err)
+                setError(err.message)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        getLocation()
+        
+        // Refresh weather every 2 hours
+        const intervalId = setInterval(() => getLocation(), 120 * 60 * 1000)
+        return () => clearInterval(intervalId)
+    }, [])
+
+    function getWeatherIcon(type) {
+        if (!type) return 'fa-cloud'
+        const typeUpper = type.toUpperCase()
+        if (typeUpper.includes('CLEAR') || typeUpper.includes('SUNNY')) return 'fa-sun'
+        if (typeUpper.includes('RAIN') || typeUpper.includes('DRIZZLE')) return 'fa-cloud-rain'
+        if (typeUpper.includes('SNOW')) return 'fa-snowflake'
+        if (typeUpper.includes('THUNDER')) return 'fa-cloud-bolt'
+        if (typeUpper.includes('PARTLY') || typeUpper.includes('SCATTERED')) return 'fa-cloud-sun'
+        if (typeUpper.includes('CLOUDY')) return 'fa-cloud'
+        return 'fa-cloud'
+    }
+
+    // Helper to get day string (e.g., "Mon")
+    function getDayLabel(dateString) {
+        if (!dateString) return ''
+        const date = new Date(dateString)
+        const today = new Date()
+        
+        // Ensure same day format comparison
+        const formatString = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+        const dateFormatted = formatString(date)
+        const todayFormatted = formatString(today)
+        
+        if (dateFormatted === todayFormatted) return 'Today'
+        
+        return date.toLocaleDateString('en-US', { weekday: 'short' })
+    }
+
+    if (loading) {
+        return (
+            <div className="weather-forecast-card loading">
+                <div className="weather-forecast-shimmer"></div>
+            </div>
+        )
+    }
+
+    if (error || forecastData.length === 0) {
+        return null 
+    }
+
+    return (
+        <div className="weather-forecast-card">
+            <h2 className="weather-card-title">
+                <i className="fa-solid fa-cloud-sun" /> 5-Day Forecast
+            </h2>
+            <div className="forecast-container">
+                {forecastData.map((day, index) => {
+                    // Extracting nested data cautiously
+                    const maxTemp = Math.round(day.maxTemperature?.degrees || 0)
+                    const minTemp = Math.round(day.minTemperature?.degrees || 0)
+                    const conditionType = day.daytimeForecast?.weatherCondition?.type
+                    const conditionDesc = day.daytimeForecast?.weatherCondition?.description?.text || ''
+                    const iconClass = getWeatherIcon(conditionType)
+                    
+                    const precip = day.daytimeForecast?.precipitation?.probability?.percent || 0
+                    const rawCloudCoverage = day.daytimeForecast?.cloudCover || 0 // Default to 0
+                    const cloudCoverage = Math.round(rawCloudCoverage)
+
+                    const dateLabel = getDayLabel(day.updateTime || new Date(new Date().setDate(new Date().getDate() + index)).toISOString())
+
+                    return (
+                        <div key={index} className="forecast-block">
+                            <h3 className="forecast-day-label">{dateLabel}</h3>
+                            <div className="forecast-icon">
+                                <i className={`fa-solid ${iconClass}`} title={conditionDesc}></i>
+                            </div>
+                            <div className="forecast-temps">
+                                <span className="temp-high">{maxTemp}°</span>
+                                <span className="temp-divider">/</span>
+                                <span className="temp-low">{minTemp}°</span>
+                            </div>
+                            <div className="forecast-metrics">
+                                <div className="forecast-metric" title="Precipitation Probability">
+                                    <i className="fa-solid fa-droplet metric-icon precip" />
+                                    <span>{precip}%</span>
+                                </div>
+                                <div className="forecast-metric" title="Cloud Coverage">
+                                    <i className="fa-solid fa-cloud metric-icon cloud" />
+                                    <span>{cloudCoverage}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import AssistantWidget from '../components/AssistantWidget.jsx'
+import WeatherWidget from '../components/WeatherWidget.jsx'
 
 export default function Dashboard() {
     const navigate = useNavigate()
@@ -111,6 +112,8 @@ export default function Dashboard() {
             </header>
 
             <div className="dashboard-grid">
+                <WeatherWidget />
+                
                 <div className="dash-card morning-notes-card">
                     <div className="card-header-row">
                         <h2 className="dash-card-heading"><i className="fa-solid fa-bars-staggered" /> Morning Notes</h2>
