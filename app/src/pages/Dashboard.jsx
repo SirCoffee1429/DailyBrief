@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import AssistantWidget from '../components/AssistantWidget.jsx'
 import WeatherWidget from '../components/WeatherWidget.jsx'
+import SalesBriefing from '../components/SalesBriefing.jsx'
 
 export default function Dashboard() {
     const navigate = useNavigate()
@@ -208,6 +209,8 @@ export default function Dashboard() {
                         </button>
                     </form>
                 </div>
+
+                <SalesBriefing />
             </div>
             <AssistantWidget />
         </div>

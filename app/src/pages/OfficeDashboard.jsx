@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import AssistantWidget from '../components/AssistantWidget.jsx'
 import WeatherWidget from '../components/WeatherWidget.jsx'
+import SalesBriefing from '../components/SalesBriefing.jsx'
 
 export default function OfficeDashboard() {
     const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0 })
@@ -77,6 +78,10 @@ export default function OfficeDashboard() {
                     </div>
                     <div className="office-tile-desc">Knowledge base & recipe questions</div>
                 </Link>
+
+                <div className="sales-column" style={{ gridColumn: 'span 3', marginTop: 'var(--space-6)' }}>
+                    <SalesBriefing />
+                </div>
             </div>
             <AssistantWidget />
         </div>
