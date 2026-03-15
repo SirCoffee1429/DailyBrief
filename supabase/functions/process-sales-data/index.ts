@@ -1,12 +1,14 @@
-/// <reference path="../deno-types.d.ts" />
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import "jsr:@supabase/functions-js@^2.4.1/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
 
 Deno.serve(async (req) => {
   try {
@@ -15,7 +17,7 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     console.log("Received Postmark payload");
 
-    const attachment = payload.Attachments?.find((a: any) => 
+    const attachment = payload.Attachments?.find((a: { ContentType: string, Name: string, Content: string }) =>
       a.ContentType === "application/pdf" || a.Name.toLowerCase().endsWith(".pdf")
     );
 
@@ -46,7 +48,7 @@ Deno.serve(async (req) => {
           Ignore items with 0 units sold if any.
           Sort the resulting array by units_sold descending.
         `;
-    
+
         const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -69,29 +71,29 @@ Deno.serve(async (req) => {
             },
           }),
         });
-    
+
         if (!geminiRes.ok) {
           const errorText = await geminiRes.text();
           throw new Error(`Gemini API Error: ${errorText}`);
         }
-    
+
         const geminiData = await geminiRes.json();
         const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
         const parsedData = JSON.parse(rawOutput);
-    
+
         // 4. Save to Supabase
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-        
+
         // Determine report date (usually today since it's emailed at 5am)
         // Actually, it's the previous night's sales, so let's use yesterday's date if possible,
         // or parse it from the filename/PDF if Gemini can.
         // For now, let's use the current date as the "report" timestamp.
         const reportDate = new Date().toISOString().split('T')[0];
-    
+
         const { error } = await supabase
           .from('sales_data')
           .insert(
-            parsedData.map((item: any) => ({
+            parsedData.map((item: { item_name: string, units_sold: number, category: string }) => ({
               report_date: reportDate,
               item_name: item.item_name,
               units_sold: item.units_sold,
@@ -99,9 +101,9 @@ Deno.serve(async (req) => {
               metadata: { source: payload.From }
             }))
           );
-    
+
         if (error) throw error;
-    
+
         console.log(`Successfully saved ${parsedData.length} items to sales_data in background task`);
       } catch (bgError) {
         console.error("Error in background task processing PDF:", bgError);
@@ -117,9 +119,10 @@ Deno.serve(async (req) => {
       headers: { "Content-Type": "application/json" },
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error processing request payload:", err);
-    return new Response(JSON.stringify({ error: err.message }), { 
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
