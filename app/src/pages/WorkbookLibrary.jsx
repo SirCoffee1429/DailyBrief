@@ -51,22 +51,7 @@ export default function WorkbookLibrary() {
         }
     }
 
-    async function deleteAllWorkbooks() {
-        if (!confirm('Are you absolutely sure you want to delete ALL recipes? This cannot be undone.')) return
 
-        const idsToDelete = workbooks.map(wb => wb.id)
-        if (idsToDelete.length === 0) return
-
-        const { error } = await supabase.from('workbooks').delete().in('id', idsToDelete)
-
-        if (!error) {
-            setWorkbooks([])
-            setSearchQuery('')
-        } else {
-            console.error(error)
-            alert('Failed to delete all recipes.')
-        }
-    }
 
     if (loading) {
         return (
@@ -109,9 +94,7 @@ export default function WorkbookLibrary() {
                     <p className="page-subtitle">{filteredWorkbooks.length} recipe{filteredWorkbooks.length !== 1 ? 's' : ''} {filter !== 'All' ? `in ${filter}` : 'uploaded'}</p>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <button onClick={deleteAllWorkbooks} className="btn btn-danger" disabled={workbooks.length === 0}>
-                        <i className="fa-solid fa-trash" /> Delete All
-                    </button>
+
                     <button onClick={() => setIsCategoryModalOpen(true)} className="btn btn-secondary">
                         <i className="fa-solid fa-list" /> Manage Categories
                     </button>
