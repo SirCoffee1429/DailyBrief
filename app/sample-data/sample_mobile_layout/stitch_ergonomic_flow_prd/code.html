@@ -1,206 +1,403 @@
 <!DOCTYPE html>
-<html class="dark" lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#FF6B00",
-                        "background-light": "#f5f8f7",
-                        "background-dark": "#0a0a0a",
-                        "card-bg": "#1a1a1a",
-                        "accent-muted": "rgba(255, 107, 0, 0.15)"
-                    },
-                    fontFamily: {
-                        "display": ["Space Grotesk"]
-                    },
-                    borderRadius: {
-                        "DEFAULT": "1.5rem",
-                        "lg": "2rem",
-                        "xl": "3rem",
-                        "full": "9999px"
-                    },
-                },
-            },
-        }
-    </script>
+<title>DailyBrief — Mobile Ergonomic Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 <style>
-        body {
-            font-family: "Space Grotesk", sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .glass-nav {
-            background: rgba(26, 26, 26, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        body {
-            min-height: max(884px, 100dvh);
-        }
-    </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-  </head>
-<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen pb-32">
-<header class="sticky top-0 z-40 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 pt-8 pb-4 flex items-center justify-between">
-<div class="flex items-center gap-3">
-<div class="size-12 rounded-full bg-primary flex items-center justify-center text-background-dark shadow-lg shadow-primary/20">
-<span class="material-symbols-outlined font-bold">restaurant_menu</span>
-</div>
-<div>
-<h1 class="text-xl font-bold leading-tight">Kitchen Pro</h1>
-<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Monday, Oct 24</p>
-</div>
-</div>
-<button class="size-12 rounded-full bg-slate-200 dark:bg-card-bg flex items-center justify-center relative">
-<span class="material-symbols-outlined text-slate-700 dark:text-slate-300">notifications</span>
-<span class="absolute top-3 right-3 size-2 bg-primary rounded-full border-2 border-background-dark"></span>
-</button>
-</header>
-<main class="px-4 space-y-6">
-<section class="mt-4">
-<div class="relative group">
-<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-<input class="w-full h-14 pl-12 pr-4 bg-slate-100 dark:bg-card-bg border-none rounded-xl text-base focus:ring-2 focus:ring-primary transition-all" placeholder="Search recipes, SOPs, or guides..." type="text"/>
-</div>
-</section>
-<section class="bg-card-bg rounded-xl overflow-hidden border border-white/5 shadow-2xl">
-<div class="h-48 bg-cover bg-center relative" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBb_cLs6ZshXYBcikiot8exz2TJl3rLNAm0zPwTy3GkDKhFoHG0mw1hj1dEVLSo7GY9kko2eMuTAHdrsWxDKFlS1eSPa2xOJWltsALIYR39jy_TMpVIMuBujlpgY9T8H2R2-rvSyNDwm62Bf6pxCD-00v5ZxcF5riE3yBNwKOR3Lwkcb-4ta8OB3Mz4l1_eWTCUeYtkwIs2jIIYbmwVZQMfmATJjBZKH7_q1yt_ItqXjbkflv-s0wVpJnvDMAROeOdB0SFnim4zJQHI')">
-<div class="absolute inset-0 bg-gradient-to-t from-card-bg via-transparent to-transparent"></div>
-<div class="absolute inset-0 flex items-center justify-center opacity-30">
-<span class="material-symbols-outlined text-9xl text-white">light_mode</span>
-</div>
-<div class="absolute bottom-4 left-4">
-<span class="bg-primary/20 text-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Outdoor Conditions</span>
-</div>
-</div>
-<div class="p-6">
-<div class="flex justify-between items-start mb-4">
-<div>
-<h2 class="text-2xl font-bold">Sunny Outlook Ahead</h2>
-<p class="text-slate-400 text-sm mt-1">Clear skies, ideal for patio service all week</p>
-</div>
-<div class="text-right">
-<span class="text-3xl font-bold text-primary">78°</span>
-<p class="text-[10px] text-slate-500 uppercase font-bold">High Intensity</p>
-</div>
-</div>
-<div class="flex items-end justify-between h-16 gap-2 mb-6">
-<div class="flex-1 bg-white/5 rounded-t-lg h-[60%]"></div>
-<div class="flex-1 bg-white/5 rounded-t-lg h-[75%]"></div>
-<div class="flex-1 bg-primary rounded-t-lg h-[95%] shadow-[0_0_15px_rgba(255,107,0,0.4)]"></div>
-<div class="flex-1 bg-primary rounded-t-lg h-[90%] shadow-[0_0_15px_rgba(255,107,0,0.4)]"></div>
-<div class="flex-1 bg-white/5 rounded-t-lg h-[80%]"></div>
-</div>
-<button class="w-full bg-primary text-background-dark font-bold h-14 rounded-full flex items-center justify-center gap-2 text-lg active:scale-95 transition-transform">
-                    Weekly Weather Details
-                    <span class="material-symbols-outlined">wb_sunny</span>
-</button>
-</div>
-</section>
-<section class="bg-card-bg rounded-xl p-6 border border-white/5 flex gap-6 items-center">
-<div class="flex-1">
-<h3 class="text-lg font-bold">Daily Briefing</h3>
-<p class="text-slate-400 text-sm mt-1">8 staff on shift. 3 key deliveries scheduled for 10 AM.</p>
-<button class="mt-4 px-6 py-2 bg-white/5 hover:bg-white/10 text-slate-200 font-semibold rounded-full text-sm border border-white/10 transition-colors">
-                    Read Briefing
-                </button>
-</div>
-<div class="size-24 rounded-lg bg-cover bg-center shrink-0 grayscale hover:grayscale-0 transition-all" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuALbvE8zJvdiLmsii-o-JHKNznDKW77A_3uyNpNAP7f2R7pcn77TMUgyn3lSIK19TxjCFDc15paucnT46IDA4NtWvSrZ6v29_CEU1yZlDduz27t93o0NrwaLPY5SYk1W1T-l0UCSkiw9-wuhSvGjLKAMfnO7y9_1dexi_G9uJZ8noFInkGYGkaQg3wbmxoBex6HWzZLQ84tZiPpPPb39W-kQbhJJo7qgrSTHC6kYE9g_Pv6gSzfF1q5LU5--Y0LF7oHCHWdH3EFgDYI')"></div>
-</section>
-<section class="space-y-4">
-<div class="flex items-center justify-between px-2">
-<h3 class="text-xl font-bold">Priority Tasks</h3>
-<button class="text-primary text-sm font-bold">See All</button>
-</div>
-<div class="space-y-3">
-<div class="p-4 bg-card-bg border-l-4 border-primary rounded-xl flex items-center justify-between">
-<div class="flex items-center gap-4">
-<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-primary">inventory_2</span>
-</div>
-<div>
-<p class="font-bold">Inventory Audit</p>
-<p class="text-xs text-slate-500">Walk-in freezer, Section B</p>
-</div>
-</div>
-<span class="material-symbols-outlined text-slate-600">chevron_right</span>
-</div>
-</div>
-</section>
-<section class="bg-[#1e3a2f] rounded-xl p-6 border border-emerald-500/20 relative overflow-hidden">
-<div class="absolute -right-8 -top-8 size-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
-<div class="flex justify-between items-center mb-4">
-<span class="text-emerald-400 font-bold flex items-center gap-1">
-<span class="material-symbols-outlined text-sm">trending_up</span> Most Ordered (Last 24h)
-                </span>
-</div>
-<div class="space-y-3">
-<div class="flex justify-between items-center">
-<span class="text-white font-medium">Grilled Salmon</span>
-<span class="text-emerald-400 font-bold">32 servings</span>
-</div>
-<div class="flex justify-between items-center">
-<span class="text-white font-medium">Chocolate Mousse</span>
-<span class="text-emerald-400 font-bold">25 servings</span>
-</div>
-</div>
-</section>
-<section class="bg-card-bg rounded-xl overflow-hidden border border-white/5">
-<div class="h-40 bg-cover bg-center relative" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDb_cLs6ZshXYBcikiot8exz2TJl3rLNAm0zPwTy3GkDKhFoHG0mw1hj1dEVLSo7GY9kko2eMuTAHdrsWxDKFlS1eSPa2xOJWltsALIYR39jy_TMpVIMuBujlpgY9T8H2R2-rvSyNDwm62Bf6pxCD-00v5ZxcF5riE3yBNwKOR3Lwkcb-4ta8OB3Mz4l1_eWTCUeYtkwIs2jIIYbmwVZQMfmATJjBZKH7_q1yt_ItqXjbkflv-s0wVpJnvDMAROeOdB0SFnim4zJQHI')">
-<div class="absolute inset-0 bg-black/40"></div>
-<div class="absolute top-4 left-4">
-<span class="bg-primary text-background-dark text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Seasonal Feature</span>
-</div>
-</div>
-<div class="p-5 flex items-center justify-between gap-4">
-<div>
-<h3 class="text-lg font-bold">Spring Vegetable Soup</h3>
-<p class="text-xs text-slate-400">Prep: 15m • Cook: 45m</p>
-</div>
-<button class="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-2 rounded-full text-sm transition-colors border border-white/10">
-                    Cook Now
-                </button>
-</div>
-</section>
-</main>
-<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
-<div class="glass-nav rounded-full h-20 px-4 flex items-center justify-around shadow-2xl shadow-black/50">
-<a class="flex flex-col items-center justify-center gap-1 text-primary" href="#">
-<span class="material-symbols-outlined font-variation-fill size-8 flex items-center justify-center" style="font-variation-settings: 'FILL' 1">grid_view</span>
-<span class="text-[10px] font-bold uppercase tracking-tighter">Dash</span>
-</a>
-<a class="flex flex-col items-center justify-center gap-1 text-slate-400" href="#">
-<span class="material-symbols-outlined size-8 flex items-center justify-center">checklist</span>
-<span class="text-[10px] font-bold uppercase tracking-tighter">Tasks</span>
-</a>
-<div class="relative -top-6">
-<button class="size-16 rounded-full bg-primary text-background-dark shadow-xl shadow-primary/40 flex items-center justify-center active:scale-90 transition-transform">
-<span class="material-symbols-outlined text-4xl">assistant_device</span>
-</button>
-</div>
-<a class="flex flex-col items-center justify-center gap-1 text-slate-400" href="#">
-<span class="material-symbols-outlined size-8 flex items-center justify-center">restaurant_menu</span>
-<span class="text-[10px] font-bold uppercase tracking-tighter">Recipes</span>
-</a>
-<a class="flex flex-col items-center justify-center gap-1 text-slate-400" href="#">
-<span class="material-symbols-outlined size-8 flex items-center justify-center">bar_chart</span>
-<span class="text-[10px] font-bold uppercase tracking-tighter">Stats</span>
-</a>
-</div>
-</nav>
-<div class="fixed bottom-0 left-0 right-0 h-1 bg-white/10 rounded-t-full pointer-events-none"></div>
+  :root {
+    --bg-primary: #0f1014;
+    --bg-secondary: #18181b;
+    --bg-card: #18181b;
+    --bg-card-hover: #27272a;
+    --bg-glass: rgba(255, 255, 255, 0.05);
+    --border-color: #27272a;
+    --text-primary: #e4e4e7;
+    --text-secondary: #a1a1aa;
+    --text-muted: #9ca3af;
+    --text-bright: #ffffff;
+    --accent: #f97316;
+    --accent-hover: #ea580c;
+    --accent-glow: rgba(249, 115, 22, 0.3);
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-full: 999px;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+  }
 
-</body></html>
+  *, *::before, *::after {
+    margin: 0; padding: 0; box-sizing: border-box;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg-primary);
+    background-image: radial-gradient(circle at top left, #1c1917 0%, #0f1014 40%);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100dvh;
+    padding-bottom: 110px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---- Header ---- */
+  header {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(15, 16, 20, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 20px 16px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .header-brand { display: flex; align-items: center; gap: 12px; }
+
+  .header-logo {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bg-primary); font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+  }
+
+  .header-info h1 { font-size: 1.15rem; font-weight: 700; color: var(--text-bright); line-height: 1.2; }
+  .header-info p { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+  .header-action {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--bg-card); display: flex;
+    align-items: center; justify-content: center;
+    border: 1px solid var(--border-color); color: var(--text-secondary);
+    position: relative;
+  }
+  .header-action .dot {
+    position: absolute; top: 10px; right: 10px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--bg-primary);
+  }
+
+  /* ---- Main ---- */
+  main { padding: 0 12px; display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+
+  /* ---- Card base ---- */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--space-3);
+  }
+  .card-heading {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-bright);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-heading i { color: var(--accent); }
+
+  /* ---- Weather Forecast (compact strip) ---- */
+  .weather-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .forecast-row {
+    display: flex; gap: 8px; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 4px;
+  }
+  .forecast-row::-webkit-scrollbar { display: none; }
+
+  .forecast-day {
+    flex: 0 0 auto; min-width: 72px;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255,255,255,0.03);
+    scroll-snap-align: start;
+  }
+  .forecast-day .day-label { font-size: 11px; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; }
+  .forecast-day .day-icon { font-size: 18px; margin-bottom: 4px; color: #FFB347; }
+  .forecast-day .day-temps { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .forecast-day .day-temps .low { font-weight: 500; color: var(--text-secondary); }
+  .forecast-day .day-metrics { display: flex; flex-direction: column; gap: 2px; font-size: 10px; color: var(--text-secondary); }
+  .forecast-day .day-metrics i.precip { color: #4da6ff; }
+  .forecast-day .day-metrics i.cloud { color: #a0aec0; }
+
+  /* ---- Morning Notes ---- */
+  .notes-list { list-style: none; margin-bottom: var(--space-4); }
+  .notes-list li {
+    position: relative; padding-left: var(--space-4);
+    margin-bottom: var(--space-2); color: var(--text-secondary);
+    font-size: 14px; line-height: 1.5;
+  }
+  .notes-list li::before {
+    content: '•'; color: var(--accent); position: absolute; left: 0;
+    font-size: 1.2rem; line-height: 1;
+  }
+  .briefing-title {
+    font-weight: 600; color: var(--text-primary); margin-bottom: 8px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border-color);
+    font-size: 1rem;
+  }
+
+  /* ---- Tasks ---- */
+  .task-count { background: rgba(249,115,22,0.2); color: var(--accent); padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; min-height: 52px;
+    background: var(--bg-glass); border-radius: var(--radius-md);
+    border: 1px solid transparent;
+  }
+  .task-checkbox {
+    appearance: none; width: 24px; height: 24px;
+    border: 2px solid var(--border-color); border-radius: 4px;
+    background: var(--bg-primary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .task-checkbox:checked { background: var(--accent); border-color: var(--accent); }
+  .task-checkbox:checked::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
+  .task-label { font-size: 14px; color: var(--text-primary); }
+
+  /* ---- Recipes Card ---- */
+  .recipes-icon-box {
+    width: 48px; height: 48px; background: #7c2d12;
+    border-radius: var(--radius-md); display: flex;
+    align-items: center; justify-content: center; font-size: 1.4rem;
+  }
+  .recipes-number { font-size: 2.2rem; font-weight: 700; color: var(--text-bright); line-height: 1; margin-bottom: 2px; }
+  .recipes-subtitle { color: var(--text-muted); font-size: 14px; }
+
+  /* ---- Sales Card ---- */
+  .sales-icon-box {
+    width: 48px; height: 48px; border-radius: var(--radius-md);
+    background: rgba(249, 115, 22, 0.1); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 12px 24px; min-height: 48px;
+    border-radius: var(--radius-full); font-size: 14px;
+    font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all 0.15s ease; border: 1px solid transparent; line-height: 1.4;
+  }
+  .btn-orange { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-orange:hover { background: var(--accent-hover); box-shadow: 0 0 15px var(--accent-glow); }
+
+  /* ---- Bottom Tab Bar ---- */
+  nav.bottom-bar {
+    position: fixed;
+    bottom: 16px; left: 16px; right: 16px;
+    height: 72px; border-radius: 36px;
+    background: rgba(24, 24, 27, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 0 12px;
+    z-index: 50;
+  }
+
+  .nav-link {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: #71717a; text-decoration: none; padding: 8px; min-width: 56px;
+    transition: all 0.15s ease;
+  }
+  .nav-link i { font-size: 1.3rem; }
+  .nav-link span { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .nav-link.active { color: var(--accent); }
+
+  /* Center raised assistant button */
+  .nav-center {
+    position: relative; top: -18px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: var(--accent); color: var(--bg-primary);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(249, 115, 22, 0.45);
+    transition: transform 0.2s ease;
+    border: none; cursor: pointer;
+  }
+  .nav-center i { font-size: 1.6rem; }
+  .nav-center:active { transform: scale(0.92); }
+
+  /* ---- Utility ---- */
+  .mt-auto { margin-top: auto; }
+  .chevron { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo"><i class="fa-solid fa-sun"></i></div>
+    <div class="header-info">
+      <h1>DailyBrief</h1>
+      <p>Sunday, March 15, 2026</p>
+    </div>
+  </div>
+  <button class="header-action" aria-label="Notifications">
+    <i class="fa-solid fa-bell"></i>
+    <span class="dot"></span>
+  </button>
+</header>
+
+<main>
+
+  <!-- 5-Day Forecast (compact strip at top) -->
+  <div class="card weather-card">
+    <div class="card-header">
+      <h2 class="card-heading"><i class="fa-solid fa-cloud-sun"></i> 5-Day Forecast</h2>
+    </div>
+    <div class="forecast-row">
+      <div class="forecast-day">
+        <span class="day-label">Today</span>
+        <i class="fa-solid fa-sun day-icon"></i>
+        <div class="day-temps">72° <span class="low">/ 54°</span></div>
+        <div class="day-metrics">
+          <span><i class="fa-solid fa-droplet precip"></i> 10%</span>
+          <span><i class="fa-solid fa-cloud cloud"></i> 15%</span>
+        </div>
+      </div>
+      <div class="forecast-day">
+        <span class="day-label">Mon</span>
+        <i class="fa-solid fa-cloud-sun day-icon" style="color: #87CEEB;"></i>
+        <div class="day-temps">68° <span class="low">/ 50°</span></div>
+        <div class="day-metrics">
+          <span><i class="fa-solid fa-droplet precip"></i> 25%</span>
+          <span><i class="fa-solid fa-cloud cloud"></i> 40%</span>
+        </div>
+      </div>
+      <div class="forecast-day">
+        <span class="day-label">Tue</span>
+        <i class="fa-solid fa-cloud-rain day-icon" style="color: #4A90E2;"></i>
+        <div class="day-temps">62° <span class="low">/ 48°</span></div>
+        <div class="day-metrics">
+          <span><i class="fa-solid fa-droplet precip"></i> 80%</span>
+          <span><i class="fa-solid fa-cloud cloud"></i> 90%</span>
+        </div>
+      </div>
+      <div class="forecast-day">
+        <span class="day-label">Wed</span>
+        <i class="fa-solid fa-cloud day-icon" style="color: #A0AEC0;"></i>
+        <div class="day-temps">65° <span class="low">/ 49°</span></div>
+        <div class="day-metrics">
+          <span><i class="fa-solid fa-droplet precip"></i> 40%</span>
+          <span><i class="fa-solid fa-cloud cloud"></i> 60%</span>
+        </div>
+      </div>
+      <div class="forecast-day">
+        <span class="day-label">Thu</span>
+        <i class="fa-solid fa-sun day-icon"></i>
+        <div class="day-temps">74° <span class="low">/ 55°</span></div>
+        <div class="day-metrics">
+          <span><i class="fa-solid fa-droplet precip"></i> 5%</span>
+          <span><i class="fa-solid fa-cloud cloud"></i> 10%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Morning Notes -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-heading"><i class="fa-solid fa-bars-staggered"></i> Morning Notes</h2>
+      <i class="fa-solid fa-pencil" style="opacity: 0.5;"></i>
+    </div>
+    <div class="briefing-title">Sunday Service Prep</div>
+    <ul class="notes-list">
+      <li>Brunch special: Smoked Salmon Benedict</li>
+      <li>VIP reservation at 7pm — Table 4, party of 8</li>
+      <li>Seafood delivery arriving by 10 AM, verify weights</li>
+      <li>New seasonal menu tasting at 3 PM with FOH team</li>
+    </ul>
+    <a href="#" class="btn btn-orange" style="width: fit-content;">Edit Notes</a>
+  </div>
+
+  <!-- Tasks -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-heading"><i class="fa-solid fa-list-check"></i> Tasks</h2>
+      <span class="task-count">2/4</span>
+    </div>
+    <div class="task-list">
+      <label class="task-row">
+        <input type="checkbox" class="task-checkbox" checked/>
+        <span class="task-label" style="text-decoration: line-through; color: var(--text-muted);">Prep brunch mise en place</span>
+      </label>
+      <label class="task-row">
+        <input type="checkbox" class="task-checkbox" checked/>
+        <span class="task-label" style="text-decoration: line-through; color: var(--text-muted);">Check walk-in inventory</span>
+      </label>
+      <label class="task-row">
+        <input type="checkbox" class="task-checkbox"/>
+        <span class="task-label">Train new line cook on grill station</span>
+      </label>
+      <label class="task-row">
+        <input type="checkbox" class="task-checkbox"/>
+        <span class="task-label">Update specials board for dinner</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Active Recipes -->
+  <div class="card" style="display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <div class="recipes-icon-box"><i class="fa-solid fa-book-open"></i></div>
+      <i class="fa-solid fa-arrow-up-right-from-square chevron"></i>
+    </div>
+    <div class="recipes-number">24</div>
+    <div class="recipes-subtitle">Active Recipes</div>
+  </div>
+
+  <!-- Sales Reports -->
+  <div class="card" style="display: flex; align-items: center; gap: 16px;">
+    <div class="sales-icon-box"><i class="fa-solid fa-chart-line"></i></div>
+    <div style="flex: 1;">
+      <h2 class="card-heading" style="margin-bottom: 4px;">Sales Reports</h2>
+      <div style="color: var(--text-bright); font-size: 1rem; font-weight: 600;">Previous Night's Sales</div>
+      <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Saturday, Mar 14 • 42 Items Logged</div>
+    </div>
+    <i class="fa-solid fa-chevron-right chevron"></i>
+  </div>
+
+</main>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-bar">
+  <a href="#" class="nav-link active">
+    <i class="fa-solid fa-table-cells-large"></i>
+    <span>Brief</span>
+  </a>
+  <button class="nav-center" aria-label="Assistant">
+    <i class="fa-solid fa-brain"></i>
+  </button>
+  <a href="#" class="nav-link">
+    <i class="fa-solid fa-utensils"></i>
+    <span>Recipes</span>
+  </a>
+</nav>
+
+</body>
+</html>

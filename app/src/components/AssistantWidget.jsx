@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 
-export default function AssistantWidget() {
+export default function AssistantWidget({ externalOpen, onExternalClose }) {
     const [isOpen, setIsOpen] = useState(false)
     const [messages, setMessages] = useState([
         { role: 'assistant', text: 'Hey Chef! 👋 Ask me anything about your recipes.' }
@@ -9,6 +9,18 @@ export default function AssistantWidget() {
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
     const messagesEndRef = useRef(null)
+
+    // Sync with external open state (from nav bar center button)
+    useEffect(() => {
+        if (externalOpen !== undefined) {
+            setIsOpen(externalOpen)
+        }
+    }, [externalOpen])
+
+    function handleClose() {
+        setIsOpen(false)
+        if (onExternalClose) onExternalClose()
+    }
 
     useEffect(() => {
         if (isOpen) {
@@ -52,7 +64,7 @@ export default function AssistantWidget() {
                         <div className="assistant-widget-title">
                             <i className="fa-solid fa-robot"></i> Kitchen Assistant
                         </div>
-                        <button className="assistant-widget-close" onClick={() => setIsOpen(false)}>
+                        <button className="assistant-widget-close" onClick={handleClose}>
                             <i className="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -87,7 +99,7 @@ export default function AssistantWidget() {
 
             <button
                 className={`assistant-widget-fab ${isOpen ? 'open' : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => isOpen ? handleClose() : setIsOpen(true)}
                 aria-label="Toggle Assistant"
             >
                 {isOpen ? <i className="fa-solid fa-xmark"></i> : <i className="fa-solid fa-message"></i>}
