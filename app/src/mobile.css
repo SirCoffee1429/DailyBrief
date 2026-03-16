@@ -284,4 +284,20 @@
   .forecast-container {
     scrollbar-width: none;
   }
+
+  /* ---- Voice — fullscreen overlay & chunky mic on mobile ---- */
+  .voice-overlay {
+    position: fixed;
+    z-index: 300;
+  }
+
+  .mic-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+
+  .bottom-tab-center.long-press-active {
+    animation: longPressScale 1.5s ease-out forwards;
+  }
 }

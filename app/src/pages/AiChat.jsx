@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import useVoiceInput, { isVoiceSupported } from '../lib/useVoiceInput.js'
 
 export default function AiChat() {
     const [messages, setMessages] = useState([
@@ -13,6 +14,15 @@ export default function AiChat() {
     const [searchParams] = useSearchParams()
     const initialQuery = searchParams.get('q')
     const hasProcessedInitialQuery = useRef(false)
+
+    // Voice input
+    const handleVoiceResult = useCallback((text) => {
+        if (text) submitQuestion(text)
+    }, [])
+
+    const { isListening, transcript, error: voiceError, startListening, stopListening } = useVoiceInput({
+        onResult: handleVoiceResult,
+    })
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -59,6 +69,18 @@ export default function AiChat() {
         await submitQuestion(question)
     }
 
+    function handleMicClick() {
+        if (!isVoiceSupported()) {
+            setMessages(prev => [...prev, { role: 'assistant', text: '⚠️ Voice input is not supported in this browser. Try Chrome or Edge.' }])
+            return
+        }
+        if (isListening) {
+            stopListening()
+        } else {
+            startListening()
+        }
+    }
+
     return (
         <div>
             <div className="page-header">
@@ -90,6 +112,22 @@ export default function AiChat() {
                             onChange={e => setInput(e.target.value)}
                             disabled={loading}
                         />
+                        {isVoiceSupported() && (
+                            <button
+                                type="button"
+                                className={`mic-btn ${isListening ? 'active' : ''}`}
+                                onClick={handleMicClick}
+                                disabled={loading}
+                                aria-label="Voice input"
+                            >
+                                <i className="fa-solid fa-microphone"></i>
+                            </button>
+                        )}
+                        {isListening && transcript && (
+                            <div className="voice-inline-indicator">
+                                <span className="voice-inline-dot"></span> {transcript}
+                            </div>
+                        )}
                         <button className="btn btn-primary" type="submit" disabled={loading || !input.trim()}>
                             Send
                         </button>

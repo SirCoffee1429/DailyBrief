@@ -894,6 +894,7 @@ a:hover {
 }
 
 .chat-input-bar {
+  position: relative;
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4);
@@ -1985,4 +1986,201 @@ a:hover {
         padding-top: 0;
         gap: var(--space-3);
     }
+}
+
+/* ============================================
+   Voice Input & Listening Overlay
+   ============================================ */
+
+/* --- Voice Overlay (fullscreen / panel listening UI) --- */
+.voice-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(10, 10, 14, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInUp 0.3s ease;
+}
+
+.voice-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-6);
+    text-align: center;
+    max-width: 320px;
+}
+
+/* --- Pulsing Mic Icon --- */
+.voice-mic-icon {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #ea580c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    transition: transform 0.2s ease;
+}
+
+.voice-mic-icon.listening {
+    animation: micPulse 1.5s ease-in-out infinite;
+}
+
+.voice-mic-ring {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    animation: micRing 2s ease-out infinite;
+}
+
+.voice-mic-ring.ring-2 {
+    inset: -18px;
+    animation-delay: 0.4s;
+}
+
+@keyframes micPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+
+@keyframes micRing {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+/* --- Status & Transcript --- */
+.voice-status {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: 0.02em;
+}
+
+.voice-transcript {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.6;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: var(--space-3) var(--space-4);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-md);
+    width: 100%;
+}
+
+.voice-error {
+    font-size: var(--font-size-sm);
+    color: var(--danger);
+    padding: var(--space-2) var(--space-3);
+    background: var(--danger-bg);
+    border-radius: var(--radius-md);
+}
+
+/* --- Done / Cancel Buttons --- */
+.voice-actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+.voice-done-btn,
+.voice-cancel-btn {
+    min-height: 44px;
+    border-radius: var(--radius-full);
+    padding: var(--space-2) var(--space-5);
+    font-size: var(--font-size-sm);
+}
+
+/* --- Mic Button (in input bars) --- */
+.mic-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-glass);
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.mic-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(249, 115, 22, 0.08);
+}
+
+.mic-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    animation: micPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+}
+
+.mic-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- Inline voice indicator (AiChat page) --- */
+.voice-inline-indicator {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: var(--space-4);
+    right: var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    animation: fadeInUp 0.2s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.voice-inline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: micPulse 1s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+/* --- Long-press animation on center button --- */
+.bottom-tab-center.long-press-active {
+    animation: longPressScale 1.5s ease-out forwards;
+    box-shadow: 0 4px 24px rgba(249, 115, 22, 0.6);
+}
+
+@keyframes longPressScale {
+    0% { transform: scale(1); }
+    60% { transform: scale(0.9); }
+    100% { transform: scale(1.1); }
 }
