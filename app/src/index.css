@@ -207,6 +207,52 @@ a:hover {
   font-weight: 700;
 }
 
+/* Center Assistant Tab — desktop */
+.bottom-tab-center {
+  background: var(--accent);
+  color: #0f1014;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  min-width: auto;
+  position: relative;
+  top: -8px;
+}
+
+.bottom-tab-center .tab-icon {
+  font-size: 1.3rem;
+  color: #0f1014;
+}
+
+.bottom-tab-center .tab-label {
+  display: none;
+}
+
+.bottom-tab-center:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 24px rgba(249, 115, 22, 0.5);
+  color: #0f1014;
+}
+
+.bottom-tab-center:active {
+  transform: scale(0.94);
+}
+
+.bottom-tab-center.active {
+  color: #0f1014;
+  box-shadow: 0 4px 24px rgba(249, 115, 22, 0.6);
+}
+
 /* ============================================
    Page Headers
    ============================================ */

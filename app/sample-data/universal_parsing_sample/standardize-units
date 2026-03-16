@@ -1,0 +1,38 @@
+const unitConversions = {
+  // Weight
+  'oz': { to: 'oz', factor: 1 },
+  'ounce': { to: 'oz', factor: 1 },
+  'lb': { to: 'oz', factor: 16 },
+  'pound': { to: 'oz', factor: 16 },
+  'g': { to: 'oz', factor: 0.035274 },
+  'gram': { to: 'oz', factor: 0.035274 },
+  'kg': { to: 'oz', factor: 35.274 },
+  
+  // Volume
+  'cup': { to: 'cup', factor: 1 },
+  'tbsp': { to: 'cup', factor: 0.0625 },
+  'tsp': { to: 'cup', factor: 0.020833 },
+  'ml': { to: 'cup', factor: 0.004227 },
+  'l': { to: 'cup', factor: 4.227 },
+  'fl oz': { to: 'cup', factor: 0.125 },
+  
+  // Count
+  'each': { to: 'each', factor: 1 },
+  'piece': { to: 'each', factor: 1 },
+  'portion': { to: 'each', factor: 1 }
+};
+
+function normalizeUnit(unit) {
+  const normalized = unitConversions[unit.toLowerCase()];
+  return normalized ? normalized.to : unit;
+}
+
+function convertToStandard(quantity, unit) {
+  const conversion = unitConversions[unit.toLowerCase()];
+  if (!conversion) return { quantity, unit };
+  
+  return {
+    quantity: quantity * conversion.factor,
+    unit: conversion.to
+  };
+}
