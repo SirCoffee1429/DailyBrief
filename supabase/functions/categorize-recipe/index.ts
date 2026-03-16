@@ -1,5 +1,4 @@
-/// <reference path="../deno-types.d.ts" />
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import "@supabase/functions-js/edge-runtime.d.ts";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_ENDPOINT =
@@ -90,7 +89,7 @@ ${text.substring(0, 1500)} // Analyze up to first 1500 chars to avoid token limi
       });
     }
 
-    let rawCategory = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Uncategorized";
+    const rawCategory = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Uncategorized";
 
     // Because we asked for comma separated, split and clean.
     const rawCategories = rawCategory.split(',').map((c: string) => c.trim().replace(/[^a-zA-Z- ]/g, ""));

@@ -1,4 +1,4 @@
-export const WORKBOOK_CATEGORIES = ['All', 'Salad', 'Fry', 'Sauces', 'BBQ', 'Grill', 'Sautee', 'Add-Ons', 'Uncategorized']
+
 
 export function formatFileSize(bytes) {
     if (!bytes) return '—'
