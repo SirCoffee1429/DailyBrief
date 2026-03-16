@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import AssistantWidget from '../components/AssistantWidget.jsx'
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
 
@@ -83,7 +82,6 @@ export default function OfficeDashboard() {
                     <SalesBriefing />
                 </div>
             </div>
-            <AssistantWidget />
         </div>
     )
 }
