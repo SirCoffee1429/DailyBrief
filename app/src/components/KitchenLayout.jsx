@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
+import AssistantWidget from './AssistantWidget.jsx'
 
 
 export default function KitchenLayout({ children }) {
@@ -40,6 +41,13 @@ export default function KitchenLayout({ children }) {
                 {children}
             </main>
 
+            {/* Assistant widget — FAB hidden on mobile via CSS; chat panel still works */}
+            <AssistantWidget
+                externalOpen={assistantOpen}
+                onExternalClose={() => { setAssistantOpen(false); setVoiceMode(false) }}
+                voiceMode={voiceMode}
+                onVoiceModeEnd={() => setVoiceMode(false)}
+            />
 
 
             <nav className="bottom-tab-bar">
