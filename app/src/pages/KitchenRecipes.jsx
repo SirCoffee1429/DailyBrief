@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { formatFileSize } from '../lib/workbooks.js'
 import { useCategories } from '../lib/useCategories.js'
+import EditRecipeContentModal from '../components/EditRecipeContentModal.jsx'
 
 export default function KitchenRecipes() {
     const { categories, loading: categoriesLoading } = useCategories()
@@ -10,6 +11,7 @@ export default function KitchenRecipes() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('All')
     const [searchQuery, setSearchQuery] = useState('')
+    const [editWorkbook, setEditWorkbook] = useState(null)
 
     useEffect(() => {
         async function load() {
@@ -104,7 +106,20 @@ export default function KitchenRecipes() {
                 <div className="workbook-grid">
                     {filteredWorkbooks.map(wb => (
                         <Link key={wb.id} to={`/kitchen/recipes/${wb.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            <div className="workbook-card">
+                            <div className="workbook-card" style={{ position: 'relative' }}>
+                                {/* Pencil edit icon */}
+                                <button
+                                    className="recipe-edit-btn"
+                                    onClick={e => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setEditWorkbook(wb)
+                                    }}
+                                    title="Edit recipe"
+                                >
+                                    <i className="fa-solid fa-pen-to-square"></i>
+                                </button>
+
                                 <div className="workbook-card-icon">📊</div>
                                 <div className="workbook-card-name">{wb.file_name}</div>
                                 <div className="workbook-card-meta">
@@ -143,6 +158,16 @@ export default function KitchenRecipes() {
                     ))}
                 </div>
             )}
+
+            {/* Edit Recipe Content Modal */}
+            <EditRecipeContentModal
+                isOpen={!!editWorkbook}
+                onClose={() => setEditWorkbook(null)}
+                workbook={editWorkbook}
+                onSaved={() => {
+                    // Optionally refresh data; for now just close
+                }}
+            />
         </div>
     )
 }
