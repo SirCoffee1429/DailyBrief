@@ -11,6 +11,8 @@ export default function useVoiceInput({ onResult, onError } = {}) {
     const [transcript, setTranscript] = useState('')
     const [error, setError] = useState(null)
     const recognitionRef = useRef(null)
+    // Stores the transcript synchronously — no React render needed
+    const transcriptRef = useRef('')
 
     const startListening = useCallback(() => {
         if (!SpeechRecognition) {
@@ -25,6 +27,9 @@ export default function useVoiceInput({ onResult, onError } = {}) {
             try { recognitionRef.current.abort() } catch (_) { /* noop */ }
         }
 
+        // Reset the transcript ref
+        transcriptRef.current = ''
+
         const recognition = new SpeechRecognition()
         recognition.continuous = false
         recognition.interimResults = true
@@ -33,6 +38,7 @@ export default function useVoiceInput({ onResult, onError } = {}) {
         recognition.onstart = () => {
             setIsListening(true)
             setTranscript('')
+            transcriptRef.current = ''
             setError(null)
         }
 
@@ -47,20 +53,20 @@ export default function useVoiceInput({ onResult, onError } = {}) {
                     interim += result[0].transcript
                 }
             }
-            setTranscript(final || interim)
+            const current = final || interim
+            // Update ref synchronously so onend always sees the latest value
+            transcriptRef.current = current
+            setTranscript(current)
         }
 
         recognition.onend = () => {
             setIsListening(false)
-            // Grab the latest transcript via functional ref
-            // We use a small delay so the final onresult fires first
-            setTimeout(() => {
-                const finalTranscript = recognitionRef.current?._lastTranscript
-                if (finalTranscript && finalTranscript.trim()) {
-                    onResult?.(finalTranscript.trim())
-                }
-                recognitionRef.current = null
-            }, 100)
+            // Read directly from the ref — always has the latest transcript
+            const finalTranscript = transcriptRef.current
+            if (finalTranscript && finalTranscript.trim()) {
+                onResult?.(finalTranscript.trim())
+            }
+            recognitionRef.current = null
         }
 
         recognition.onerror = (event) => {
@@ -88,16 +94,10 @@ export default function useVoiceInput({ onResult, onError } = {}) {
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
-            // Save whatever transcript we have before stopping
-            recognitionRef.current._lastTranscript = transcript
             try { recognitionRef.current.stop() } catch (_) { /* noop */ }
         }
-    }, [transcript])
-
-    // Keep _lastTranscript updated whenever transcript changes
-    if (recognitionRef.current) {
-        recognitionRef.current._lastTranscript = transcript
-    }
+    }, [])
 
     return { isListening, transcript, error, startListening, stopListening }
 }
+
