@@ -12,7 +12,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -27,7 +26,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Create Supabase client using the request's auth
     const authHeader = req.headers.get("Authorization") || "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -35,20 +33,50 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Fetch workbook chunks for context
-    const { data: chunks } = await supabase
-      .from("workbook_chunks")
-      .select("content")
-      .limit(10000);
+    // Step 1: Embed the question
+    const embeddingRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "models/text-embedding-004",
+          content: { parts: [{ text: question }] }
+        })
+      }
+    );
 
-    const context = (chunks || []).map((c: { content: string }) => c.content).join("\n\n---\n\n");
+    const embeddingData = await embeddingRes.json();
+    const queryVector = embeddingData.embedding?.values;
+
+    let context = "";
+
+    if (queryVector) {
+      // Step 2: Find the most relevant chunks via vector similarity
+      const { data: chunks, error } = await supabase.rpc("match_chunks", {
+        query_embedding: queryVector,
+        match_count: 15
+      });
+
+      if (error) console.error("match_chunks error:", error);
+
+      context = (chunks || []).map((c: { content: string }) => c.content).join("\n\n---\n\n");
+    } else {
+      // Fallback: if embedding fails, grab a limited set of chunks the old way
+      console.warn("Embedding failed, falling back to keyword fetch");
+      const { data: chunks } = await supabase
+        .from("workbook_chunks")
+        .select("content")
+        .limit(50);
+      context = (chunks || []).map((c: { content: string }) => c.content).join("\n\n---\n\n");
+    }
 
     const systemPrompt = `You are a helpful kitchen assistant for a restaurant crew. You have access to the restaurant's recipe workbooks and operational data. Answer questions accurately based on the workbook data provided below. If the answer isn't in the data, say so honestly. Be concise and practical — these are busy kitchen workers. IMPORTANT FORMATTING RULE: Do NOT use markdown formatting like **bold** or *italics*. However, you MUST use line breaks and simple dashes (-) to create clean, readable lists for ingredients and steps.
 
 WORKBOOK DATA:
 ${context || "(No workbooks uploaded yet)"}`;
 
-    // Call Gemini
+    // Step 3: Send to Gemini
     const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -74,6 +102,7 @@ ${context || "(No workbooks uploaded yet)"}`;
     return new Response(JSON.stringify({ answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("Edge function error:", err);
     return new Response(

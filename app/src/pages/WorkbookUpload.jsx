@@ -185,6 +185,11 @@ export default function WorkbookUpload() {
                 if (chunksToInsert.length > 0) {
                     await supabase.from('workbook_chunks').insert(chunksToInsert)
                 }
+                supabase.functions.invoke('embed-chunks', {
+                    body: { workbook_id: wbData.id }
+                }).then(({ error }) => {
+                    if (error) console.error('Embedding error:', error)
+                })
 
                 setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'done', category: category, workbookId: wbData.id } : f))
             } catch (err) {
