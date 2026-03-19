@@ -85,21 +85,12 @@ export default function Dashboard() {
             <header className="dashboard-header">
                 <div className="header-left">
                     <h1 className="header-title"><i className="fa-solid fa-sun title-icon" /> Today's Briefing</h1>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-1)' }}>
-                        <p className="header-date" style={{ marginTop: 0 }}>
-                            {latestBriefing
-                                ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-                                : today
-                            }
-                        </p>
-                        {todaysBriefings.length > 1 && (
-                            <div className="briefing-cycler" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.05)', padding: '2px 10px', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-color)' }}>
-                                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: activeIndex > 0 ? 'pointer' : 'default', opacity: activeIndex > 0 ? 1 : 0.3 }} onClick={() => activeIndex > 0 && setActiveIndex(activeIndex - 1)} aria-label="Previous Briefing"><i className="fa-solid fa-chevron-left" /></button>
-                                <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{activeIndex + 1} OF {todaysBriefings.length}</span>
-                                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: activeIndex < todaysBriefings.length - 1 ? 'pointer' : 'default', opacity: activeIndex < todaysBriefings.length - 1 ? 1 : 0.3 }} onClick={() => activeIndex < todaysBriefings.length - 1 && setActiveIndex(activeIndex + 1)} aria-label="Next Briefing"><i className="fa-solid fa-chevron-right" /></button>
-                            </div>
-                        )}
-                    </div>
+                    <p className="header-date" style={{ marginTop: 'var(--space-1)' }}>
+                        {latestBriefing
+                            ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                            : today
+                        }
+                    </p>
                 </div>
                 <div className="header-actions" ref={menuRef}>
                     <button className="header-icon-btn" aria-label="Settings" onClick={() => setShowMenu(prev => !prev)}>
@@ -119,10 +110,21 @@ export default function Dashboard() {
                 <WeatherWidget />
                 
                 <div className="dash-card morning-notes-card">
-                    <div className="card-header-row">
-                        <h2 className="dash-card-heading"><i className="fa-solid fa-bars-staggered" /> Morning Notes</h2>
-                        <div className="illustration-icon"><i className="fa-solid fa-pencil" /></div>
-                    </div>
+                    {todaysBriefings.length > 1 && (
+                        <div className="briefing-cycler">
+                            <button className="briefing-cycler-btn" disabled={activeIndex === 0} onClick={() => setActiveIndex(activeIndex - 1)} aria-label="Previous Briefing">
+                                <i className="fa-solid fa-chevron-left" />
+                            </button>
+                            <span className="briefing-cycler-label">
+                                <i className="fa-solid fa-layer-group" style={{ marginRight: '6px', opacity: 0.7 }} />
+                                Briefing {activeIndex + 1} of {todaysBriefings.length}
+                            </span>
+                            <button className="briefing-cycler-btn" disabled={activeIndex >= todaysBriefings.length - 1} onClick={() => setActiveIndex(activeIndex + 1)} aria-label="Next Briefing">
+                                <i className="fa-solid fa-chevron-right" />
+                            </button>
+                        </div>
+                    )}
+
                     {latestBriefing ? (
                         <>
                             {latestBriefing.title && (

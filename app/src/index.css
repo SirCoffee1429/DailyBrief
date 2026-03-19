@@ -471,6 +471,54 @@ a:hover {
   min-height: 340px;
 }
 
+/* Briefing Cycler */
+.briefing-cycler {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.04));
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  margin-bottom: var(--space-4);
+  animation: fadeIn 0.3s ease;
+}
+
+.briefing-cycler-label {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 0.03em;
+  user-select: none;
+}
+
+.briefing-cycler-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.85rem;
+}
+
+.briefing-cycler-btn:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.briefing-cycler-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
 .illustration-icon {
   font-size: 1.5rem;
   opacity: 0.7;
