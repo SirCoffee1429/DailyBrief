@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import AssistantWidget from '../components/AssistantWidget.jsx'
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
 
@@ -42,7 +41,10 @@ export default function OfficeDashboard() {
             </header>
 
             <div className="office-grid">
-                <WeatherWidget />
+                <div className="office-weather-row">
+                    <WeatherWidget />
+                </div>
+
                 <Link to="/office/briefings" className="office-tile">
                     <div className="office-tile-icon"><i className="fa-solid fa-clipboard-list" /></div>
                     <div className="office-tile-info">
@@ -70,20 +72,10 @@ export default function OfficeDashboard() {
                     <div className="office-tile-desc">Daily task completion & briefing log</div>
                 </Link>
 
-                <Link to="/office/chat" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-brain" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">Ask</span>
-                        <span className="office-tile-label">Assistant</span>
-                    </div>
-                    <div className="office-tile-desc">Knowledge base & recipe questions</div>
-                </Link>
-
-                <div className="sales-column" style={{ gridColumn: 'span 3', marginTop: 'var(--space-6)' }}>
+                <div className="office-weather-row">
                     <SalesBriefing />
                 </div>
             </div>
-            <AssistantWidget />
         </div>
     )
 }

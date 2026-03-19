@@ -1486,6 +1486,10 @@ a:hover {
   margin-top: var(--space-6);
 }
 
+.office-weather-row {
+  grid-column: 1 / -1;
+}
+
 .office-tile {
   display: flex;
   flex-direction: column;
