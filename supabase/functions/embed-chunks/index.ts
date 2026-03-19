@@ -71,11 +71,11 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
-  } catch (err) {
-    console.error("embed-chunks error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+} catch (err) {
+    console.error("embed-chunks error:", JSON.stringify(err))
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : JSON.stringify(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    })
   }
 });
