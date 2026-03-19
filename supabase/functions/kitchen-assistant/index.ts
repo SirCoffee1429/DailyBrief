@@ -35,13 +35,14 @@ Deno.serve(async (req: Request) => {
 
     // Step 1: Embed the question
     const embeddingRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "models/text-embedding-004",
-          content: { parts: [{ text: question }] }
+          model: "models/gemini-embedding-001",
+          content: { parts: [{ text: question }] },
+          outputDimensionality: 768,
         })
       }
     );
