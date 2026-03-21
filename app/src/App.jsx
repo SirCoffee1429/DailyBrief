@@ -15,6 +15,7 @@ import OfficeLayout from './components/OfficeLayout.jsx'
 import OfficeGate from './components/OfficeGate.jsx'
 import SalesReports from './pages/SalesReports.jsx'
 import SalesReportDetail from './pages/SalesReportDetail.jsx'
+import ManagementBoardPage from './pages/ManagementBoardPage.jsx'
 
 export default function App() {
     return (
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/office/workbooks/upload" element={<OfficeGate><OfficeLayout><WorkbookUpload /></OfficeLayout></OfficeGate>} />
             <Route path="/office/workbooks/:id" element={<OfficeGate><OfficeLayout><WorkbookViewer /></OfficeLayout></OfficeGate>} />
             <Route path="/office/history" element={<OfficeGate><OfficeLayout><History /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/board" element={<OfficeGate><OfficeLayout><ManagementBoardPage /></OfficeLayout></OfficeGate>} />
             <Route path="/office/chat" element={<OfficeGate><OfficeLayout><AiChat /></OfficeLayout></OfficeGate>} />
             <Route path="/office/sales" element={<OfficeGate><OfficeLayout><SalesReports /></OfficeLayout></OfficeGate>} />
             <Route path="/office/sales/:date" element={<OfficeGate><OfficeLayout><SalesReportDetail /></OfficeLayout></OfficeGate>} />

@@ -1,0 +1,143 @@
+# DailyBrief — Change Log
+
+---
+
+### 2026-03-19 — Fix Embedding API 404 Errors
+
+**File(s) Changed:** `supabase/functions/embed-chunks/index.ts`, `supabase/functions/kitchen-assistant/index.ts`
+**Type:** `fix`
+**Summary:** Fixed 404 errors when calling Google's embedding API. The `text-embedding-004` model was deprecated and shut down (Jan 2026).
+
+**Details:**
+
+- Switched embedding model from `text-embedding-004` to `gemini-embedding-001`
+- Changed API version from `/v1/` to `/v1beta/`
+- Added `outputDimensionality: 768` parameter to match existing vector column size
+- Both edge functions redeployed to Supabase
+
+---
+
+### 2026-03-19 — Move Briefing Cycler to Morning Notes Card
+
+**File(s) Changed:** `app/src/pages/Dashboard.jsx`, `app/src/index.css`
+**Type:** `refactor`
+**Summary:** Moved the briefing cycler from the header into the morning notes card for better visibility, and removed the "Morning Notes" heading.
+
+**Details:**
+
+- Removed briefing cycler from the dashboard header
+- Placed it at the top of the `morning-notes-card` component
+- Added dedicated CSS classes (`.briefing-cycler`, `.briefing-cycler-btn`, `.briefing-cycler-label`)
+- Orange gradient background with layer-group icon and clear "Briefing X of Y" label
+- Removed the "Morning Notes" `card-header-row`
+
+---
+
+### 2026-03-19 — Restructure Office Dashboard
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx`, `app/src/index.css`
+**Type:** `refactor`
+**Summary:** Removed the Ask Assistant card, kept forecast at top, and arranged remaining tiles evenly.
+
+**Details:**
+
+- Removed `AssistantWidget` import and Ask Assistant tile
+- Weather forecast spans full width at top via `.office-weather-row`
+- Briefings, Workbooks, Task History in a 2x2 grid
+- SalesBriefing component kept inline spanning full width at the bottom
+
+---
+
+### 2026-03-19 — Management Whiteboard Feature
+
+**File(s) Changed:** `app/src/components/ManagementWhiteboard.jsx`, `app/src/pages/OfficeDashboard.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Added a management-only whiteboard on the Office Dashboard for internal communication.
+
+**Details:**
+
+- Created `management_notes` table in Supabase with columns: id, content, author, pinned, created_at
+- RLS policy allows all operations (protected by password gate at application level)
+- Built `ManagementWhiteboard.jsx` component with post, pin/unpin, delete, and relative timestamps
+- Blue-tinted accent theme to differentiate from orange kitchen UI
+- Ctrl+Enter shortcut to post quickly
+- Pin/delete action buttons appear on hover
+- Integrated below weather forecast in OfficeDashboard.jsx
+
+---
+
+### 2026-03-19 — Move Management Board to Dedicated Page
+
+**File(s) Changed:** `app/src/pages/ManagementBoardPage.jsx`, `app/src/pages/OfficeDashboard.jsx`, `app/src/App.jsx`
+**Type:** `refactor`
+**Summary:** Moved the Management Board from an inline widget to its own page at `/office/board`.
+
+**Details:**
+
+- Created `ManagementBoardPage.jsx` as a page wrapper with header and back button
+- Replaced inline `<ManagementWhiteboard />` on the dashboard with a Link tile card
+- Tile shows note count, blue chalkboard icon, and links to `/office/board`
+- Added route in `App.jsx` wrapped in `OfficeGate` + `OfficeLayout`
+- Added blue hover accent for the board tile
+
+---
+
+### 2026-03-20 — Redesign Management Board (Column Layout)
+
+**File(s) Changed:** `app/src/components/ManagementWhiteboard.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Redesigned the Management Board to match the Stitch whiteboard reference — 4-column layout with categorized content.
+
+**Details:**
+
+- Added `category` column to `management_notes` table (alerts, events, comms, features)
+- Rebuilt ManagementWhiteboard as a 4-column layout:
+  - 86'd Items & Alerts (red accent)
+  - Special Events & Catering (blue accent)
+  - Department Communication (green accent)
+  - Lunch/Dinner Features (orange accent)
+- Each column has its own scrollable feed, header with count badge, and inline message input
+- Author name persisted to localStorage across sessions
+- Hover-reveal pin/delete actions on each note
+- Responsive: 4-col → 2-col → 1-col as viewport narrows
+- Replaced all old `.mgmt-*` CSS classes with new `.wb-*` column-based styles
+
+---
+
+### 2026-03-20 — Weekly Features Schedule Column
+
+**File(s) Changed:** `app/src/components/WeeklyFeatures.jsx`, `app/src/components/ManagementWhiteboard.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Replaced the 4th whiteboard column with a weekly schedule for lunch and dinner features.
+
+**Details:**
+
+- Created `weekly_features` table with unique constraint on (week_start, day_of_week, meal)
+- Built `WeeklyFeatures.jsx` component with Mon-Sun rows, each showing lunch (☀️) and dinner (🌙) slots
+- Click any slot to edit inline, press Enter to save or Escape to cancel
+- Week navigation with prev/next arrows and date range label
+- Today's row is highlighted with an orange accent border
+- Removed `features` from the generic COLUMNS array in ManagementWhiteboard
+- Added `.wf-*` CSS classes for the schedule layout
+
+---
+
+### 2026-03-20 — Refactor Kitchen Sales View
+
+**File(s) Changed:** `app/src/pages/SalesReportDetail.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Redesigned the "Previous Night's Sales" detail view to match the new UI mockups with a two-panel layout.
+
+**Details:**
+
+- Removed the `#` rank numbers from the item list
+- Implemented a two-panel layout: "Top Selling Items (Volume)" and "Sales by Category"
+- Top Selling Items panel:
+  - Display item names in uppercase
+  - Replaced plain counts with "XX ORDERS"
+  - Updated progress bars to use vibrant gradients (`linear-gradient`)
+- Sales by Category panel:
+  - Added new panel using the `category` data extracted by the Edge Function
+  - Calculates category percentage based on volume
+  - Displays color-coded dots, category name, percentage, and total units sold
+- Added `.sr-*` CSS classes for the new two-panel layout and stylized components

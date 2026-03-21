@@ -5,19 +5,21 @@ import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
 
 export default function OfficeDashboard() {
-    const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0 })
+    const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0, notes: 0 })
 
     useEffect(() => {
         async function load() {
-            const [wbRes, brRes, taskRes] = await Promise.all([
+            const [wbRes, brRes, taskRes, noteRes] = await Promise.all([
                 supabase.from('workbooks').select('id', { count: 'exact', head: true }),
                 supabase.from('briefings').select('id', { count: 'exact', head: true }),
                 supabase.from('briefing_tasks').select('id', { count: 'exact', head: true }),
+                supabase.from('management_notes').select('id', { count: 'exact', head: true }),
             ])
             setStats({
                 workbooks: wbRes.count || 0,
                 briefings: brRes.count || 0,
                 tasks: taskRes.count || 0,
+                notes: noteRes.count || 0,
             })
         }
         load()
@@ -45,6 +47,15 @@ export default function OfficeDashboard() {
                     <WeatherWidget />
                 </div>
 
+                <Link to="/office/board" className="office-tile">
+                    <div className="office-tile-icon"><i className="fa-solid fa-chalkboard" /></div>
+                    <div className="office-tile-info">
+                        <span className="office-tile-value">{stats.notes}</span>
+                        <span className="office-tile-label">Board</span>
+                    </div>
+                    <div className="office-tile-desc">Management whiteboard & internal updates</div>
+                </Link>
+
                 <Link to="/office/briefings" className="office-tile">
                     <div className="office-tile-icon"><i className="fa-solid fa-clipboard-list" /></div>
                     <div className="office-tile-info">
@@ -55,10 +66,10 @@ export default function OfficeDashboard() {
                 </Link>
 
                 <Link to="/office/workbooks" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-folder-open" /></div>
+                    <div className="office-tile-icon"><i className="fa-solid fa-book-open" /></div>
                     <div className="office-tile-info">
                         <span className="office-tile-value">{stats.workbooks}</span>
-                        <span className="office-tile-label">Workbooks</span>
+                        <span className="office-tile-label">Recipes</span>
                     </div>
                     <div className="office-tile-desc">Upload & manage recipe workbooks</div>
                 </Link>

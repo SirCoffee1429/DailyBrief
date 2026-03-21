@@ -2,13 +2,30 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
+const CATEGORY_COLORS = [
+    '#f97316', // orange
+    '#3b82f6', // blue
+    '#06b6d4', // cyan
+    '#a78bfa', // purple
+    '#f43f5e', // rose
+    '#10b981', // emerald
+    '#eab308', // yellow
+    '#ec4899', // pink
+]
+
+const BAR_GRADIENTS = [
+    'linear-gradient(90deg, #f97316, #22d3ee)',
+    'linear-gradient(90deg, #06b6d4, #3b82f6)',
+    'linear-gradient(90deg, #f59e0b, #22d3ee)',
+    'linear-gradient(90deg, #10b981, #3b82f6)',
+]
+
 export default function SalesReportDetail() {
     const { date } = useParams()
     const location = useLocation()
     const [salesItems, setSalesItems] = useState([])
     const [loading, setLoading] = useState(true)
 
-    // Determine base path to route back correctly
     const basePath = location.pathname.startsWith('/office') ? '/office/sales' : '/kitchen/sales'
 
     useEffect(() => {
@@ -29,9 +46,7 @@ export default function SalesReportDetail() {
             }
         }
 
-        if (date) {
-            fetchSalesData()
-        }
+        if (date) fetchSalesData()
     }, [date])
 
     if (loading) {
@@ -42,12 +57,30 @@ export default function SalesReportDetail() {
         )
     }
 
-    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { 
+    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
         weekday: 'long',
-        month: 'long', 
+        month: 'long',
         day: 'numeric',
         year: 'numeric'
     })
+
+    // Top sellers — take up to 8
+    const topSellers = salesItems.slice(0, 8)
+    const maxUnits = topSellers[0]?.units_sold || 1
+
+    // Category aggregation
+    const catMap = {}
+    let totalUnits = 0
+    salesItems.forEach(item => {
+        const cat = item.category || 'Other'
+        if (!catMap[cat]) catMap[cat] = { units: 0, items: 0 }
+        catMap[cat].units += item.units_sold
+        catMap[cat].items += 1
+        totalUnits += item.units_sold
+    })
+    const categories = Object.entries(catMap)
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.units - a.units)
 
     return (
         <div className="card">
@@ -64,24 +97,56 @@ export default function SalesReportDetail() {
             {salesItems.length === 0 ? (
                 <div style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-muted)' }}>No data found for this date.</div>
             ) : (
-                <div className="sales-list-grid">
-                    {salesItems.map((item, idx) => (
-                        <div key={item.id} className="sales-item-row" style={{ padding: 'var(--space-3) var(--space-4)' }}>
-                            <span className="sales-item-rank" style={{ fontSize: '1rem', minWidth: '30px' }}>#{idx + 1}</span>
-                            <span className="sales-item-name" style={{ fontSize: '1rem' }}>{item.item_name}</span>
-                            <div className="sales-item-bar-container" style={{ height: '12px' }}>
-                                 <div 
-                                    className="sales-item-bar" 
-                                    style={{ 
-                                        width: `${(item.units_sold / salesItems[0].units_sold) * 100}%`,
-                                        background: 'var(--orange)',
-                                        opacity: Math.max(0.3, 1 - (idx * 0.05)) // Keep a minimum opacity
-                                    }} 
-                                 />
-                            </div>
-                            <span className="sales-item-count" style={{ fontSize: '1.1rem', minWidth: '40px' }}>{item.units_sold}</span>
+                <div className="sr-panels">
+                    {/* Left: Top Selling Items */}
+                    <div className="sr-panel">
+                        <h2 className="sr-panel-title">
+                            <i className="fa-solid fa-chart-simple" style={{ color: 'var(--orange)' }} />
+                            Top Selling Items (Volume)
+                        </h2>
+                        <div className="sr-top-list">
+                            {topSellers.map((item, idx) => (
+                                <div key={item.id} className="sr-top-item">
+                                    <div className="sr-top-row">
+                                        <span className="sr-item-name">{item.item_name}</span>
+                                        <span className="sr-item-orders">{item.units_sold} ORDERS</span>
+                                    </div>
+                                    <div className="sr-bar-track">
+                                        <div
+                                            className="sr-bar-fill"
+                                            style={{
+                                                width: `${(item.units_sold / maxUnits) * 100}%`,
+                                                background: BAR_GRADIENTS[idx % BAR_GRADIENTS.length],
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Right: Sales by Category */}
+                    <div className="sr-panel">
+                        <h2 className="sr-panel-title">
+                            <i className="fa-solid fa-pie-chart" style={{ color: 'var(--orange)' }} />
+                            Sales by Category
+                        </h2>
+                        <div className="sr-cat-list">
+                            {categories.map((cat, idx) => {
+                                const pct = totalUnits > 0 ? Math.round((cat.units / totalUnits) * 100) : 0
+                                return (
+                                    <div key={cat.name} className="sr-cat-row">
+                                        <div className="sr-cat-dot" style={{ background: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }} />
+                                        <div className="sr-cat-info">
+                                            <span className="sr-cat-name">{cat.name}</span>
+                                            <span className="sr-cat-pct">{pct}% of volume</span>
+                                        </div>
+                                        <span className="sr-cat-units">{cat.units} sold</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
