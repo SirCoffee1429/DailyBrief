@@ -13,13 +13,6 @@ const CATEGORY_COLORS = [
     '#ec4899', // pink
 ]
 
-const BAR_GRADIENTS = [
-    'linear-gradient(90deg, #f97316, #22d3ee)',
-    'linear-gradient(90deg, #06b6d4, #3b82f6)',
-    'linear-gradient(90deg, #f59e0b, #22d3ee)',
-    'linear-gradient(90deg, #10b981, #3b82f6)',
-]
-
 export default function SalesReportDetail() {
     const { date } = useParams()
     const location = useLocation()
@@ -64,8 +57,14 @@ export default function SalesReportDetail() {
         year: 'numeric'
     })
 
-    // Top sellers — take up to 8
-    const topSellers = salesItems.slice(0, 8)
+    // Filter out fries
+    const filteredItems = salesItems.filter(item => {
+        const name = item.item_name.toLowerCase();
+        return name !== 'house cut fries' && name !== 'sweet potato fries';
+    })
+
+    // Top sellers — take up to 10
+    const topSellers = filteredItems.slice(0, 10)
     const maxUnits = topSellers[0]?.units_sold || 1
 
     // Category aggregation
@@ -78,9 +77,15 @@ export default function SalesReportDetail() {
         catMap[cat].items += 1
         totalUnits += item.units_sold
     })
+
     const categories = Object.entries(catMap)
         .map(([name, data]) => ({ name, ...data }))
         .sort((a, b) => b.units - a.units)
+
+    const catColorMap = {}
+    categories.forEach((cat, idx) => {
+        catColorMap[cat.name] = CATEGORY_COLORS[idx % CATEGORY_COLORS.length]
+    })
 
     return (
         <div className="card">
@@ -116,7 +121,7 @@ export default function SalesReportDetail() {
                                             className="sr-bar-fill"
                                             style={{
                                                 width: `${(item.units_sold / maxUnits) * 100}%`,
-                                                background: BAR_GRADIENTS[idx % BAR_GRADIENTS.length],
+                                                background: catColorMap[item.category || 'Other'] || 'var(--orange)',
                                             }}
                                         />
                                     </div>

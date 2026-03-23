@@ -26,9 +26,6 @@ The app is live at: https://brief-club.vercel.app
 ## Repository
 
 - **DailyBrief:** https://github.com/SirCoffee1429/DailyBrief
-- **KitchSync:** https://github.com/SirCoffee1429/KitchSync
-- **PrepMaster:**
-  https://github.com/SirCoffee1429/PrepMasterWithClaude021726---Copy
 
 ---
 

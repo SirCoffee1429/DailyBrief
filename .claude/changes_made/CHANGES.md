@@ -4,8 +4,8 @@
 
 ### 2026-03-19 — Fix Embedding API 404 Errors
 
-**File(s) Changed:** `supabase/functions/embed-chunks/index.ts`, `supabase/functions/kitchen-assistant/index.ts`
-**Type:** `fix`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Fixed 404 errors when calling Google's embedding API. The `text-embedding-004` model was deprecated and shut down (Jan 2026).
 
 **Details:**
@@ -19,8 +19,8 @@
 
 ### 2026-03-19 — Move Briefing Cycler to Morning Notes Card
 
-**File(s) Changed:** `app/src/pages/Dashboard.jsx`, `app/src/index.css`
-**Type:** `refactor`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Moved the briefing cycler from the header into the morning notes card for better visibility, and removed the "Morning Notes" heading.
 
 **Details:**
@@ -35,8 +35,8 @@
 
 ### 2026-03-19 — Restructure Office Dashboard
 
-**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx`, `app/src/index.css`
-**Type:** `refactor`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Removed the Ask Assistant card, kept forecast at top, and arranged remaining tiles evenly.
 
 **Details:**
@@ -50,8 +50,8 @@
 
 ### 2026-03-19 — Management Whiteboard Feature
 
-**File(s) Changed:** `app/src/components/ManagementWhiteboard.jsx`, `app/src/pages/OfficeDashboard.jsx`, `app/src/index.css`
-**Type:** `feature`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Added a management-only whiteboard on the Office Dashboard for internal communication.
 
 **Details:**
@@ -68,8 +68,8 @@
 
 ### 2026-03-19 — Move Management Board to Dedicated Page
 
-**File(s) Changed:** `app/src/pages/ManagementBoardPage.jsx`, `app/src/pages/OfficeDashboard.jsx`, `app/src/App.jsx`
-**Type:** `refactor`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Moved the Management Board from an inline widget to its own page at `/office/board`.
 
 **Details:**
@@ -84,8 +84,8 @@
 
 ### 2026-03-20 — Redesign Management Board (Column Layout)
 
-**File(s) Changed:** `app/src/components/ManagementWhiteboard.jsx`, `app/src/index.css`
-**Type:** `feature`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Redesigned the Management Board to match the Stitch whiteboard reference — 4-column layout with categorized content.
 
 **Details:**
@@ -106,8 +106,8 @@
 
 ### 2026-03-20 — Weekly Features Schedule Column
 
-**File(s) Changed:** `app/src/components/WeeklyFeatures.jsx`, `app/src/components/ManagementWhiteboard.jsx`, `app/src/index.css`
-**Type:** `feature`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Replaced the 4th whiteboard column with a weekly schedule for lunch and dinner features.
 
 **Details:**
@@ -124,8 +124,8 @@
 
 ### 2026-03-20 — Refactor Kitchen Sales View
 
-**File(s) Changed:** `app/src/pages/SalesReportDetail.jsx`, `app/src/index.css`
-**Type:** `feature`
+**File(s) Changed:** pp/src/pages/SalesReportDetail.jsx
+**Type:** eature
 **Summary:** Redesigned the "Previous Night's Sales" detail view to match the new UI mockups with a two-panel layout.
 
 **Details:**
@@ -141,3 +141,30 @@
   - Calculates category percentage based on volume
   - Displays color-coded dots, category name, percentage, and total units sold
 - Added `.sr-*` CSS classes for the new two-panel layout and stylized components
+
+
+---
+
+### 2026-03-21 — Refine Top Selling Items
+
+**File(s) Changed:** `app/src/pages/SalesReportDetail.jsx`
+**Type:** `feature`
+**Summary:** Refined the top selling items list to hide house cut fries, show 10 items instead of 8, and match item bar colors to their category.
+
+**Details:**
+
+- Filtered 'House Cut Fries' from displaying in the Top Selling Items panel
+- Increased top sellers list count from 8 to 10
+- Mapped item bar colors to respect the dynamically assigned color of their respective category
+
+---
+
+### 2026-03-22 — Hide Sweet Potato Fries
+
+**File(s) Changed:** `app/src/pages/SalesReportDetail.jsx`
+**Type:** `feature`
+**Summary:** Extended the Top Selling Items filter to also exclude Sweet Potato Fries.
+
+**Details:**
+
+- Added sweet potato fries to the filtering logic for the volume list
