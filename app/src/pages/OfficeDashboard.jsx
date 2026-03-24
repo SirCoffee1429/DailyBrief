@@ -5,21 +5,23 @@ import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
 
 export default function OfficeDashboard() {
-    const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0, notes: 0 })
+    const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0, notes: 0, events: 0 })
 
     useEffect(() => {
         async function load() {
-            const [wbRes, brRes, taskRes, noteRes] = await Promise.all([
+            const [wbRes, brRes, taskRes, boardNoteRes, eventNoteRes] = await Promise.all([
                 supabase.from('workbooks').select('id', { count: 'exact', head: true }),
                 supabase.from('briefings').select('id', { count: 'exact', head: true }),
                 supabase.from('briefing_tasks').select('id', { count: 'exact', head: true }),
-                supabase.from('management_notes').select('id', { count: 'exact', head: true }),
+                supabase.from('management_notes').select('id', { count: 'exact', head: true }).neq('category', 'events'),
+                supabase.from('management_notes').select('id', { count: 'exact', head: true }).eq('category', 'events'),
             ])
             setStats({
                 workbooks: wbRes.count || 0,
                 briefings: brRes.count || 0,
                 tasks: taskRes.count || 0,
-                notes: noteRes.count || 0,
+                notes: boardNoteRes.count || 0,
+                events: eventNoteRes.count || 0,
             })
         }
         load()
@@ -46,6 +48,15 @@ export default function OfficeDashboard() {
                 <div className="office-weather-row">
                     <WeatherWidget />
                 </div>
+
+                <Link to="/office/events" className="office-tile" style={{ borderColor: 'rgba(96, 165, 250, 0.2)' }}>
+                    <div className="office-tile-icon"><i className="fa-solid fa-champagne-glasses" style={{ color: '#60a5fa' }} /></div>
+                    <div className="office-tile-info">
+                        <span className="office-tile-value">{stats.events}</span>
+                        <span className="office-tile-label">Events & Catering</span>
+                    </div>
+                    <div className="office-tile-desc">Manage special events and banquets</div>
+                </Link>
 
                 <Link to="/office/board" className="office-tile">
                     <div className="office-tile-icon"><i className="fa-solid fa-chalkboard" /></div>

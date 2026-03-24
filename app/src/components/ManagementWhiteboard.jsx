@@ -4,7 +4,6 @@ import WeeklyFeatures from './WeeklyFeatures.jsx'
 
 const COLUMNS = [
     { key: 'alerts', title: "86'd Items & Alerts", icon: 'fa-triangle-exclamation', accent: '#f87171', accentBg: 'rgba(248, 113, 113, 0.08)', accentBorder: 'rgba(248, 113, 113, 0.2)' },
-    { key: 'events', title: 'Special Events & Catering', icon: 'fa-champagne-glasses', accent: '#60a5fa', accentBg: 'rgba(96, 165, 250, 0.08)', accentBorder: 'rgba(96, 165, 250, 0.2)' },
     { key: 'comms', title: 'Department Communication', icon: 'fa-comments', accent: '#4ade80', accentBg: 'rgba(74, 222, 128, 0.08)', accentBorder: 'rgba(74, 222, 128, 0.2)' },
 ]
 

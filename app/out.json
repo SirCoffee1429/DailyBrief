@@ -1,0 +1,125 @@
+{
+  "error": null,
+  "data": [
+    {
+      "id": "bed6be07-12bc-4119-9497-87ecdfeade76",
+      "event_date": "2026-03-25",
+      "event_name": "CANCELED - Junior Spring Break Tennis Camp",
+      "start_time": "11:00 AM",
+      "location": "Tack Room",
+      "guest_count": 15,
+      "event_type": "Sports",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "4789e8e5-b1a3-455b-af5e-b0e0ed6c5e9f",
+      "event_date": "2026-03-26",
+      "event_name": "Bridge",
+      "start_time": "1:30 PM",
+      "location": "Red Room",
+      "guest_count": 4,
+      "event_type": "Social",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "f6bd1fae-a9a7-430a-8a88-21f4c811d586",
+      "event_date": "2026-03-24",
+      "event_name": "CANCELED - Junior Spring Break Tennis Camp",
+      "start_time": "11:00 AM",
+      "location": "Tack Room",
+      "guest_count": 15,
+      "event_type": "Sports",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "c9530806-844f-4cbe-a340-4ce98b990c67",
+      "event_date": "2026-03-25",
+      "event_name": "Canasta",
+      "start_time": "10:15 AM",
+      "location": "Red Room",
+      "guest_count": 8,
+      "event_type": "Social",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "36684325-75f3-43b7-b065-507977d4b5da",
+      "event_date": "2026-03-25",
+      "event_name": "Ladies Night Out",
+      "start_time": "5:00 PM",
+      "location": "Bar & Grille",
+      "guest_count": 40,
+      "event_type": "Party",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "79643771-f680-4b6c-861f-7f3c7d87b6b0",
+      "event_date": "2026-03-26",
+      "event_name": "CANCELED - Junior Spring Break Tennis Camp",
+      "start_time": "11:00 AM",
+      "location": "Tack Room",
+      "guest_count": 15,
+      "event_type": "Sports",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "b666ee41-b60b-4e04-9364-c595d5a2dec8",
+      "event_date": "2026-03-23",
+      "event_name": "Midday Mahjong",
+      "start_time": "1:00 PM",
+      "location": "Red Room",
+      "guest_count": 8,
+      "event_type": "Social",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "713e044e-85de-4dd6-9234-5a35665cb4a4",
+      "event_date": "2026-03-23",
+      "event_name": "Mahjong Monday Club",
+      "start_time": "5:00 PM",
+      "location": "Red Room",
+      "guest_count": 20,
+      "event_type": "Social",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "90125bb1-d355-4216-b6c4-9baf8917bf45",
+      "event_date": "2026-03-25",
+      "event_name": "POPs Poker",
+      "start_time": "10:00 AM",
+      "location": "Men's Locker Room",
+      "guest_count": 10,
+      "event_type": "Social",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    },
+    {
+      "id": "2ead4a81-8145-4127-9374-2f11122dfc2a",
+      "event_date": "2026-03-26",
+      "event_name": "Western Party",
+      "start_time": "6:00 PM",
+      "location": "Legacy Ballroom",
+      "guest_count": 25,
+      "event_type": "Party",
+      "source": null,
+      "raw_pdf_url": null,
+      "created_at": "2026-03-24T14:12:36.480094+00:00"
+    }
+  ]
+}
