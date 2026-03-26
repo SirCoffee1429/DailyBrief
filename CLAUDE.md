@@ -54,6 +54,9 @@ The app is live at: https://brief-club.vercel.app
 - `Briefings.jsx` — Office briefing list
 - `BriefingEditor.jsx` — Create/edit briefings and tasks
 - `History.jsx` — 30-day briefing and task completion log
+- `ManagementBoardPage.jsx` — Dedicated management whiteboard for coordination
+- `EventsBanquetsPage.jsx` — Banquets & special events dashboard with BEO
+  parsing
 
 ### Key Components
 
@@ -68,15 +71,19 @@ The app is live at: https://brief-club.vercel.app
 
 ## Supabase Tables
 
-| Table               | Purpose                                                             |
-| ------------------- | ------------------------------------------------------------------- |
-| `workbooks`         | Uploaded Excel recipe files, category as text[]                     |
-| `workbook_sheets`   | Parsed sheet rows stored as JSON arrays                             |
-| `workbook_chunks`   | Text chunks with vector embeddings for RAG                          |
-| `recipe_categories` | User-managed category list                                          |
-| `briefings`         | Daily shift notes (title, body, date)                               |
-| `briefing_tasks`    | Tasks attached to briefings with completion + sort order            |
-| `sales_data`        | Parsed nightly sales (item_name, units_sold, category, report_date) |
+| Table                  | Purpose                                                             |
+| ---------------------- | ------------------------------------------------------------------- |
+| `workbooks`            | Uploaded Excel recipe files, category as text[]                     |
+| `workbook_sheets`      | Parsed sheet rows stored as JSON arrays                             |
+| `workbook_chunks`      | Text chunks with vector embeddings for RAG                          |
+| `recipe_categories`    | User-managed category list                                          |
+| `briefings`            | Daily shift notes (title, body, date)                               |
+| `briefing_tasks`       | Tasks attached to briefings with completion + sort order            |
+| `sales_data`           | Parsed nightly sales (item_name, units_sold, category, report_date) |
+| `management_notes`     | Internal management communications and event coordination           |
+| `upcoming_banquets`    | Parsed upcoming event summaries scraped from ReserveCloud links     |
+| `banquet_event_orders` | Structured BEOs detailing event date, food items, and quantities    |
+| `weekly_features`      | Scheduled lunch and dinner features displayed on whiteboard         |
 
 ---
 
@@ -89,6 +96,8 @@ The app is live at: https://brief-club.vercel.app
 | `embed-chunks`       | Generates vector embeddings for recipe chunks via Gemini                |
 | `get-weather`        | Proxies Google Weather API for 5-day forecast                           |
 | `process-sales-data` | Postmark webhook — parses sales PDF via Gemini, inserts into sales_data |
+| `process-banquets`   | Postmark webhook — scrapes ReserveCloud PDFs and logs upcoming banquets |
+| `process-beo`        | Parses BEO PDFs via dashboard upload and dynamically extracts food data |
 
 ---
 
@@ -151,3 +160,9 @@ At the start of every new session, or whenever a new model is loaded, you MUST:
    doing any work
 
 If either file does not exist, flag it immediately before proceeding.
+
+## Your Behavior
+
+1. Its ok to not know something or to be wrong but always let me know. Do not guess or put out wrong information or code just to "complete" a task to make me happy.
+2. Ask me questions to clarify and get a better understanding of my request. 
+3. Offer suggestions if you think of a better idea or that something might work better based on the project and goals.

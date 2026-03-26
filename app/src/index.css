@@ -417,11 +417,11 @@ a:hover {
   grid-auto-rows: minmax(160px, auto);
   gap: var(--space-5);
   grid-template-areas:
-    "weather weather weather"
-    "notes   notes   tasks"
-    "notes   notes   recipes"
-    "sales   sales   sales"
-    "kb      kb      kb";
+    "weather   weather   weather"
+    "notes     notes     tasks"
+    "notes     notes     eightysix"
+    "recipes   sales     sales"
+    "kb        kb        kb";
 }
 
 .weather-forecast-card {
@@ -435,6 +435,8 @@ a:hover {
       "weather"
       "notes"
       "tasks"
+      "eightysix"
+      "sales"
       "recipes"
       "kb";
   }
@@ -442,11 +444,18 @@ a:hover {
 
 .dash-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.dash-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(249, 115, 22, 0.25);
 }
 
 .dash-card-heading {
@@ -656,6 +665,75 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 160px;
+}
+
+/* 86'd Items Card */
+.eightysix-card {
+  grid-area: eightysix;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+}
+
+.eightysix-feed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  max-height: 220px;
+  margin-bottom: var(--space-3);
+}
+
+.eightysix-item {
+  background: var(--bg-glass);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: all var(--transition-fast);
+}
+
+.eightysix-item:hover {
+  border-color: var(--border-color);
+}
+
+.eightysix-pinned {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+.eightysix-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.eightysix-item-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.eightysix-item-time {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.eightysix-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.eightysix-input {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
 }
 
 .recipes-top-row {
@@ -1504,10 +1582,10 @@ a:hover {
 }
 
 .office-tile:hover {
-  background: var(--bg-card-hover);
+  background: rgba(96, 165, 250, 0.04);
   border-color: var(--orange);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(96, 165, 250, 0.2), 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 .office-tile-icon {
@@ -3199,4 +3277,102 @@ a:hover {
   font-weight: 700;
   color: var(--text-bright);
   white-space: nowrap;
+}
+
+/* ============================================
+   Recipe Creator
+   ============================================ */
+.rc-cell-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  transition: all var(--transition-fast);
+}
+
+.rc-cell-input:focus {
+  background: var(--bg-input);
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.15);
+}
+
+.rc-cell-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.rc-cell-readonly {
+  color: var(--text-muted);
+  font-style: italic;
+  cursor: default;
+}
+
+.rc-cell-readonly:focus {
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
+}
+
+.rc-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  font-size: 0.9rem;
+}
+
+.rc-remove-btn:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.rc-remove-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.rc-assembly-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 160px;
+  transition: border-color var(--transition-fast);
+}
+
+.rc-assembly-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.15);
+}
+
+.rc-assembly-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* Hide number input spinners */
+.rc-cell-input[type="number"]::-webkit-inner-spin-button,
+.rc-cell-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.rc-cell-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

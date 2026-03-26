@@ -253,3 +253,107 @@ for food items on BEOs.
 
 - Handled Edge-to-DB event synchronization delays by looping `loadBanquets` quietly in the background.
 - Embedded a manual `Refresh` UI button alongside `Upload BEO`.
+
+---
+
+### 2026-03-24 — Fixed Office Dashboard Tasks Route
+
+**File(s) Changed:** `app/src/components/OfficeLayout.jsx`
+**Type:** `fix`
+**Summary:** Corrected the bottom navigation routing for the "Tasks" tab to point to the correct task administration page.
+
+**Details:**
+- Changed the `to` attribute for the Tasks tab from `/office/chat` to `/office/history`
+- Prevents the office dashboard from incorrectly sending users to the AiChat component when they want to view the task history log.
+
+---
+
+### 2026-03-25 — In-App Recipe Creator
+
+**File(s) Changed:** `app/src/pages/RecipeCreator.jsx`, `app/src/App.jsx`, `app/src/pages/WorkbookLibrary.jsx`, `app/src/pages/KitchenRecipes.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Added a full in-app recipe creation page accessible from both kitchen and office dashboards with an editable ingredient table, auto-calculated costs, assembly instructions, and category tagging.
+
+**Details:**
+- Created `RecipeCreator.jsx` with recipe name input, category selector, dynamic ingredient table (Ingredient, Quantity, Measure, Unit Cost, Total Cost), and assembly textarea
+- Total Cost auto-calculates as Quantity × Unit Cost
+- Add/Remove row buttons for ingredient management
+- Saves using existing `workbooks`/`workbook_sheets`/`workbook_chunks` schema for seamless WorkbookViewer compatibility
+- Triggers `embed-chunks` edge function for AI RAG embedding on save
+- Added routes: `/kitchen/recipes/create` and `/office/workbooks/create`
+- Added green "Create Recipe" button to KitchenRecipes and "Create" button to WorkbookLibrary
+- Added `.rc-*` CSS classes for inline cell inputs, readonly fields, remove buttons, and assembly textarea
+
+---
+
+### 2026-03-25 — Recipe Creator Single-Sheet Fix
+
+**File(s) Changed:** `app/src/pages/RecipeCreator.jsx`
+**Type:** `fix`
+**Summary:** Merged ingredients and assembly into a single sheet so WorkbookViewer displays everything on one page with no tabs.
+
+**Details:**
+- Removed separate "Assembly" sheet; assembly lines are now appended after ingredient rows with a blank separator and a "— ASSEMBLY —" label row
+- `sheet_count` is now always `1`
+- Sheet name now uses the recipe name instead of "Ingredients"
+- AI chunk also includes both ingredient and assembly content in one block
+
+---
+
+### 2026-03-25 — Move 86'd Items to Kitchen Dashboard
+
+**File(s) Changed:** `app/src/components/EightySixFeed.jsx`, `app/src/pages/Dashboard.jsx`, `app/src/index.css`, `app/src/components/ManagementWhiteboard.jsx`
+**Type:** `feature`
+**Summary:** Moved the 86'd Items & Alerts feed from the office Management Board to the kitchen dashboard with full CRUD. Rearranged the dashboard grid so the Recipes card sits next to Sales.
+
+**Details:**
+- Created `EightySixFeed.jsx` with post, delete, and pin/unpin capabilities (queries `management_notes` where `category='alerts'`)
+- Updated `Dashboard.jsx` to render `<EightySixFeed />` in the grid-area under Tasks, moved Active Recipes card next to Sales
+- Updated CSS grid-template-areas: `eightysix` replaces `recipes` position, `recipes` now shares row with `sales`
+- Added `.eightysix-*` CSS classes for feed items, input bar, and pinned state styling
+- Removed `alerts` column from `ManagementWhiteboard.jsx` COLUMNS array (only `comms` remains on office board)
+
+---
+
+### 2026-03-26 — Swap Recipes Tile to Left of Sales
+
+**File(s) Changed:** `app/src/index.css`
+**Type:** `fix`
+**Summary:** Moved the Active Recipes card to the left column of the bottom grid row, with Sales spanning the remaining two columns on the right.
+
+**Details:**
+- Changed grid-template-areas row from `"sales sales recipes"` to `"recipes sales sales"`
+
+---
+
+### 2026-03-26 — Dashboard Tile Hover Effect
+
+**File(s) Changed:** `app/src/index.css`
+**Type:** `feature`
+**Summary:** Added a floating lift effect with subtle orange glow to all kitchen dashboard tiles on hover.
+
+**Details:**
+- Added `transition` for transform, box-shadow, and border-color to `.dash-card`
+- On hover: `translateY(-4px)` to float the card up, orange-tinted `box-shadow` underneath, and orange-tinted border
+
+---
+
+### 2026-03-26 — Uniform Dashboard Tile Border Thickness
+
+**File(s) Changed:** `app/src/index.css`
+**Type:** `fix`
+**Summary:** Increased `.dash-card` border from 1px to 2px so all tiles match the visual weight of the wider Sales card.
+
+**Details:**
+- Changed `border: 1px solid` to `border: 2px solid` on `.dash-card`
+
+---
+
+### 2026-03-26 — Office Dashboard Tile Hover Effect
+
+**File(s) Changed:** `app/src/index.css`
+**Type:** `feature`
+**Summary:** Updated office dashboard tile hover to show an orange outline with a blue glow background.
+
+**Details:**
+- `.office-tile:hover` now has `border-color: var(--orange)` (orange outline), `box-shadow` with blue (`rgba(96, 165, 250, 0.2)`) glow, subtle blue background tint, and `translateY(-4px)` float

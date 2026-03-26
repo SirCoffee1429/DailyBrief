@@ -88,7 +88,7 @@ export default function OfficeLayout({ children }) {
                 </NavLink>
 
                 <NavLink
-                    to="/office/chat"
+                    to="/office/history"
                     className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
                 >
                     <i className="tab-icon fa-solid fa-list-check" />

@@ -65,6 +65,9 @@ export default function KitchenRecipes() {
                     <h1 className="page-title">Recipes</h1>
                     <p className="page-subtitle">{filteredWorkbooks.length} recipe{filteredWorkbooks.length !== 1 ? 's' : ''} {filter !== 'All' ? `in ${filter}` : 'available'}</p>
                 </div>
+                <Link to="/kitchen/recipes/create" className="btn btn-primary" style={{ background: '#34d399', borderColor: '#34d399' }}>
+                    <i className="fa-solid fa-plus" /> Create Recipe
+                </Link>
             </div>
 
             <div style={{ marginBottom: 'var(--space-4)' }}>

@@ -17,6 +17,7 @@ import SalesReports from './pages/SalesReports.jsx'
 import SalesReportDetail from './pages/SalesReportDetail.jsx'
 import ManagementBoardPage from './pages/ManagementBoardPage.jsx'
 import EventsBanquetsPage from './pages/EventsBanquetsPage.jsx'
+import RecipeCreator from './pages/RecipeCreator.jsx'
 
 export default function App() {
     return (
@@ -26,6 +27,7 @@ export default function App() {
             {/* Kitchen routes */}
             <Route path="/kitchen" element={<KitchenLayout><Dashboard /></KitchenLayout>} />
             <Route path="/kitchen/recipes" element={<KitchenLayout><KitchenRecipes /></KitchenLayout>} />
+            <Route path="/kitchen/recipes/create" element={<KitchenLayout><RecipeCreator /></KitchenLayout>} />
             <Route path="/kitchen/recipes/:id" element={<KitchenLayout><WorkbookViewer /></KitchenLayout>} />
             <Route path="/kitchen/chat" element={<KitchenLayout><AiChat /></KitchenLayout>} />
             <Route path="/kitchen/sales" element={<KitchenLayout><SalesReports /></KitchenLayout>} />
@@ -37,6 +39,7 @@ export default function App() {
             <Route path="/office/briefings/new" element={<OfficeGate><OfficeLayout><BriefingEditor /></OfficeLayout></OfficeGate>} />
             <Route path="/office/briefings/:id/edit" element={<OfficeGate><OfficeLayout><BriefingEditor /></OfficeLayout></OfficeGate>} />
             <Route path="/office/workbooks" element={<OfficeGate><OfficeLayout><WorkbookLibrary /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/workbooks/create" element={<OfficeGate><OfficeLayout><RecipeCreator /></OfficeLayout></OfficeGate>} />
             <Route path="/office/workbooks/upload" element={<OfficeGate><OfficeLayout><WorkbookUpload /></OfficeLayout></OfficeGate>} />
             <Route path="/office/workbooks/:id" element={<OfficeGate><OfficeLayout><WorkbookViewer /></OfficeLayout></OfficeGate>} />
             <Route path="/office/history" element={<OfficeGate><OfficeLayout><History /></OfficeLayout></OfficeGate>} />

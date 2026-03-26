@@ -98,6 +98,9 @@ export default function WorkbookLibrary() {
                     <button onClick={() => setIsCategoryModalOpen(true)} className="btn btn-secondary">
                         <i className="fa-solid fa-list" /> Manage Categories
                     </button>
+                    <Link to="/office/workbooks/create" className="btn btn-primary" style={{ background: '#34d399', borderColor: '#34d399' }}>
+                        <i className="fa-solid fa-plus" /> Create
+                    </Link>
                     <Link to="/office/workbooks/upload" className="btn btn-primary">📤 Upload</Link>
                 </div>
             </div>

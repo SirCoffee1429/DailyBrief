@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase.js'
 import WeeklyFeatures from './WeeklyFeatures.jsx'
 
 const COLUMNS = [
-    { key: 'alerts', title: "86'd Items & Alerts", icon: 'fa-triangle-exclamation', accent: '#f87171', accentBg: 'rgba(248, 113, 113, 0.08)', accentBorder: 'rgba(248, 113, 113, 0.2)' },
     { key: 'comms', title: 'Department Communication', icon: 'fa-comments', accent: '#4ade80', accentBg: 'rgba(74, 222, 128, 0.08)', accentBorder: 'rgba(74, 222, 128, 0.2)' },
 ]
 

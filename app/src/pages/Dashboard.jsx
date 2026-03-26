@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
+import EightySixFeed from '../components/EightySixFeed.jsx'
 
 export default function Dashboard() {
     const navigate = useNavigate()
@@ -181,6 +182,10 @@ export default function Dashboard() {
                     {latestBriefing && <div className="updated-text">Updated 5m ago</div>}
                 </div>
 
+                <EightySixFeed />
+
+                <SalesBriefing />
+
                 <Link to="/kitchen/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="recipes-top-row">
                         <div className="recipes-icon-box"><i className="fa-solid fa-book-open" /></div>
@@ -189,10 +194,6 @@ export default function Dashboard() {
                     <div className="recipes-number">{stats.workbooks}</div>
                     <div className="recipes-subtitle">Active Recipes</div>
                 </Link>
-
-
-
-                <SalesBriefing />
             </div>
 
         </div>
