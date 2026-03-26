@@ -107,6 +107,24 @@ export default function EventsBanquetsPage() {
         await loadNotes()
     }
 
+    async function handleDeleteBEO(id) {
+        await supabase.from('banquet_event_orders').delete().eq('id', id)
+        setBeos(prev => prev.filter(b => b.id !== id))
+    }
+
+    async function handleClearAllBEOs() {
+        if (!confirm('Are you sure you want to clear all BEOs? This cannot be undone.')) return
+        const ids = beos.map(b => b.id)
+        await supabase.from('banquet_event_orders').delete().in('id', ids)
+        setBeos([])
+    }
+
+    async function toggleBEOComplete(id, currentCompleted) {
+        const newVal = !currentCompleted
+        await supabase.from('banquet_event_orders').update({ completed: newVal }).eq('id', id)
+        setBeos(prev => prev.map(b => b.id === id ? { ...b, completed: newVal } : b))
+    }
+
     function timeAgo(dateStr) {
         const diff = Date.now() - new Date(dateStr).getTime()
         const mins = Math.floor(diff / 60000)
@@ -147,25 +165,44 @@ export default function EventsBanquetsPage() {
                 {/* Left Panel: Parsed upcoming banquets & BEOs */}
                 <div className="card-column" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
                     
-                    {/* BEO Details Card (New!) */}
+                    {/* BEO Details Card */}
                     {beos.length > 0 && (
                         <div className="card">
-                            <div className="card-header">
+                            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2 className="card-title"><i className="fa-solid fa-file-invoice" style={{ color: '#3b82f6', marginRight: '8px' }}/> Recent Event Orders (BEOs)</h2>
+                                <button
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ fontSize: 'var(--font-size-xs)', color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
+                                    onClick={handleClearAllBEOs}
+                                    title="Clear all BEOs"
+                                >
+                                    <i className="fa-solid fa-trash-can" /> Clear All
+                                </button>
                             </div>
-                            <div className="data-table-wrapper" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            <div className="data-table-wrapper" style={{ maxHeight: '500px', overflowY: 'auto' }}>
                                 <table className="data-table">
                                     <thead>
                                         <tr>
+                                            <th style={{ width: '36px' }}></th>
                                             <th>Event</th>
                                             <th>Date</th>
                                             <th>Guests</th>
                                             <th>Food Items & Qty</th>
+                                            <th style={{ width: '36px' }}></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {beos.slice().reverse().map(b => (
-                                            <tr key={b.id}>
+                                            <tr key={b.id} className={b.completed ? 'beo-completed' : ''}>
+                                                <td>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="beo-check"
+                                                        checked={!!b.completed}
+                                                        onChange={() => toggleBEOComplete(b.id, b.completed)}
+                                                        title={b.completed ? 'Mark incomplete' : 'Mark complete'}
+                                                    />
+                                                </td>
                                                 <td style={{ fontWeight: 600 }}>{b.event_name}</td>
                                                 <td>{new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}</td>
                                                 <td>{b.guest_count}</td>
@@ -178,6 +215,16 @@ export default function EventsBanquetsPage() {
                                                             </div>
                                                         ))}
                                                     </div>
+                                                </td>
+                                                <td>
+                                                    <button
+                                                        className="wb-act-btn wb-act-delete"
+                                                        onClick={() => handleDeleteBEO(b.id)}
+                                                        title="Delete this BEO"
+                                                        style={{ fontSize: '0.85rem' }}
+                                                    >
+                                                        <i className="fa-solid fa-xmark" />
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}

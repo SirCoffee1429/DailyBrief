@@ -357,3 +357,38 @@ for food items on BEOs.
 
 **Details:**
 - `.office-tile:hover` now has `border-color: var(--orange)` (orange outline), `box-shadow` with blue (`rgba(96, 165, 250, 0.2)`) glow, subtle blue background tint, and `translateY(-4px)` float
+
+---
+
+### 2026-03-26 — Fix BEO Multi-Event PDF Parsing
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts`
+**Type:** `fix`
+**Summary:** Fixed BEO parsing edge function to correctly handle PDFs containing multiple events. Previously treated Gemini output as a single object instead of an array, causing all fields to be undefined and stored as "Unknown Event".
+
+**Details:**
+- Updated Gemini prompt to always return a JSON array of events
+- Added array normalization: `if (!Array.isArray(parsed)) parsed = [parsed]`
+- Loop through each event and insert individually
+- Added raw Gemini output logging and per-event insertion diagnostics
+- Fixed `btoa(String.fromCharCode(...spread))` stack overflow by using chunked encoding (8KB chunks)
+- Restored correct model name (`gemini-3-flash-preview`)
+- Deployed to Supabase via `npx -y supabase functions deploy`
+
+---
+
+### 2026-03-26 — BEO Table Management: Delete, Clear All, Completion Checkbox
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`, `app/src/index.css`, `supabase/migrations/20260326170306_add_completed_to_beo.sql`
+**Type:** `feature`
+**Summary:** Added interactive management controls to the BEO table: per-row delete button, a "Clear All" button, and a completion checkbox that strikes through the event row when checked.
+
+**Details:**
+- Added `handleDeleteBEO()` — deletes individual BEO from DB and removes from state
+- Added `handleClearAllBEOs()` — confirmation prompt, then bulk deletes all BEO records
+- Added `toggleBEOComplete()` — toggles `completed` boolean column, UI immediately updates with strikethrough
+- Added `beo-check` checkbox column with blue accent color
+- Added `beo-completed` CSS class: `text-decoration: line-through`, `opacity: 0.5`
+- Created migration file to add `completed boolean DEFAULT false` column to `banquet_event_orders`
+- "Clear All" button styled red for visibility, placed in card header
+

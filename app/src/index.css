@@ -736,6 +736,26 @@ a:hover {
   margin-top: auto;
 }
 
+/* BEO completion checkbox & strikethrough */
+.beo-check {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+tr.beo-completed td {
+  text-decoration: line-through;
+  opacity: 0.5;
+  color: var(--text-muted) !important;
+}
+
+tr.beo-completed td .beo-check {
+  text-decoration: none;
+  opacity: 1;
+}
+
 .recipes-top-row {
   display: flex;
   justify-content: space-between;

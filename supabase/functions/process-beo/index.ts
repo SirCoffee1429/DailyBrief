@@ -31,7 +31,15 @@ Deno.serve(async (req) => {
         const file = formData.get("file") as File;
         if (file) {
            const arrayBuffer = await file.arrayBuffer();
-           pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+           const bytes = new Uint8Array(arrayBuffer);
+           // Chunked base64 encoding to avoid stack overflow on large files
+           let binary = "";
+           const chunkSize = 8192;
+           for (let i = 0; i < bytes.length; i += chunkSize) {
+             const chunk = bytes.subarray(i, i + chunkSize);
+             binary += String.fromCharCode(...chunk);
+           }
+           pdfBase64 = btoa(binary);
         }
     }
 
@@ -42,27 +50,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Starting BEO parsing via Gemini 3 Flash...`);
+    console.log(`Starting BEO parsing via Gemini...`);
 
     // 2. Ask Gemini to parse the PDF for BEO details
     const prompt = `
-      You are an expert at parsing Banquet Event Orders (BEO). 
-      Please carefully extract the following information from the attached ReserveCloud/EventPro BEO PDF.
+      You are an expert at parsing Banquet Event Orders (BEOs).
+      This PDF may contain ONE or MULTIPLE BEOs/events. Extract ALL of them.
       
-      Look closely for the main event details:
-      - Event Name
+      For EACH event found, extract:
+      - Event Name (the title or name of the banquet/event)
       - Event Date (in YYYY-MM-DD format)
-      - Start Time
-      - Guest Count (integer)
-      
-      CRITICAL: You must extract ALL food items, catering dishes, and beverages listed on the BEO, along with their respective quantities (e.g., 50 units, 2 gallons, 3 dozen, etc). Look for tabular layouts or menus often found in the middle or end of the document. Ignore pricing, notes, and staff instructions.
-      
-      Return ONLY a JSON object with these exact keys: 
-      "event_name" (the title of the event),
-      "event_date" (YYYY-MM-DD),
-      "start_time" (e.g. "5:00 PM"),
-      "guest_count" (integer),
-      "food_items" (an array of objects with exactly two keys: "item" (string describing the food/beverage) and "quantity" (string or number indicating amount))
+      - Start Time (e.g. "5:00 PM")
+      - Guest Count (integer — look for "Guaranteed", "Expected", "# of Guests", or similar fields)
+      - Food Items: ALL food, catering dishes, and beverages listed, with quantities
+
+      IMPORTANT RULES:
+      - ALWAYS return a JSON array, even if there is only one event. Example: [{ ... }]
+      - Each element must have these keys: "event_name", "event_date", "start_time", "guest_count", "food_items"
+      - "food_items" is an array of objects with keys "item" (string) and "quantity" (string or number)
+      - If you cannot find a value, use null for strings and 0 for guest_count
+      - Do NOT wrap in markdown code fences, return ONLY the JSON array
     `;
 
     const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
@@ -90,32 +97,68 @@ Deno.serve(async (req) => {
 
     if (!geminiRes.ok) {
       const errorText = await geminiRes.text();
+      console.error(`Gemini API error: ${errorText}`);
       throw new Error(`Gemini API Error: ${errorText}`);
     }
 
     const geminiData = await geminiRes.json();
     const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    const parsedData = JSON.parse(rawOutput);
-    console.log(`Gemini parsed BEO: ${parsedData.event_name} for ${parsedData.event_date}`);
+    
+    // Log the raw output for debugging
+    console.log(`Raw Gemini output: ${rawOutput}`);
 
-    // 3. Save to Supabase
+    if (!rawOutput) {
+      throw new Error("Gemini returned empty output");
+    }
+
+    let parsed = JSON.parse(rawOutput);
+
+    // Normalize to always be an array
+    if (!Array.isArray(parsed)) {
+      parsed = [parsed];
+    }
+
+    console.log(`Parsed ${parsed.length} event(s) from BEO PDF`);
+
+    // 3. Save each event to Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const insertedIds: string[] = [];
 
-    const { data: record, error } = await supabase
-      .from("banquet_event_orders")
-      .insert({
-          event_name: parsedData.event_name || "Unknown Event",
-          event_date: parsedData.event_date || new Date().toISOString().split("T")[0],
-          start_time: parsedData.start_time || "",
-          guest_count: parsedData.guest_count || 0,
-          food_items: parsedData.food_items || [],
-      })
-      .select('id')
-      .single();
+    for (const event of parsed) {
+      const eventName = event.event_name || null;
+      const eventDate = event.event_date || null;
+      const guestCount = event.guest_count || 0;
 
-    if (error) throw error;
+      // Log a warning if we're getting empty data
+      if (!eventName || !eventDate) {
+        console.warn(`Warning: event missing data — name: ${eventName}, date: ${eventDate}, guests: ${guestCount}`);
+      }
 
-    return new Response(JSON.stringify({ success: true, id: record.id }), {
+      console.log(`Inserting BEO: "${eventName}" on ${eventDate} for ${guestCount} guests with ${(event.food_items || []).length} food items`);
+
+      const { data: record, error } = await supabase
+        .from("banquet_event_orders")
+        .insert({
+            event_name: eventName || "Unknown Event",
+            event_date: eventDate || new Date().toISOString().split("T")[0],
+            start_time: event.start_time || "",
+            guest_count: guestCount,
+            food_items: event.food_items || [],
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error(`Error inserting event "${eventName}":`, error);
+        throw error;
+      }
+
+      insertedIds.push(record.id);
+    }
+
+    console.log(`Successfully inserted ${insertedIds.length} BEO(s)`);
+
+    return new Response(JSON.stringify({ success: true, count: insertedIds.length, ids: insertedIds }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
