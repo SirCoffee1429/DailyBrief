@@ -392,3 +392,16 @@ for food items on BEOs.
 - Created migration file to add `completed boolean DEFAULT false` column to `banquet_event_orders`
 - "Clear All" button styled red for visibility, placed in card header
 
+---
+
+### 2026-03-26 — BEO Card Rename & Sort Order Fix
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `fix`
+**Summary:** Renamed "Recent Event Orders (BEOs)" to "Banquet Event Orders". Fixed sort order so soonest dates appear first by removing `.slice().reverse()` — the DB query already sorts ascending by `event_date`.
+
+**Details:**
+- Changed card title text to "Banquet Event Orders"
+- Removed `.slice().reverse()` from the `beos.map()` render so the ascending DB order is preserved
+
+

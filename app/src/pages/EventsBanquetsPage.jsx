@@ -169,7 +169,7 @@ export default function EventsBanquetsPage() {
                     {beos.length > 0 && (
                         <div className="card">
                             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2 className="card-title"><i className="fa-solid fa-file-invoice" style={{ color: '#3b82f6', marginRight: '8px' }}/> Recent Event Orders (BEOs)</h2>
+                                <h2 className="card-title"><i className="fa-solid fa-file-invoice" style={{ color: '#3b82f6', marginRight: '8px' }}/> Banquet Event Orders</h2>
                                 <button
                                     className="btn btn-secondary btn-sm"
                                     style={{ fontSize: 'var(--font-size-xs)', color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
@@ -192,7 +192,7 @@ export default function EventsBanquetsPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {beos.slice().reverse().map(b => (
+                                        {beos.map(b => (
                                             <tr key={b.id} className={b.completed ? 'beo-completed' : ''}>
                                                 <td>
                                                     <input
