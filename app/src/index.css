@@ -420,7 +420,7 @@ a:hover {
     "weather   weather   weather"
     "notes     notes     tasks"
     "notes     notes     eightysix"
-    "recipes   sales     sales"
+    "events    recipes   sales"
     "kb        kb        kb";
 }
 
@@ -436,6 +436,7 @@ a:hover {
       "notes"
       "tasks"
       "eightysix"
+      "events"
       "sales"
       "recipes"
       "kb";
@@ -670,6 +671,14 @@ a:hover {
 /* 86'd Items Card */
 .eightysix-card {
   grid-area: eightysix;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+}
+
+/* Events Card */
+.events-card {
+  grid-area: events;
   display: flex;
   flex-direction: column;
   min-height: 160px;

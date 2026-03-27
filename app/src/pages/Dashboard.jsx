@@ -12,6 +12,7 @@ export default function Dashboard() {
     const [todaysBriefings, setTodaysBriefings] = useState([])
     const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
+    const [beoCount, setBeoCount] = useState(0)
 
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
@@ -41,6 +42,7 @@ export default function Dashboard() {
             }
         }
         load()
+        supabase.from('banquet_event_orders').select('id', { count: 'exact', head: true }).then(({ count }) => setBeoCount(count || 0))
     }, [])
 
     // Load tasks whenever the active briefing changes
@@ -183,6 +185,15 @@ export default function Dashboard() {
                 </div>
 
                 <EightySixFeed />
+
+                <Link to="/kitchen/events" className="dash-card events-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div className="recipes-top-row">
+                        <div className="recipes-icon-box" style={{ background: '#1e3a5f' }}><i className="fa-solid fa-champagne-glasses" /></div>
+                        <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>
+                    </div>
+                    <div className="recipes-number">{beoCount}</div>
+                    <div className="recipes-subtitle">Upcoming Events</div>
+                </Link>
 
                 <SalesBriefing />
 

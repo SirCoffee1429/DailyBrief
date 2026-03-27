@@ -417,5 +417,39 @@ for food items on BEOs.
 - Item span: `flex: 1` so it takes remaining space and wraps naturally
 - Added `gap: '8px'` between item text and quantity
 
+---
 
+### 2026-03-27 — BEO Card Layout Redesign for Readability
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feature`
+**Summary:** Redesigned the Banquet Event Orders section from a cramped table layout to individual event cards with wider food item display, preventing excessive line wrapping.
+
+**Details:**
+- Replaced `<table>` layout with stacked card-per-event layout
+- Each event card has a clear header: event name (1.1rem, bold), date with weekday, and guest count with icons
+- Food items displayed in a CSS Grid (`1fr auto`) with item name column taking full width and quantity right-aligned
+- Font size increased from `0.9em` to `0.95rem` with `line-height: 1.5` for readability
+- Added column headers (Item | Qty) in the food items grid
+- Subtle blue-tinted background on each event card for visual separation
+- Completed events retain opacity/strikethrough behavior
+- Reduced right coordination panel from 350px to 300px to give BEO cards more horizontal space
+
+---
+
+### 2026-03-27 — Events & Catering on Kitchen Dashboard
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`, `app/src/App.jsx`, `app/src/pages/Dashboard.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Made the Events & Catering page available to kitchen crew as a read-only view accessible from the kitchen dashboard.
+
+**Details:**
+- Added `readOnly` prop to `EventsBanquetsPage` — when true, hides Upload BEO, Clear All, completion checkboxes, delete (X) buttons, and the coordination panel
+- Back button routes to `/kitchen` instead of `/office` in readOnly mode
+- Grid goes full-width (single column) in readOnly mode since coordination panel is hidden
+- Added `/kitchen/events` route in `App.jsx` wrapped in `KitchenLayout`
+- Added "Upcoming Events" tile to kitchen `Dashboard.jsx` with dynamic BEO count and blue champagne-glasses icon
+- Updated CSS `.dashboard-grid` template-areas to include `events` area alongside `recipes` and `sales`
+- Added `.events-card` CSS class with `grid-area: events`
+- Updated mobile grid breakpoint to include `events` in the stacked layout
 

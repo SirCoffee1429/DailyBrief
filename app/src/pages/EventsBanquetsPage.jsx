@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
-export default function EventsBanquetsPage() {
+export default function EventsBanquetsPage({ readOnly = false }) {
     const [notes, setNotes] = useState([])
     const [banquets, setBanquets] = useState([])
     const [beos, setBeos] = useState([])
@@ -151,16 +151,18 @@ export default function EventsBanquetsPage() {
                     <p className="header-date">Upcoming banquets and special event coordination</p>
                 </div>
                 <div className="header-actions">
-                    <label className={`btn btn-primary btn-sm ${uploadingBEO ? 'disabled' : ''}`} style={{ background: '#3b82f6', borderColor: '#3b82f6', cursor: 'pointer' }}>
-                        <i className={`fa-solid ${uploadingBEO ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`} />
-                        {uploadingBEO ? 'Parsing...' : 'Upload BEO'}
-                        <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={handleBEOUpload} disabled={uploadingBEO} />
-                    </label>
-                    <Link to="/office" className="btn btn-secondary btn-sm"><i className="fa-solid fa-arrow-left" /> Back</Link>
+                    {!readOnly && (
+                        <label className={`btn btn-primary btn-sm ${uploadingBEO ? 'disabled' : ''}`} style={{ background: '#3b82f6', borderColor: '#3b82f6', cursor: 'pointer' }}>
+                            <i className={`fa-solid ${uploadingBEO ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`} />
+                            {uploadingBEO ? 'Parsing...' : 'Upload BEO'}
+                            <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={handleBEOUpload} disabled={uploadingBEO} />
+                        </label>
+                    )}
+                    <Link to={readOnly ? '/kitchen' : '/office'} className="btn btn-secondary btn-sm"><i className="fa-solid fa-arrow-left" /> Back</Link>
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: 'var(--space-6)', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: readOnly ? '1fr' : 'minmax(0, 1fr) 300px', gap: 'var(--space-6)', alignItems: 'start' }}>
                 
                 {/* Left Panel: Parsed upcoming banquets & BEOs */}
                 <div className="card-column" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
@@ -170,66 +172,95 @@ export default function EventsBanquetsPage() {
                         <div className="card">
                             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2 className="card-title"><i className="fa-solid fa-file-invoice" style={{ color: '#3b82f6', marginRight: '8px' }}/> Banquet Event Orders</h2>
-                                <button
-                                    className="btn btn-secondary btn-sm"
-                                    style={{ fontSize: 'var(--font-size-xs)', color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
-                                    onClick={handleClearAllBEOs}
-                                    title="Clear all BEOs"
-                                >
-                                    <i className="fa-solid fa-trash-can" /> Clear All
-                                </button>
+                                {!readOnly && (
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ fontSize: 'var(--font-size-xs)', color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
+                                        onClick={handleClearAllBEOs}
+                                        title="Clear all BEOs"
+                                    >
+                                        <i className="fa-solid fa-trash-can" /> Clear All
+                                    </button>
+                                )}
                             </div>
-                            <div className="data-table-wrapper" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th style={{ width: '36px' }}></th>
-                                            <th>Event</th>
-                                            <th>Date</th>
-                                            <th>Guests</th>
-                                            <th>Food Items & Qty</th>
-                                            <th style={{ width: '36px' }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {beos.map(b => (
-                                            <tr key={b.id} className={b.completed ? 'beo-completed' : ''}>
-                                                <td>
-                                                    <input
-                                                        type="checkbox"
-                                                        className="beo-check"
-                                                        checked={!!b.completed}
-                                                        onChange={() => toggleBEOComplete(b.id, b.completed)}
-                                                        title={b.completed ? 'Mark incomplete' : 'Mark complete'}
-                                                    />
-                                                </td>
-                                                <td style={{ fontWeight: 600 }}>{b.event_name}</td>
-                                                <td>{new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}</td>
-                                                <td>{b.guest_count}</td>
-                                                <td>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.9em' }}>
-                                                        {(b.food_items || []).map((fi, idx) => (
-                                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '2px' }}>
-                                                                <span style={{ color: 'var(--text-primary)', flex: 1 }}>• {fi.item}</span>
-                                                                <span style={{ fontWeight: 700, color: '#3b82f6', whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right', minWidth: '28px' }}>{fi.quantity}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <button
-                                                        className="wb-act-btn wb-act-delete"
-                                                        onClick={() => handleDeleteBEO(b.id)}
-                                                        title="Delete this BEO"
-                                                        style={{ fontSize: '0.85rem' }}
-                                                    >
-                                                        <i className="fa-solid fa-xmark" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
+                                {beos.map(b => (
+                                    <div
+                                        key={b.id}
+                                        style={{
+                                            background: b.completed ? 'rgba(100,100,100,0.05)' : 'rgba(59, 130, 246, 0.04)',
+                                            border: `1px solid ${b.completed ? 'var(--border-color)' : 'rgba(59, 130, 246, 0.15)'}`,
+                                            borderRadius: 'var(--radius-md)',
+                                            padding: 'var(--space-4)',
+                                            opacity: b.completed ? 0.5 : 1,
+                                            textDecoration: b.completed ? 'line-through' : 'none',
+                                            transition: 'opacity 0.2s ease',
+                                        }}
+                                    >
+                                        {/* Event Header Row */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-3)' }}>
+                                            {!readOnly && (
+                                                <input
+                                                    type="checkbox"
+                                                    className="beo-check"
+                                                    checked={!!b.completed}
+                                                    onChange={() => toggleBEOComplete(b.id, b.completed)}
+                                                    title={b.completed ? 'Mark incomplete' : 'Mark complete'}
+                                                />
+                                            )}
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>
+                                                    {b.event_name}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                    <span><i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: '#3b82f6' }} />
+                                                        {new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </span>
+                                                    {b.guest_count && (
+                                                        <span><i className="fa-solid fa-users" style={{ marginRight: '5px', color: '#3b82f6' }} />{b.guest_count} guests</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {!readOnly && (
+                                                <button
+                                                    className="wb-act-btn wb-act-delete"
+                                                    onClick={() => handleDeleteBEO(b.id)}
+                                                    title="Delete this BEO"
+                                                    style={{ fontSize: '0.9rem', flexShrink: 0 }}
+                                                >
+                                                    <i className="fa-solid fa-xmark" />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Food Items */}
+                                        {(b.food_items || []).length > 0 && (
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '1fr auto',
+                                                gap: '6px 20px',
+                                                fontSize: '0.95rem',
+                                                lineHeight: '1.5',
+                                                padding: 'var(--space-3)',
+                                                background: 'rgba(0,0,0,0.1)',
+                                                borderRadius: 'var(--radius-sm)',
+                                            }}>
+                                                <div style={{ fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>Item</div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', textAlign: 'right' }}>Qty</div>
+                                                {(b.food_items || []).map((fi, idx) => (
+                                                    <>
+                                                        <div key={`item-${idx}`} style={{ color: 'var(--text-primary)', paddingBlock: '3px', borderBottom: idx < b.food_items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                                                            {fi.item}
+                                                        </div>
+                                                        <div key={`qty-${idx}`} style={{ fontWeight: 700, color: '#3b82f6', textAlign: 'right', paddingBlock: '3px', whiteSpace: 'nowrap', borderBottom: idx < b.food_items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                                                            {fi.quantity}
+                                                        </div>
+                                                    </>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -277,6 +308,7 @@ export default function EventsBanquetsPage() {
                 </div>
 
                 {/* Right Panel: Single Whiteboard Column for coordination */}
+                {!readOnly && (
                 <div className="wb-column" style={{ background: 'var(--bg-card)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
                     <div className="wb-author-bar" style={{ marginBottom: 'var(--space-4)' }}>
                         <i className="fa-solid fa-user-pen" />
@@ -368,6 +400,7 @@ export default function EventsBanquetsPage() {
                         </div>
                     </div>
                 </div>
+                )}
 
             </div>
         </div>
