@@ -209,9 +209,9 @@ export default function EventsBanquetsPage() {
                                                 <td>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.9em' }}>
                                                         {(b.food_items || []).map((fi, idx) => (
-                                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '2px' }}>
-                                                                <span style={{ color: 'var(--text-primary)' }}>• {fi.item}</span>
-                                                                <span style={{ fontWeight: 700, color: '#3b82f6' }}>{fi.quantity}</span>
+                                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '2px' }}>
+                                                                <span style={{ color: 'var(--text-primary)', flex: 1 }}>• {fi.item}</span>
+                                                                <span style={{ fontWeight: 700, color: '#3b82f6', whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right', minWidth: '28px' }}>{fi.quantity}</span>
                                                             </div>
                                                         ))}
                                                     </div>

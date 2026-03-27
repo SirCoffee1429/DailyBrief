@@ -404,4 +404,18 @@ for food items on BEOs.
 - Changed card title text to "Banquet Event Orders"
 - Removed `.slice().reverse()` from the `beos.map()` render so the ascending DB order is preserved
 
+---
+
+### 2026-03-26 — Fix BEO Quantity Number Wrapping
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `fix`
+**Summary:** Fixed quantity numbers splitting across lines when food item descriptions wrap. Added `white-space: nowrap`, `flex-shrink: 0`, and a gap to the quantity span.
+
+**Details:**
+- Quantity span: `whiteSpace: 'nowrap'`, `flexShrink: 0`, `minWidth: '28px'`, `textAlign: 'right'`
+- Item span: `flex: 1` so it takes remaining space and wraps naturally
+- Added `gap: '8px'` between item text and quantity
+
+
 
