@@ -453,3 +453,18 @@ for food items on BEOs.
 - Added `.events-card` CSS class with `grid-area: events`
 - Updated mobile grid breakpoint to include `events` in the stacked layout
 
+---
+
+### 2026-03-28 — Show Event Times on BEO Cards
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feature`
+**Summary:** Added event start time display to each BEO card between the date and guest count.
+
+**Details:**
+- Added clock icon (`fa-regular fa-clock`) and `b.start_time` display to the event metadata row
+- Time shows between date and guest count (e.g. "Fri, Mar 27, 2026 · 🕐 5:00 PM · 👥 21 guests")
+- Only renders when `start_time` is present (conditionally guarded)
+- Added `flexWrap: 'wrap'` to the metadata row for better mobile behavior
+- No DB or edge function changes needed — `start_time` column and Gemini extraction already existed
+

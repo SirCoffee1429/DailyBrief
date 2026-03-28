@@ -212,10 +212,13 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>
                                                     {b.event_name}
                                                 </div>
-                                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px', flexWrap: 'wrap' }}>
                                                     <span><i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: '#3b82f6' }} />
                                                         {new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                                                     </span>
+                                                    {b.start_time && (
+                                                        <span><i className="fa-regular fa-clock" style={{ marginRight: '5px', color: '#3b82f6' }} />{b.start_time}</span>
+                                                    )}
                                                     {b.guest_count && (
                                                         <span><i className="fa-solid fa-users" style={{ marginRight: '5px', color: '#3b82f6' }} />{b.guest_count} guests</span>
                                                     )}
