@@ -28,18 +28,25 @@ Deno.serve(async (req) => {
 
     // 3. Ask Gemini to parse the PDF
     const prompt = `
-      You are an expert at parsing restaurant sales reports. 
-      Attached is a PDF of an "Item Sales Report". 
-      Please extract all items sold. 
-      Return ONLY a JSON array of objects with these keys: 
-      "item_name" (the name of the item), 
-      "units_sold" (the number of units sold as a number), 
-      "category" (the category it falls under, e.g., Appetizers, BBQ, Desserts).
-      
-      The report contains a list of items and their "Units Sold". 
-      Ignore "Item Category Totals" and "Totals" lines.
-      Ignore items with 0 units sold if any.
-      Sort the resulting array by units_sold descending.
+      You are an expert at parsing restaurant sales reports.
+      Attached is a PDF of an "Item Sales Report".
+
+      Return ONLY a JSON object with exactly two keys:
+      1. "report_date": The date of this report in YYYY-MM-DD format.
+         Look in the header, title, footer, or anywhere on the page for a date (e.g. "03/27/2026", "March 27, 2026", "2026-03-27").
+         If you cannot find any date, use null.
+      2. "items": An array of objects, each with these keys:
+         - "item_name" (string): the name of the item
+         - "units_sold" (number): the number of units sold
+         - "category" (string): the category (e.g., Appetizers, BBQ, Desserts)
+
+      Rules for items:
+      - Ignore "Item Category Totals" and "Totals" lines
+      - Ignore items with 0 units sold
+      - Sort items by units_sold descending
+
+      Example response shape:
+      { "report_date": "2026-03-27", "items": [{"item_name": "Brisket", "units_sold": 42, "category": "BBQ"}] }
     `;
 
     console.log("Sending PDF to Gemini for parsing...");
@@ -75,17 +82,25 @@ Deno.serve(async (req) => {
     const geminiData = await geminiRes.json();
     const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
     const parsedData = JSON.parse(rawOutput);
-    console.log(`Gemini parsed ${parsedData.length} items from the PDF`);
+
+    // Extract date from Gemini response, fall back to today (UTC) if not found
+    const reportDate: string = parsedData.report_date
+      || new Date().toISOString().split("T")[0];
+    const items: { item_name: string; units_sold: number; category: string }[] = parsedData.items || [];
+
+    console.log(`Gemini parsed ${items.length} items from the PDF, report date: ${reportDate}`);
+
+    if (items.length === 0) {
+      console.warn("Gemini returned 0 items — check PDF or prompt");
+    }
 
     // 4. Save to Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const reportDate = new Date().toISOString().split("T")[0];
-
     const { error } = await supabase
       .from("sales_data")
       .insert(
-        parsedData.map((item: { item_name: string; units_sold: number; category: string }) => ({
+        items.map((item) => ({
           report_date: reportDate,
           item_name: item.item_name,
           units_sold: item.units_sold,
@@ -99,9 +114,9 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    console.log(`Successfully saved ${parsedData.length} items to sales_data for ${reportDate}`);
+    console.log(`Successfully saved ${items.length} items to sales_data for ${reportDate}`);
 
-    return new Response(JSON.stringify({ success: true, count: parsedData.length }), {
+    return new Response(JSON.stringify({ success: true, count: items.length, report_date: reportDate }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

@@ -9,19 +9,19 @@ export default function OfficeDashboard() {
 
     useEffect(() => {
         async function load() {
-            const [wbRes, brRes, taskRes, boardNoteRes, eventNoteRes] = await Promise.all([
+            const [wbRes, brRes, taskRes, boardNoteRes, beoRes] = await Promise.all([
                 supabase.from('workbooks').select('id', { count: 'exact', head: true }),
                 supabase.from('briefings').select('id', { count: 'exact', head: true }),
                 supabase.from('briefing_tasks').select('id', { count: 'exact', head: true }),
-                supabase.from('management_notes').select('id', { count: 'exact', head: true }).neq('category', 'events'),
-                supabase.from('management_notes').select('id', { count: 'exact', head: true }).eq('category', 'events'),
+                supabase.from('management_notes').select('id', { count: 'exact', head: true }).eq('category', 'comms'),
+                supabase.from('banquet_event_orders').select('id', { count: 'exact', head: true }),
             ])
             setStats({
                 workbooks: wbRes.count || 0,
                 briefings: brRes.count || 0,
                 tasks: taskRes.count || 0,
                 notes: boardNoteRes.count || 0,
-                events: eventNoteRes.count || 0,
+                events: beoRes.count || 0,
             })
         }
         load()
