@@ -636,3 +636,29 @@ beneath the weather widget as a full-width row.
   span) immediately after the weather widget
 - No CSS or database changes needed — reuses existing `.office-weather-row`
   class for full-width layout
+
+---
+
+### 2026-04-02 — Fix Sales Navigation Across All Dashboards
+
+**File(s) Changed:** `app/src/components/SalesBriefing.jsx`,
+`app/src/pages/SalesReports.jsx`, `app/src/pages/SalesReportDetail.jsx`,
+`app/src/pages/FohDashboard.jsx`, `app/src/App.jsx` **Type:** `fix`
+**Summary:** Fixed broken sales navigation in the Office and FOH dashboards.
+The "Previous Night's Sales" tile, sales list date tiles, and detail back
+buttons all generated incorrect URLs that didn't match routes, causing blank
+screens.
+
+**Details:**
+
+- Fixed `SalesBriefing.jsx` link path — now extracts `:dept` from the URL for
+  office context (e.g. `/office/kitchen/sales` instead of `/office/sales`)
+- Fixed `SalesReports.jsx` basePath — same department-aware extraction for
+  office, plus FOH support
+- Fixed `SalesReportDetail.jsx` basePath — same fix for the "Back to Dates"
+  link
+- All three components now support `/foh/sales` path context
+- Added `/foh/sales` and `/foh/sales/:date` routes in `App.jsx` wrapped in
+  `FohLayout`
+- Added `<SalesBriefing />` import and render to `FohDashboard.jsx` so FOH
+  users see the Previous Night's Sales tile

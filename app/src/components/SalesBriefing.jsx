@@ -7,8 +7,18 @@ export default function SalesBriefing() {
     const [latestDate, setLatestDate] = useState('')
     const [itemCount, setItemCount] = useState(0)
 
-    // Determine the relevant link path based on perspective
-    const linkPath = location.pathname.startsWith('/office') ? '/office/sales' : '/kitchen/sales'
+    // Build the correct sales link based on which dashboard context we're in
+    // Office routes include a :dept param (e.g. /office/kitchen/sales)
+    const getLinkPath = () => {
+        if (location.pathname.startsWith('/office')) {
+            const parts = location.pathname.split('/')
+            const dept = parts[2] || 'kitchen'
+            return `/office/${dept}/sales`
+        }
+        if (location.pathname.startsWith('/foh')) return '/foh/sales'
+        return '/kitchen/sales'
+    }
+    const linkPath = getLinkPath()
 
     useEffect(() => {
         async function fetchLatestSalesSummary() {

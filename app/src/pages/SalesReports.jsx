@@ -7,8 +7,18 @@ export default function SalesReports() {
     const [loading, setLoading] = useState(true)
     const location = useLocation()
     
-    // Determine base path based on whether user is in kitchen or office
-    const basePath = location.pathname.startsWith('/office') ? '/office/sales' : '/kitchen/sales'
+    // Build the correct base path depending on dashboard context
+    // Office routes include a :dept param (e.g. /office/kitchen/sales)
+    const getBasePath = () => {
+        if (location.pathname.startsWith('/office')) {
+            const parts = location.pathname.split('/')
+            const dept = parts[2] || 'kitchen'
+            return `/office/${dept}/sales`
+        }
+        if (location.pathname.startsWith('/foh')) return '/foh/sales'
+        return '/kitchen/sales'
+    }
+    const basePath = getBasePath()
 
     useEffect(() => {
         async function fetchDates() {
