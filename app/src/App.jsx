@@ -18,7 +18,7 @@ import OfficeLayout from './components/OfficeLayout.jsx'
 import OfficeGate from './components/OfficeGate.jsx'
 import SalesReports from './pages/SalesReports.jsx'
 import SalesReportDetail from './pages/SalesReportDetail.jsx'
-import ManagementBoardPage from './pages/ManagementBoardPage.jsx'
+
 import EventsBanquetsPage from './pages/EventsBanquetsPage.jsx'
 import RecipeCreator from './pages/RecipeCreator.jsx'
 
@@ -56,7 +56,7 @@ export default function App() {
             <Route path="/office/:dept/workbooks/upload" element={<OfficeGate><OfficeLayout><WorkbookUpload /></OfficeLayout></OfficeGate>} />
             <Route path="/office/:dept/workbooks/:id" element={<OfficeGate><OfficeLayout><WorkbookViewer /></OfficeLayout></OfficeGate>} />
             <Route path="/office/:dept/history" element={<OfficeGate><OfficeLayout><History /></OfficeLayout></OfficeGate>} />
-            <Route path="/office/:dept/board" element={<OfficeGate><OfficeLayout><ManagementBoardPage /></OfficeLayout></OfficeGate>} />
+
             <Route path="/office/:dept/events" element={<OfficeGate><OfficeLayout><EventsBanquetsPage /></OfficeLayout></OfficeGate>} />
             <Route path="/office/:dept/chat" element={<OfficeGate><OfficeLayout><AiChat /></OfficeLayout></OfficeGate>} />
             <Route path="/office/:dept/sales" element={<OfficeGate><OfficeLayout><SalesReports /></OfficeLayout></OfficeGate>} />
