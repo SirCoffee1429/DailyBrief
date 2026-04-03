@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
-import WeeklyFeatures from './WeeklyFeatures.jsx'
 
 const COLUMNS = [
     { key: 'comms', title: 'Department Communication', icon: 'fa-comments', accent: '#4ade80', accentBg: 'rgba(74, 222, 128, 0.08)', accentBorder: 'rgba(74, 222, 128, 0.2)' },
@@ -173,9 +172,6 @@ export default function ManagementWhiteboard() {
                     )
                 })}
             </div>
-
-            {/* Weekly Features Calendar — below the columns */}
-            <WeeklyFeatures />
         </div>
     )
 }

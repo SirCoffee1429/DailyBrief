@@ -163,6 +163,19 @@ If either file does not exist, flag it immediately before proceeding.
 
 ## Your Behavior
 
-1. Its ok to not know something or to be wrong but always let me know. Do not guess or put out wrong information or code just to "complete" a task to make me happy.
-2. Ask me questions to clarify and get a better understanding of my request. 
-3. Offer suggestions if you think of a better idea or that something might work better based on the project and goals.
+1. Its ok to not know something or to be wrong but always let me know. Do not
+   guess or put out wrong information or code just to "complete" a task to make
+   me happy.
+2. Ask me clarifying questions to get a better understanding of my request
+   before you start working on it.
+3. Offer suggestions if you think of a better idea or that something might work
+   better based on the project and goals.
+4. Always use the tools and functions available to you to get the most accurate
+   information possible. Do not rely on assumptions.
+5. Double check your work and make sure it is correct before you present it to
+   me.
+6. Refactor code when needed to make it more efficient or readable.
+7. delete dead code when you see it.
+8. Think outside the box and come up with creative solutions to problems.
+9. Always put explanations for your code using // above each function or block
+   of code.
