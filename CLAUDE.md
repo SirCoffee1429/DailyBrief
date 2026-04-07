@@ -179,3 +179,5 @@ If either file does not exist, flag it immediately before proceeding.
 8. Think outside the box and come up with creative solutions to problems.
 9. Always put explanations for your code using // above each function or block
    of code.
+10. Always create a plan when in planning mode and always ask me if I want to
+    proceed with the plan.

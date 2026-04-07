@@ -662,3 +662,30 @@ screens.
   `FohLayout`
 - Added `<SalesBriefing />` import and render to `FohDashboard.jsx` so FOH
   users see the Previous Night's Sales tile
+
+---
+
+### 2026-04-07 — Remove Front of House Dashboard & Department-Scoped Routing
+
+**File(s) Changed:** `app/src/App.jsx`, `app/src/pages/OfficeDashboard.jsx`,
+`app/src/pages/Briefings.jsx`, `app/src/pages/SalesReports.jsx`,
+`app/src/pages/SalesReportDetail.jsx`, `app/src/components/SalesBriefing.jsx`
+**File(s) Deleted:** `app/src/pages/FohDashboard.jsx`
+**Type:** `refactor`
+**Summary:** Removed all Front of House dashboard code and department-scoped
+(`/office/:dept/...`) routing. The app is now Kitchen + Office only, with flat
+`/office/...` paths.
+
+**Details:**
+
+- Deleted `FohDashboard.jsx`
+- Removed `FohDashboard`, `FohLayout`, `OfficeDeptSelect` imports from `App.jsx`
+- Replaced all `:dept`-scoped office routes with flat `/office/...` routes
+- Rewrote `OfficeDashboard.jsx` — removed `useParams`, `DEPT_META`, department
+  filtering, and "Departments" back-button. All links use static `/office/...`
+- Rewrote `Briefings.jsx` — removed `DEPT_LABELS`, `useParams`, department
+  filter on queries. Shows all briefings, uses `/office/briefings` paths
+- Simplified `SalesReports.jsx`, `SalesReportDetail.jsx`, `SalesBriefing.jsx`
+  — removed `/foh` path checks and dept-scoped office path parsing
+- Restored `readOnly` events route at `/kitchen/events`
+- Final grep audit confirmed zero remaining `foh` or `:dept` references

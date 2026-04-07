@@ -1,32 +1,27 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
-const DEPT_LABELS = { kitchen: 'Kitchen', foh: 'Front of House' }
-
 export default function Briefings() {
-    const { dept } = useParams()
-    const base = `/office/${dept}`
-    const label = DEPT_LABELS[dept] || 'Kitchen'
-
     const [briefings, setBriefings] = useState([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         loadBriefings()
-    }, [dept])
+    }, [])
 
+    // Fetch all briefings ordered by date descending
     async function loadBriefings() {
         setLoading(true)
         const { data } = await supabase
             .from('briefings')
             .select('*, briefing_tasks(*)')
-            .eq('department', dept)
             .order('date', { ascending: false })
         setBriefings(data || [])
         setLoading(false)
     }
 
+    // Toggle a task's completion state
     async function toggleTask(taskId, isCompleted) {
         await supabase
             .from('briefing_tasks')
@@ -43,6 +38,7 @@ export default function Briefings() {
         )
     }
 
+    // Delete a briefing by ID
     async function deleteBriefing(id) {
         if (!confirm('Delete this briefing?')) return
         await supabase.from('briefings').delete().eq('id', id)
@@ -57,17 +53,17 @@ export default function Briefings() {
         <div>
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                    <h1 className="page-title">{label} Briefings</h1>
-                    <p className="page-subtitle">Shift notes and tasks for the {label.toLowerCase()} crew</p>
+                    <h1 className="page-title">Briefings</h1>
+                    <p className="page-subtitle">Shift notes and tasks for the crew</p>
                 </div>
-                <Link to={`${base}/briefings/new`} className="btn btn-primary">📋 New Briefing</Link>
+                <Link to="/office/briefings/new" className="btn btn-primary">📋 New Briefing</Link>
             </div>
 
             {briefings.length === 0 ? (
                 <div className="empty-state">
                     <div className="empty-state-icon">📋</div>
-                    <div className="empty-state-text">No {label.toLowerCase()} briefings yet. Create one for the crew.</div>
-                    <Link to={`${base}/briefings/new`} className="btn btn-primary" style={{ marginTop: 'var(--space-5)' }}>
+                    <div className="empty-state-text">No briefings yet. Create one for the crew.</div>
+                    <Link to="/office/briefings/new" className="btn btn-primary" style={{ marginTop: 'var(--space-5)' }}>
                         📋 Create Briefing
                     </Link>
                 </div>
@@ -83,7 +79,7 @@ export default function Briefings() {
                                     <div className="briefing-card-title">{b.title}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                    <Link to={`${base}/briefings/${b.id}/edit`} className="btn btn-sm btn-secondary">✏️ Edit</Link>
+                                    <Link to={`/office/briefings/${b.id}/edit`} className="btn btn-sm btn-secondary">✏️ Edit</Link>
                                     <button className="btn btn-sm btn-danger" onClick={() => deleteBriefing(b.id)}>🗑</button>
                                 </div>
                             </div>

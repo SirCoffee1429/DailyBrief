@@ -8,14 +8,8 @@ export default function SalesReports() {
     const location = useLocation()
     
     // Build the correct base path depending on dashboard context
-    // Office routes include a :dept param (e.g. /office/kitchen/sales)
     const getBasePath = () => {
-        if (location.pathname.startsWith('/office')) {
-            const parts = location.pathname.split('/')
-            const dept = parts[2] || 'kitchen'
-            return `/office/${dept}/sales`
-        }
-        if (location.pathname.startsWith('/foh')) return '/foh/sales'
+        if (location.pathname.startsWith('/office')) return '/office/sales'
         return '/kitchen/sales'
     }
     const basePath = getBasePath()
