@@ -569,3 +569,20 @@ dashboard. It was auto-placed by the grid rather than locked below the forecast.
   locks into the correct named slot
 - Added `"features"` to the mobile breakpoint stack order (after weather, before
   notes)
+
+---
+
+### 2026-04-07 — Fix Office Dashboard Route Mismatch
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx` **Type:** `fix`
+**Summary:** OfficeDashboard was still using department-scoped links
+(`/office/${dept}/...`) from a reverted commit, but App.jsx routes are at
+`/office/...`. Rewrote to use direct `/office/...` paths.
+
+**Details:**
+
+- Removed `useParams()`, `DEPT_META` config, and the `base` path builder
+- All tile links now use static `/office/...` paths matching App.jsx routes
+- Removed department-specific filtering on briefings/tasks queries
+- Removed "Departments" back-button (no longer applicable)
+- Kept WeeklyFeatures and SalesBriefing cards
