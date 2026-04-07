@@ -537,128 +537,35 @@ and guest count.
 
 ---
 
-### 2026-03-29 — Front of House Dashboard
+### 2026-04-07 — Move Lunch & Dinner Features to Dashboards
 
-**File(s) Changed:** `app/src/pages/FohDashboard.jsx`,
-`app/src/components/FohLayout.jsx`, `app/src/pages/RoleSelect.jsx`,
-`app/src/App.jsx`, `app/src/pages/EventsBanquetsPage.jsx`,
-`app/src/index.css` **Type:** `feature` **Summary:** Created a dedicated Front
-of House dashboard at `/foh` with its own teal accent color scheme, reusing
-existing components for weather, briefing, tasks, and 86'd items.
+**File(s) Changed:** `app/src/components/ManagementWhiteboard.jsx`,
+`app/src/pages/OfficeDashboard.jsx`, `app/src/pages/Dashboard.jsx` **Type:**
+`feature` **Summary:** Moved the Lunch & Dinner Features weekly calendar from
+the Board/ManagementWhiteboard page onto both the Office and Kitchen dashboards,
+displayed directly below the weather forecast card.
 
 **Details:**
 
-- Created `FohDashboard.jsx` with 5-day weather forecast, briefing section with
-  cycler, tasks with checkboxes, 86'd items feed, Today's Features card (pulls
-  lunch/dinner from `weekly_features`), and Events tile linking to read-only
-  events page
-- Created `FohLayout.jsx` shell with simplified bottom tab nav (Brief + Events)
-- Added FOH as third role option on the landing page (ordered: FOH, Office,
-  Kitchen left-to-right)
-- Added `/foh` and `/foh/events` routes in `App.jsx` wrapped in `FohLayout`
-- Updated `EventsBanquetsPage.jsx` to detect `/foh` path and route back button
-  correctly using `useLocation`
-- Added `--foh-accent` CSS variables (`#10b981` emerald/teal) with full set of
-  FOH-specific styles: grid layout, briefing cycler, task badges, checkbox
-  colors, features card, events card, hover effects, tab bar accent, and role
-  select card glow
-- FOH grid layout: weather (full width) → briefing + tasks → briefing +
-  eightysix → features + events
+- Removed `<WeeklyFeatures />` and its import from `ManagementWhiteboard.jsx`
+- Added `WeeklyFeatures` import and rendered it after `<WeatherWidget />` in
+  `OfficeDashboard.jsx` (wrapped in `office-weather-row` for consistent width)
+- Added `WeeklyFeatures` import and rendered it after `<WeatherWidget />` in
+  `Dashboard.jsx` (Kitchen dashboard)
 
 ---
 
-### 2026-03-30 — Separate Kitchen & FOH Briefings + Office Department Flow
+### 2026-04-07 — Fix Features Card Grid Position on Kitchen Dashboard
 
-**File(s) Changed:**
-
-- `supabase/migrations/add_department_to_briefings.sql`
-- `app/src/pages/OfficeDeptSelect.jsx` (new)
-- `app/src/App.jsx`
-- `app/src/components/OfficeLayout.jsx`
-- `app/src/pages/OfficeDashboard.jsx`
-- `app/src/pages/Briefings.jsx`
-- `app/src/pages/BriefingEditor.jsx`
-- `app/src/pages/History.jsx`
-- `app/src/pages/Dashboard.jsx`
-- `app/src/pages/FohDashboard.jsx`
-- `app/src/pages/EventsBanquetsPage.jsx`
-
-**Type:** `feature`
-
-**Summary:** Separated Kitchen and FOH briefings/tasks so they operate
-independently. Added a department selection page to the Office flow so managers
-choose which department to manage after entering the password.
+**File(s) Changed:** `app/src/index.css` **Type:** `fix` **Summary:** Fixed the
+Lunch & Dinner Features card appearing in the wrong grid position on the kitchen
+dashboard. It was auto-placed by the grid rather than locked below the forecast.
 
 **Details:**
 
-- Added `department` column (text, NOT NULL, default 'kitchen') to `briefings`
-  table via Supabase migration. All existing briefings tagged as 'kitchen'.
-- Created `OfficeDeptSelect.jsx` — new page after password gate with Kitchen and
-  FOH cards for department selection
-- Restructured all office routes from `/office/*` to `/office/:dept/*` using URL
-  params (e.g., `/office/kitchen/briefings`, `/office/foh/briefings`)
-- Updated `OfficeLayout.jsx` to read `:dept` from URL and build all nav links
-  relative to `/office/{dept}/`
-- Updated `OfficeDashboard.jsx` to filter briefing/task counts by department,
-  show department-specific accent colors (orange for kitchen, teal for FOH), and
-  added "Departments" back button
-- Updated `Briefings.jsx` to filter by `.eq('department', dept)` and use
-  department-aware labels and links
-- Updated `BriefingEditor.jsx` to tag new briefings with `department: dept` on
-  insert, and use department-scoped back/cancel links
-- Updated `History.jsx` to filter by `.eq('department', dept)` with
-  department-specific page titles
-- Updated `Dashboard.jsx` (Kitchen) to filter briefings by
-  `.eq('department', 'kitchen')`
-- Updated `FohDashboard.jsx` to filter briefings by
-  `.eq('department', 'foh')`
-- Updated `EventsBanquetsPage.jsx` back-button logic to handle new
-  `/office/:dept/` route structure
-- Shared pages (Events, Board, Sales, Recipes, Features, 86'd Items) remain
-  identical across both department contexts
-
----
-
-### 2026-04-02 — Move Lunch & Dinner Features to Office Dashboard
-
-**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx`,
-`app/src/components/ManagementWhiteboard.jsx` **Type:** `refactor`
-**Summary:** Moved the Lunch & Dinner Features (WeeklyFeatures) calendar from
-the Management Board page to the main Office Dashboard, positioned directly
-beneath the weather widget as a full-width row.
-
-**Details:**
-
-- Removed `<WeeklyFeatures />` render and its import from
-  `ManagementWhiteboard.jsx`
-- Added `WeeklyFeatures` import to `OfficeDashboard.jsx`
-- Rendered `<WeeklyFeatures />` inside an `office-weather-row` div (full-width
-  span) immediately after the weather widget
-- No CSS or database changes needed — reuses existing `.office-weather-row`
-  class for full-width layout
-
----
-
-### 2026-04-02 — Fix Sales Navigation Across All Dashboards
-
-**File(s) Changed:** `app/src/components/SalesBriefing.jsx`,
-`app/src/pages/SalesReports.jsx`, `app/src/pages/SalesReportDetail.jsx`,
-`app/src/pages/FohDashboard.jsx`, `app/src/App.jsx` **Type:** `fix`
-**Summary:** Fixed broken sales navigation in the Office and FOH dashboards.
-The "Previous Night's Sales" tile, sales list date tiles, and detail back
-buttons all generated incorrect URLs that didn't match routes, causing blank
-screens.
-
-**Details:**
-
-- Fixed `SalesBriefing.jsx` link path — now extracts `:dept` from the URL for
-  office context (e.g. `/office/kitchen/sales` instead of `/office/sales`)
-- Fixed `SalesReports.jsx` basePath — same department-aware extraction for
-  office, plus FOH support
-- Fixed `SalesReportDetail.jsx` basePath — same fix for the "Back to Dates"
-  link
-- All three components now support `/foh/sales` path context
-- Added `/foh/sales` and `/foh/sales/:date` routes in `App.jsx` wrapped in
-  `FohLayout`
-- Added `<SalesBriefing />` import and render to `FohDashboard.jsx` so FOH
-  users see the Previous Night's Sales tile
+- Added `"features  features  features"` row to `dashboard-grid`
+  grid-template-areas immediately after the `weather` row
+- Replaced `margin-top` on `.wf-calendar` with `grid-area: features` so the card
+  locks into the correct named slot
+- Added `"features"` to the mobile breakpoint stack order (after weather, before
+  notes)
