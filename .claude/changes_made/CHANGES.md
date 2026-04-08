@@ -586,3 +586,29 @@ dashboard. It was auto-placed by the grid rather than locked below the forecast.
 - Removed department-specific filtering on briefings/tasks queries
 - Removed "Departments" back-button (no longer applicable)
 - Kept WeeklyFeatures and SalesBriefing cards
+
+---
+
+### 2026-04-08 — Remove FOH Code & Fix Briefings on Main Branch
+
+**File(s) Changed:** `app/src/pages/Briefings.jsx`,
+`app/src/pages/OfficeDashboard.jsx`, `app/src/pages/SalesReports.jsx`,
+`app/src/pages/SalesReportDetail.jsx`, `app/src/components/SalesBriefing.jsx`
+**File(s) Deleted:** `app/src/pages/FohDashboard.jsx`
+**Type:** `fix`
+**Summary:** Previous cleanup was done on a feature branch that was deleted
+before merging. Re-applied all FOH removal and dept-scoping fixes directly to
+main. Fixed the briefings page showing empty because it was filtering by an
+undefined `:dept` param.
+
+**Details:**
+
+- `Briefings.jsx`: Removed `useParams`, `DEPT_LABELS`, and `.eq('department',
+  dept)` filter — briefings now load without department filtering. Links use
+  static `/office/briefings/...` paths
+- `OfficeDashboard.jsx`: Removed stale `notes` state and `management_notes`
+  query for the deleted Board tile
+- `SalesReports.jsx`, `SalesReportDetail.jsx`, `SalesBriefing.jsx`: Removed
+  `/foh` path checks and dept-scoped office path parsing
+- Deleted `FohDashboard.jsx` on main
+- Final audit: zero `foh` references remain across all source files

@@ -6,28 +6,28 @@ import SalesBriefing from '../components/SalesBriefing.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
 
 export default function OfficeDashboard() {
-    const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0, notes: 0, events: 0 })
+    const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0, events: 0 })
 
     useEffect(() => {
+        // Fetch counts for each dashboard tile
         async function load() {
-            const [wbRes, brRes, taskRes, boardNoteRes, beoRes] = await Promise.all([
+            const [wbRes, brRes, taskRes, beoRes] = await Promise.all([
                 supabase.from('workbooks').select('id', { count: 'exact', head: true }),
                 supabase.from('briefings').select('id', { count: 'exact', head: true }),
                 supabase.from('briefing_tasks').select('id', { count: 'exact', head: true }),
-                supabase.from('management_notes').select('id', { count: 'exact', head: true }).eq('category', 'comms'),
                 supabase.from('banquet_event_orders').select('id', { count: 'exact', head: true }),
             ])
             setStats({
                 workbooks: wbRes.count || 0,
                 briefings: brRes.count || 0,
                 tasks: taskRes.count || 0,
-                notes: boardNoteRes.count || 0,
                 events: beoRes.count || 0,
             })
         }
         load()
     }, [])
 
+    // Lock the office and return to landing page
     function handleLogout() {
         sessionStorage.removeItem('officeUnlocked')
         window.location.href = '/'

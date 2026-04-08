@@ -7,15 +7,9 @@ export default function SalesBriefing() {
     const [latestDate, setLatestDate] = useState('')
     const [itemCount, setItemCount] = useState(0)
 
-    // Build the correct sales link based on which dashboard context we're in
-    // Office routes include a :dept param (e.g. /office/kitchen/sales)
+    // Build link path based on current dashboard context
     const getLinkPath = () => {
-        if (location.pathname.startsWith('/office')) {
-            const parts = location.pathname.split('/')
-            const dept = parts[2] || 'kitchen'
-            return `/office/${dept}/sales`
-        }
-        if (location.pathname.startsWith('/foh')) return '/foh/sales'
+        if (location.pathname.startsWith('/office')) return '/office/sales'
         return '/kitchen/sales'
     }
     const linkPath = getLinkPath()
