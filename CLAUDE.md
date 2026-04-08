@@ -156,7 +156,9 @@ At the start of every new session, or whenever a new model is loaded, you MUST:
 1. Read `CHANGES.md` for project history
 2. Read this file for project context
 3. Summarize the last 3 tasks completed and current status
-4. Output: "Context loaded. Ready to continue from [LAST TASK TITLE]." before
+4. Ask what supabase project we are working on
+5. Ask what branch we are working on
+6. Output: "Context loaded. Ready to continue from [LAST TASK TITLE]." before
    doing any work
 
 If either file does not exist, flag it immediately before proceeding.

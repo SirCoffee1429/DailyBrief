@@ -689,3 +689,20 @@ screens.
   — removed `/foh` path checks and dept-scoped office path parsing
 - Restored `readOnly` events route at `/kitchen/events`
 - Final grep audit confirmed zero remaining `foh` or `:dept` references
+
+---
+
+### 2026-04-07 — Remove Dead Board Tile Code from OfficeDashboard
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx` **Type:** `refactor`
+**Summary:** Removed unused state and redundant data fetching left over from
+the now-removed Board tile.
+
+**Details:**
+
+- Removed `notes` field from the `stats` state object
+- Removed `boardNoteRes` query (`management_notes` count for category 'comms')
+  from the `Promise.all` data fetch
+- Verified `RoleSelect.jsx` is clean (no FOH references)
+- Verified `FohLayout.jsx` no longer exists on disk
+- Verified zero `foh` references remain across all `.jsx`, `.js`, `.css` files
