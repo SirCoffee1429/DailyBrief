@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
+import ManagementWhiteboard from '../components/ManagementWhiteboard.jsx'
 
 export default function OfficeDashboard() {
     const [stats, setStats] = useState({ workbooks: 0, briefings: 0, tasks: 0, events: 0 })
@@ -92,6 +93,11 @@ export default function OfficeDashboard() {
 
                 <div className="office-weather-row">
                     <SalesBriefing />
+                </div>
+
+                {/* Manager Board — chat-style message board for managers */}
+                <div className="office-weather-row">
+                    <ManagementWhiteboard />
                 </div>
             </div>
         </div>
