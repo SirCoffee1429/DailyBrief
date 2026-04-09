@@ -15,7 +15,8 @@ export default function AssistantWidget({ externalOpen, onExternalClose, voiceMo
     const suggestedPrompts = [
         "What sold the most this week?",
         "What % of sales were Handhelds?",
-        "How many Pretzel Bites did we sell?"
+        "How many Pretzel Bites did we sell?",
+        "Whats the recipe for French Onion Soup?"
     ]
 
     // Voice input hook
