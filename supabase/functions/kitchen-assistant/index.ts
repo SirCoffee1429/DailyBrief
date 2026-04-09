@@ -14,9 +14,9 @@ const corsHeaders = {
 // ─── Sales intent detection ───────────────────────────────────────────────────
 const SALES_KEYWORDS = [
   "sold", "sell", "sales", "revenue", "popular", "top seller", "best seller",
-  "worst seller", "how many", "percentage", "percent", "most sold", "least sold",
-  "top item", "best item", "category", "this week", "last week", "yesterday",
-  "this month", "last month", "total", "how much did", "how much have",
+  "worst seller", "most sold", "least sold",
+  "top item", "best item", "this week", "last week", "yesterday",
+  "this month", "last month", "how much did", "how much have",
   "did we sell", "have we sold", "what sold", "ranking", "breakdown",
 ];
 
