@@ -1,5 +1,5 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_ENDPOINT =
@@ -10,6 +10,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+interface SalesDataRow {
+  item_name: string;
+  units_sold: number;
+  unit_price: number;
+  total_revenue: number;
+  category: string;
+  report_date: string;
+}
 
 // ─── Sales intent detection ───────────────────────────────────────────────────
 const SALES_KEYWORDS = [
@@ -58,7 +67,7 @@ function getDateWindow(question: string): { from: string; to: string; label: str
 
 // ─── Sales context builder ────────────────────────────────────────────────────
 async function fetchSalesContext(
-  supabase: any,
+  supabase: SupabaseClient,
   _question: string
 ): Promise<string> {
   const { from, to, label } = getDateWindow(_question);
@@ -84,7 +93,7 @@ async function fetchSalesContext(
   let grandUnits = 0;
   let grandRevenue = 0;
 
-  for (const row of data as any[]) {
+  for (const row of data as SalesDataRow[]) {
     const key = row.item_name;
     if (!itemMap[key]) {
       itemMap[key] = { units: 0, revenue: 0, price: row.unit_price || 0, category: row.category || "" };
@@ -114,7 +123,7 @@ async function fetchSalesContext(
   if (wantsDaily) {
     ctx += `\n[DAILY RAW DATA BREAKDOWN]\n`;
     ctx += `Date | Item Name | Category | Units Sold | Unit Price | Total Revenue\n`;
-    for (const row of data as any[]) {
+    for (const row of data as SalesDataRow[]) {
       const p = row.unit_price ? `$${Number(row.unit_price).toFixed(2)}` : "0";
       const r = row.total_revenue ? `$${Number(row.total_revenue).toFixed(2)}` : "0";
       ctx += `${row.report_date} | ${row.item_name} | ${row.category} | ${row.units_sold} | ${p} | ${r}\n`;

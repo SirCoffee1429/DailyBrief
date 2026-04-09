@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js@^2.4.1/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
