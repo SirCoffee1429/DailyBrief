@@ -639,3 +639,18 @@ questions about sales data, and updated the sales parser to capture item pricing
 - **Assistant UI:** Updated `AssistantWidget.jsx` with a new greeting including
   sales questions, and surfaced three common predefined sales prompts as
   quick-access chips when beginning a chat.
+### 2026-04-08 — Add Manager Board to Office Dashboard
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx` **Type:** `feature`
+**Summary:** Added the ManagementWhiteboard component to the Office Dashboard,
+giving managers a chat-style message board to post notes for other managers.
+
+**Details:**
+
+- Imported existing `ManagementWhiteboard` component (was unused after earlier
+  refactors)
+- Rendered it as a full-width card at the bottom of the office grid
+- No DB changes needed — uses existing `management_notes` table with `comms`
+  category
+- All existing CSS (`.wb-*` classes) was already in `index.css`
+- Supports posting, pinning, deleting, author names, and relative timestamps
