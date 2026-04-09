@@ -3522,7 +3522,6 @@ tr.beo-completed td .beo-check {
 
 .office-v2-content {
   flex: 1;
-  overflow-y: auto;
   padding: 0 1.5rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
