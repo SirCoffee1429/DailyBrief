@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Optimized Office Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#e66b35',
+              orangeHover: '#d35c2b',
+              orangeLight: 'rgba(230, 107, 53, 0.1)',
+            },
+            dark: {
+              900: '#1e1e1e', // App background
+              800: '#2a2a2a', // Sidebar/Widget backgrounds
+              700: '#333333', // Borders/Separators
+              600: '#555555', // Secondary text
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          },
+          backgroundImage: {
+            'grid-pattern': 'linear-gradient(to right, #333 1px, transparent 1px), linear-gradient(to bottom, #333 1px, transparent 1px)',
+          }
+        }
+      }
+    }
+  </script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style data-purpose="custom-scrollbars">
+    /* Custom Scrollbar for better UI in dark mode */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+    
+    .bg-grid {
+      background-image: var(--tw-gradient-stops);
+      background-size: 40px 40px;
+    }
+  </style>
+</head>
+<body class="bg-dark-900 text-gray-300 font-sans h-screen flex overflow-hidden selection:bg-brand-orange selection:text-white relative">
+<!-- Grid Background overlay -->
+<div class="absolute inset-0 pointer-events-none z-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+<!-- BEGIN: Sidebar Navigation -->
+<aside class="w-64 bg-dark-800 flex flex-col z-10 border-r border-dark-700 shrink-0">
+<!-- Header -->
+<div class="h-16 flex items-center px-4 border-b border-dark-700">
+<button class="text-gray-400 hover:text-white mr-4">
+<i class="fa-solid fa-bars text-xl"></i>
+</button>
+<h1 class="text-white font-semibold text-lg truncate">Optimized Office Dashboard</h1>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 overflow-y-auto py-4 space-y-1 custom-scrollbar">
+<a class="flex items-center px-6 py-3 bg-brand-orange/20 text-brand-orange border-l-4 border-brand-orange transition-colors" href="#">
+<i class="fa-solid fa-grip w-6 text-center text-lg"></i>
+<span class="ml-3 font-medium">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-dollar-sign w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Sales</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-book-open w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Recipes</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-check-square w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Tasks</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-clipboard-list w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Briefings</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-calendar-alt w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Events</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-comments w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Communication</span>
+</a>
+<a class="flex items-center px-6 py-3 text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-colors border-l-4 border-transparent" href="#">
+<i class="fa-solid fa-chart-bar w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Reports</span>
+</a>
+</nav>
+<!-- Footer Settings -->
+<div class="p-4 border-t border-dark-700">
+<a class="flex items-center px-2 py-2 text-gray-400 hover:text-gray-200 transition-colors" href="#">
+<i class="fa-solid fa-cog w-6 text-center text-lg text-brand-orange"></i>
+<span class="ml-3">Settings</span>
+</a>
+</div>
+</aside>
+<!-- END: Sidebar Navigation -->
+<!-- BEGIN: Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden z-10">
+<!-- Top Bar Placeholder (Profile Icon) -->
+<header class="h-16 flex items-center justify-end px-6 shrink-0">
+<button class="text-brand-orange hover:text-brand-orangeHover transition-colors focus:outline-none rounded-full border border-brand-orange p-1 w-8 h-8 flex items-center justify-center">
+<i class="fa-regular fa-user"></i>
+</button>
+</header>
+<div class="flex-1 overflow-y-auto p-6 pt-0 space-y-6 custom-scrollbar">
+<!-- BEGIN: Top Stats Widgets -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+<!-- Weather Widget -->
+<div class="bg-dark-800 rounded-lg p-4 border border-dark-700 col-span-1 lg:col-span-1 flex justify-between items-center overflow-hidden">
+<div class="text-center flex-1">
+<div class="text-xs text-gray-400 font-semibold mb-1">TODAY</div>
+<div class="text-sm font-medium text-white mb-1">78°/52°</div>
+<i class="fa-solid fa-cloud-rain text-blue-400 mb-1"></i>
+<div class="text-[10px] text-blue-300">10%</div>
+</div>
+<div class="text-center flex-1 border-l border-dark-700 pl-2">
+<div class="text-xs text-gray-400 font-semibold mb-1">FRI</div>
+<div class="text-sm font-medium text-white mb-1">61°/51°</div>
+<i class="fa-solid fa-cloud-showers-heavy text-blue-400 mb-1"></i>
+<div class="text-[10px] text-blue-300">70%</div>
+</div>
+<div class="text-center flex-1 border-l border-dark-700 pl-2">
+<div class="text-xs text-gray-400 font-semibold mb-1">SAT</div>
+<div class="text-sm font-medium text-white mb-1">78°/52°</div>
+<i class="fa-solid fa-cloud-sun text-gray-400 mb-1"></i>
+<div class="text-[10px] text-blue-300">75%</div>
+</div>
+<div class="text-center flex-1 border-l border-dark-700 pl-2">
+<div class="text-xs text-gray-400 font-semibold mb-1">SUN</div>
+<div class="text-sm font-medium text-white mb-1">73°/62°</div>
+<i class="fa-solid fa-cloud-sun text-gray-400 mb-1"></i>
+<div class="text-[10px] text-blue-300">75%</div>
+</div>
+<div class="text-center flex-1 border-l border-dark-700 pl-2">
+<div class="text-xs text-gray-400 font-semibold mb-1">MON</div>
+<div class="text-sm font-medium text-white mb-1">77°/64°</div>
+<i class="fa-solid fa-cloud-rain text-blue-400 mb-1"></i>
+<div class="text-[10px] text-blue-300">20%</div>
+</div>
+</div>
+<!-- Stat: Events & Catering -->
+<div class="bg-dark-800 rounded-lg p-4 border border-dark-700 flex items-center justify-between">
+<div>
+<div class="text-4xl font-bold text-brand-orange mb-1">19</div>
+<div class="text-xs text-gray-400 font-bold tracking-wider uppercase">Events &amp; Catering</div>
+</div>
+<i class="fa-solid fa-bread-slice text-3xl text-brand-orange opacity-80"></i>
+</div>
+<!-- Stat: Briefings -->
+<div class="bg-dark-800 rounded-lg p-4 border border-dark-700 flex items-center justify-between">
+<div>
+<div class="text-4xl font-bold text-brand-orange mb-1">14</div>
+<div class="text-xs text-gray-400 font-bold tracking-wider uppercase">Briefings</div>
+</div>
+<i class="fa-regular fa-clipboard text-3xl text-brand-orange opacity-80"></i>
+</div>
+<!-- Stat: Recipes -->
+<div class="bg-dark-800 rounded-lg p-4 border border-dark-700 flex items-center justify-between">
+<div>
+<div class="text-4xl font-bold text-brand-orange mb-1">201</div>
+<div class="text-xs text-gray-400 font-bold tracking-wider uppercase">Recipes</div>
+</div>
+<i class="fa-solid fa-book-open text-3xl text-brand-orange opacity-80"></i>
+</div>
+<!-- Stat: Task History -->
+<div class="bg-dark-800 rounded-lg p-4 border border-dark-700 flex items-center justify-between">
+<div>
+<div class="text-4xl font-bold text-brand-orange mb-1">23</div>
+<div class="text-xs text-gray-400 font-bold tracking-wider uppercase">Task History</div>
+</div>
+<i class="fa-regular fa-calendar-check text-3xl text-brand-orange opacity-80"></i>
+</div>
+</section>
+<!-- END: Top Stats Widgets -->
+<!-- BEGIN: Calendar Section -->
+<section class="bg-dark-800 rounded-lg border border-dark-700 flex flex-col">
+<div class="p-4 border-b border-dark-700 flex justify-between items-center">
+<h2 class="text-lg font-bold text-white">Lunch &amp; Dinner Features</h2>
+<div class="flex items-center text-gray-400">
+<button class="hover:text-white px-2"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+<span class="mx-2 text-sm">April 2026</span>
+<button class="hover:text-white px-2"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+</div>
+</div>
+<div class="grid grid-cols-7 border-b border-dark-700 text-center text-xs font-semibold text-gray-400">
+<div class="py-2 border-r border-dark-700">Mon 6</div>
+<div class="py-2 border-r border-dark-700">Tue 7</div>
+<div class="py-2 border-r border-dark-700">Wed 8</div>
+<div class="py-2 bg-brand-orange text-white border-r border-dark-700">Thu 9</div>
+<div class="py-2 border-r border-dark-700">Fri 10</div>
+<div class="py-2 border-r border-dark-700">Sat 11</div>
+<div class="py-2">Sun 12</div>
+</div>
+<div class="grid grid-cols-7 min-h-[120px] text-xs">
+<!-- Mon -->
+<div class="p-2 border-r border-dark-700 border-l-[3px] border-l-brand-orange border-y border-y-transparent">
+<div class="mb-2"><span class="text-brand-orange font-semibold">Lunch:</span> Dinner Special<br/>Spicy Thai Herb Traruro Herb Sauce</div>
+</div>
+<!-- Tue -->
+<div class="p-2 border-r border-dark-700 border-l-[3px] border-l-brand-orange border-y border-y-transparent">
+<div class="mb-2"><span class="text-brand-orange font-semibold">Lunch:</span> Dinner Special<br/>Fresh Pinsen with Cheese Salads</div>
+<div><span class="text-brand-orange font-semibold">Dinner:</span> Dinner Special<br/>Ainara Havie Cheese</div>
+</div>
+<!-- Wed -->
+<div class="p-2 border-r border-dark-700 border-l-[3px] border-l-brand-orange border-y border-y-transparent">
+<div class="mb-2"><span class="text-brand-orange font-semibold">Lunch:</span> Dinner Special<br/>Prastased Binger Sperliel</div>
+<div><span class="text-brand-orange font-semibold">Dinner:</span> Dinner Special<br/>Managy Chicken Postitc and Solata</div>
+</div>
+<!-- Thu (Active) -->
+<div class="p-2 border-r border-brand-orange border-l-[3px] border-l-brand-orange border-y border-y-brand-orange bg-dark-800 relative z-10 shadow-[0_0_10px_rgba(230,107,53,0.2)]">
+<div class="mb-2"><span class="text-brand-orange font-semibold">Lunch:</span> Dinner Special<br/>Spicy Thai Saut and Chican Salads</div>
+<div><span class="text-brand-orange font-semibold">Dinner:</span> Dinner Special<br/>Rorls Games Sauce</div>
+</div>
+<!-- Fri -->
+<div class="p-2 border-r border-dark-700 border-l-[3px] border-l-brand-orange border-y border-y-transparent">
+<div class="mb-2"><span class="text-brand-orange font-semibold">Lunch:</span> Dinner Special<br/>Fresh Grios with Salata Special Special</div>
+<div><span class="text-brand-orange font-semibold">Dinner:</span> Dinner Special<br/>Rmre Sarram Cheese</div>
+</div>
+<!-- Sat -->
+<div class="p-2 border-r border-dark-700 border-l-[3px] border-l-brand-orange border-y border-y-transparent">
+<div class="mb-2"><span class="text-brand-orange font-semibold">Lunch:</span> Dinner Special<br/>Freth Plusan with Tomatoe Cheese Salads</div>
+<div><span class="text-brand-orange font-semibold">Dinner:</span> Dinner Special<br/>Spicy Fliisan with Sumsy Herb Sauce</div>
+</div>
+<!-- Sun -->
+<div class="p-2 border-y border-y-transparent"></div>
+</div>
+</section>
+<!-- END: Calendar Section -->
+<!-- BEGIN: Bottom Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- BEGIN: Chat/Communication -->
+<section class="bg-dark-800 rounded-lg border border-dark-700 col-span-1 lg:col-span-2 flex flex-col h-[400px]">
+<div class="p-4 border-b border-dark-700 flex justify-between items-center shrink-0">
+<h2 class="text-lg font-bold text-white">Department Communication</h2>
+<button class="text-gray-400 hover:text-white"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+<!-- Message 1 -->
+<div class="flex gap-3 bg-dark-700/30 p-3 rounded-lg border-l-4 border-brand-orange">
+<div class="w-10 h-10 rounded-full bg-yellow-600 flex items-center justify-center shrink-0 border border-dark-600 overflow-hidden">
+<img alt="Victor Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAx2b6Cxlt1XulHLk-LNoOxUp8AW_P0dHZiryFGG8XXbm2Jc-fMCfVBlBSqQ2Ich8HUmK_FzLxLz7oyZj-o_edrF-8ESyg42XCnc84GSpDE8iuJAT3rN9NP8eKcpQbKCQ2QtLsZj6X0AH4oBVrKohR4f_QG7a5XEgDf4G2d3M0XESRszGvSPgwfzZB_ol2AcgRJrDS8cL2s8aU451APP84U3GgWvpDSKY6vdMdUMUXXVUdvEJJH0KTYURyD-ZVc43uNADBXQbPrDSE"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-white text-sm">VICTOR</span>
+<span class="text-[10px] text-brand-orange flex items-center gap-1"><i class="fa-solid fa-thumbtack text-[8px]"></i> Pinned</span>
+</div>
+<span class="text-xs text-gray-500">7:53 AM</span>
+</div>
+<p class="text-sm text-gray-300">Hey Victor's ani man siton to enoichments service liot or ontersity, manager. Communication.</p>
+<div class="mt-2 flex gap-2">
+<button class="bg-dark-700 rounded px-2 py-1 text-xs flex items-center gap-1 border border-dark-600 hover:bg-dark-600"><span class="text-yellow-500">👍</span> 1</button>
+<button class="text-gray-500 hover:text-gray-300"><i class="fa-solid fa-reply text-xs"></i></button>
+<button class="text-gray-500 hover:text-gray-300"><i class="fa-regular fa-face-smile text-xs"></i></button>
+</div>
+</div>
+</div>
+<!-- Message 2 -->
+<div class="flex gap-3 p-3">
+<div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 border border-dark-600 overflow-hidden">
+<img alt="Manager Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLGz1ki_iKVCLEgQA1L8nkzg1wtc-oVRu7djmRyUajWHJRflWSggTIDRl6SH9Pk0gqWWxp4SjBh-3mcFY52WCbRRjVUcu6x7NKIOrdzDDi6VpYddE5msi2O7Ku6cbbvOmt1Cf3Y9ciO7yKoTtHRekyrfdEIn_K8JJ_-frXwR2vsTjUhaRW5NtpRI65OnodgQXFLXRGOiMoRJCoY99bhVn-_1dK3At93oteHZZD9OarIOqqcEgie7yNF0HDWZ-sg-Iq8aqU00nnUAI"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<span class="font-bold text-white text-sm">MANAGER</span>
+<span class="text-xs text-gray-500">1:53 AM</span>
+</div>
+<p class="text-sm text-gray-300">Hello, inanager. Han a chat approached in s will see the beakfast service crining in marks!</p>
+</div>
+</div>
+<!-- Message 3 -->
+<div class="flex gap-3 p-3">
+<div class="w-10 h-10 rounded-full bg-brand-orange flex items-center justify-center shrink-0 border border-dark-600 overflow-hidden">
+<img alt="Chef Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXoIsz4Ke27c8ERKA9N3v8jVWxf8ULLo8evlSeCBy7bmP9PxvevPE9Xvo8mONhy5BKnWRqWuObti_nm1JnFGVdrwd_VdLGeeT5aEnQKaKuSO7vcp4eAl7sPVkysZBGlNskKoGKE1PfPbOUnHWWaQVbAdZB8HWHLywwohtfCQQ1J8dHuPwbQGkK3zGJURtFHQGJ4yDjYCA_-eBLoSr1N5vwIuLESuyZOqCHEvjX_zAa-vliZkH1xxTxRULAAjufEzXlcbBdtDFBogg"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<span class="font-bold text-white text-sm">CHEF</span>
+<span class="text-xs text-gray-500">1:57 AM</span>
+</div>
+<p class="text-sm text-gray-300">Hey I'm completed out from some lme provious hit working with special lunotan chef.</p>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-dark-700 shrink-0">
+<div class="relative">
+<input class="w-full bg-dark-900 border border-dark-700 rounded-full py-2 px-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange" placeholder="Type a message..." type="text"/>
+</div>
+</div>
+</section>
+<!-- END: Chat/Communication -->
+<!-- BEGIN: Right Column (Reports & Activity) -->
+<div class="col-span-1 flex flex-col gap-6">
+<!-- Sales Reports Chart -->
+<section class="bg-dark-800 rounded-lg border border-dark-700 p-4">
+<h2 class="text-lg font-bold text-white mb-4">Sales Reports</h2>
+<div class="flex items-start gap-4 mb-4">
+<div class="flex-1">
+<div class="text-sm text-gray-400 mb-2">Previous Night's Sales</div>
+<!-- Fake Chart Area -->
+<div class="relative h-24 w-full border-b border-l border-dark-600">
+<!-- Y-axis labels -->
+<div class="absolute -left-8 top-0 bottom-0 flex flex-col justify-between text-[10px] text-gray-500 text-right w-6">
+<span>$500</span>
+<span>$400</span>
+<span>$100</span>
+<span>$0</span>
+</div>
+<!-- X-axis labels -->
+<div class="absolute -bottom-5 left-0 right-0 flex justify-between text-[10px] text-gray-500 px-1">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+</div>
+<!-- SVG Graph Line -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 100">
+<polyline fill="none" points="0,80 20,60 40,75 60,65 80,40 100,55" stroke="#e66b35" stroke-width="2"></polyline>
+<polygon fill="url(#orange-grad)" opacity="0.2" points="0,100 0,80 20,60 40,75 60,65 80,40 100,55 100,100"></polygon>
+<defs>
+<lineargradient id="orange-grad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#e66b35"></stop>
+<stop offset="100%" stop-color="#1e1e1e" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- Stats Column -->
+<div class="flex flex-col gap-4 min-w-[80px]">
+<div class="border-l-2 border-brand-orange pl-2">
+<div class="text-xs text-gray-400">Total</div>
+<div class="text-lg font-bold text-white">$75.0K</div>
+</div>
+<div class="border-l-2 border-brand-orange pl-2">
+<div class="text-xs text-gray-400">Nights Sales</div>
+<div class="text-lg font-bold text-white">$9.68</div>
+</div>
+<div class="border-l-2 border-brand-orange pl-2">
+<div class="text-xs text-gray-400">Reconit Sales</div>
+<div class="text-lg font-bold text-white">$1.15</div>
+</div>
+<div class="border-l-2 border-brand-orange pl-2">
+<div class="text-xs text-gray-400">Task History</div>
+<div class="text-lg font-bold text-white">23</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Activity -->
+<section class="bg-dark-800 rounded-lg border border-dark-700 p-4 flex-1">
+<h2 class="text-lg font-bold text-white mb-4">Recent Activity</h2>
+<div class="space-y-4">
+<div class="flex items-center gap-3">
+<i class="fa-solid fa-bread-slice text-brand-orange w-5 text-center"></i>
+<div class="flex-1 text-sm text-gray-300 truncate">New Recipe Added: Spicy Thai Herb Sauce</div>
+<div class="text-xs text-gray-500 shrink-0">1:33 AM</div>
+</div>
+<div class="flex items-center gap-3">
+<i class="fa-solid fa-check text-green-500 w-5 text-center"></i>
+<div class="flex-1 text-sm text-gray-300 truncate">Task Completed: Inventory Check</div>
+<div class="text-xs text-gray-500 shrink-0">2:38 AM</div>
+</div>
+<div class="flex items-center gap-3">
+<i class="fa-regular fa-clipboard text-brand-orange w-5 text-center"></i>
+<div class="flex-1 text-sm text-gray-300 truncate">Briefing Updated: Lunch Service Protocol</div>
+<div class="text-xs text-gray-500 shrink-0">1:57 AM</div>
+</div>
+<div class="flex items-center gap-3">
+<i class="fa-regular fa-calendar-plus text-brand-orange w-5 text-center"></i>
+<div class="flex-1 text-sm text-gray-300 truncate">Event Created: Private Dinner</div>
+<div class="text-xs text-gray-500 shrink-0">1:30 AM</div>
+</div>
+</div>
+</section>
+</div>
+<!-- END: Right Column -->
+</div>
+<!-- END: Bottom Grid Layout -->
+</div>
+</main>
+<!-- END: Main Content Area -->
+</body></html>
