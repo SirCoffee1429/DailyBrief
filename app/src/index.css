@@ -3405,3 +3405,308 @@ tr.beo-completed td .beo-check {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* ============================================
+   NEW OFFICE DASHBOARD & LAYOUT REFACTOR
+   ============================================ */
+
+.office-v2-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  color: #d1d5db;
+  font-family: var(--font-family);
+  position: relative;
+}
+
+.office-v2-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.2;
+  background-image: linear-gradient(to right, rgba(128,128,128,0.07) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(128,128,128,0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Sidebar */
+.office-v2-sidebar {
+  width: 256px; /* w-64 */
+  background-color: #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  border-right: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.office-v2-sidebar-header {
+  height: 4rem; /* h-16 */
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.office-v2-sidebar-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.office-v2-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.office-v2-nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: #9ca3af;
+  border-left: 4px solid transparent;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.office-v2-nav-link:hover {
+  background-color: rgba(51, 51, 51, 0.5);
+  color: #fff;
+}
+
+.office-v2-nav-link.active {
+  background-color: rgba(230, 107, 53, 0.2);
+  color: #e66b35;
+  border-left-color: #e66b35;
+}
+
+.office-v2-nav-icon {
+  width: 1.5rem;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+.office-v2-nav-link.active .office-v2-nav-icon {
+  color: #e66b35;
+}
+
+/* Main Content Area */
+.office-v2-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.office-v2-topbar {
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+.office-v2-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Widgets Grid */
+.office-v2-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .office-v2-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .office-v2-stats-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+.office-v2-widget {
+  background-color: #2a2a2a;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #333;
+}
+
+.office-v2-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.office-v2-stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #e66b35;
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+}
+
+.office-v2-stat-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.office-v2-stat-icon {
+  font-size: 1.875rem;
+  color: #e66b35;
+  opacity: 0.8;
+}
+
+/* Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Bottom Grid (Chat & Sales) */
+.office-v2-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .office-v2-bottom-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.office-v2-chat-section {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+}
+
+@media (min-width: 1024px) {
+  .office-v2-chat-section { grid-column: span 2 / span 2; }
+}
+
+.office-v2-panel-header {
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.office-v2-panel-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+/* Weather Compact */
+.office-v2-weather-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.office-v2-weather-day {
+  flex: 1;
+  text-align: center;
+}
+
+.office-v2-weather-day + .office-v2-weather-day {
+  border-left: 1px solid #333;
+  padding-left: 0.5rem;
+}
+
+/* Calendar Layout elements */
+.office-v2-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.office-v2-cal-header-cell {
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+  border-right: 1px solid #333;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.office-v2-cal-header-cell.active {
+  background-color: #e66b35;
+  color: #fff;
+}
+
+.office-v2-cal-header-cell:last-child {
+  border-right: none;
+}
+
+.office-v2-cal-cell {
+  padding: 0.5rem;
+  border-right: 1px solid #333;
+  border-left: 3px solid transparent;
+  min-height: 120px;
+  font-size: 0.75rem;
+}
+
+.office-v2-cal-cell:last-child {
+  border-right: none;
+}
+
+.office-v2-cal-cell.active {
+  background-color: #2a2a2a;
+  border-right: 1px solid #e66b35;
+  border-left: 3px solid #e66b35;
+  box-shadow: 0 0 10px rgba(230, 107, 53, 0.2);
+  position: relative;
+  z-index: 10;
+}
+
+.office-v2-cal-item {
+  margin-bottom: 0.5rem;
+}
+
+.office-v2-cal-item-label {
+  color: #e66b35;
+  font-weight: 600;
+}
+
+/* For mobile wrapper transition */
+@media (max-width: 767px) {
+  .office-v2-sidebar {
+    display: none; /* Let the bottom tab bar take over on mobile */
+  }
+}

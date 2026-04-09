@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 
-export default function WeatherWidget() {
+export default function WeatherWidget({ compact = false }) {
     const [forecastData, setForecastData] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -104,14 +104,52 @@ export default function WeatherWidget() {
 
     if (error || forecastData.length === 0) {
         return (
-            <div className="weather-forecast-card">
-                <h2 className="weather-card-title">
-                    <i className="fa-solid fa-cloud-sun" /> 5-Day Forecast
-                </h2>
+            <div className={compact ? "office-v2-weather-compact" : "weather-forecast-card"}>
+                {!compact && (
+                    <h2 className="weather-card-title">
+                        <i className="fa-solid fa-cloud-sun" /> 5-Day Forecast
+                    </h2>
+                )}
                 <div style={{ padding: 'var(--space-4)', textAlign: 'center', width: '100%', color: 'var(--text-secondary)' }}>
                     <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--warning)' }}></i>
                     <p style={{ margin: 0, fontSize: '14px' }}>Weather unavailable: {error || 'No data returned'}</p>
                 </div>
+            </div>
+        )
+    }
+
+    if (compact) {
+        return (
+            <div className="office-v2-weather-compact" style={{ height: '100%', alignItems: 'center' }}>
+                {forecastData.slice(0, 5).map((dayData, index) => {
+                    const startTime = dayData.startTime ? new Date(dayData.startTime) : null
+                    const dayLabels = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+                    const dateLabel = index === 0 ? "TODAY" : (startTime ? dayLabels[startTime.getDay()] : "UKN")
+                    
+                    const minTemp = dayData.minTemp !== undefined ? `${Math.round(dayData.minTemp)}` : '--'
+                    const maxTemp = dayData.maxTemp !== undefined ? `${Math.round(dayData.maxTemp)}` : '--'
+                    const precip = dayData.precipProbability !== undefined ? dayData.precipProbability : 0
+                    
+                    const weatherType = dayData.weatherType || "UNKNOWN"
+                    const iconClass = getWeatherIcon(weatherType) || 'fa-cloud'
+                    const colorClass = getWeatherColor(weatherType)
+                    
+                    // Simple color mapping for text inside the compact widget to match the mockup
+                    const isSunny = iconClass.includes('sun')
+                    const isRainy = iconClass.includes('rain') || iconClass.includes('showers') || iconClass.includes('cloud-bolt')
+                    let overrideColor = '#9ca3af' // default gray
+                    if (isSunny && !isRainy) overrideColor = '#fcd34d' // yellow
+                    if (isRainy) overrideColor = '#60a5fa' // blue
+                    
+                    return (
+                        <div key={index} className="office-v2-weather-day">
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600, marginBottom: '0.25rem' }}>{dateLabel}</div>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fff', marginBottom: '0.25rem' }}>{maxTemp}°/{minTemp}°</div>
+                            <i className={`fa-solid ${iconClass}`} style={{ color: overrideColor, marginBottom: '0.25rem', fontSize: '1.25rem' }}></i>
+                            <div style={{ fontSize: '10px', color: overrideColor }}>{precip}%</div>
+                        </div>
+                    )
+                })}
             </div>
         )
     }

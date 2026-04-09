@@ -5,7 +5,7 @@ const COLUMNS = [
     { key: 'comms', title: 'Department Communication', icon: 'fa-comments', accent: '#4ade80', accentBg: 'rgba(74, 222, 128, 0.08)', accentBorder: 'rgba(74, 222, 128, 0.2)' },
 ]
 
-export default function ManagementWhiteboard() {
+export default function ManagementWhiteboard({ hideHeader = false }) {
     const [notes, setNotes] = useState([])
     const [newTexts, setNewTexts] = useState({ alerts: '', events: '', comms: '' })
     const [authorName, setAuthorName] = useState(() => localStorage.getItem('mgmt_author') || '')
@@ -72,33 +72,38 @@ export default function ManagementWhiteboard() {
     return (
         <div className="wb-board">
             {/* Author name bar */}
-            <div className="wb-author-bar">
-                <i className="fa-solid fa-user-pen" />
-                <input
-                    className="wb-author-input"
-                    type="text"
-                    placeholder="Your name..."
-                    value={authorName}
-                    onChange={e => setAuthorName(e.target.value)}
-                    onBlur={() => localStorage.setItem('mgmt_author', authorName)}
-                />
-            </div>
+            {!hideHeader && (
+                <div className="wb-author-bar">
+                    <i className="fa-solid fa-user-pen" />
+                    <input
+                        className="wb-author-input"
+                        type="text"
+                        placeholder="Your name..."
+                        value={authorName}
+                        onChange={e => setAuthorName(e.target.value)}
+                        onBlur={() => localStorage.setItem('mgmt_author', authorName)}
+                    />
+                </div>
+            )}
 
             {/* Column grid */}
             <div className="wb-columns">
                 {COLUMNS.map(col => {
                     const colNotes = notes.filter(n => n.category === col.key)
                     return (
-                        <div key={col.key} className="wb-column">
-                            <div className="wb-col-header" style={{ borderBottomColor: col.accentBorder }}>
-                                <h3 className="wb-col-title">
-                                    <i className={`fa-solid ${col.icon}`} style={{ color: col.accent }} />
-                                    {col.title}
-                                </h3>
-                                <span className="wb-col-count" style={{ background: col.accentBg, color: col.accent }}>
-                                    {colNotes.length}
-                                </span>
-                            </div>
+                        <div key={col.key} className="wb-column" style={hideHeader ? { border: 'none', background: 'transparent' } : {}}>
+                            
+                            {!hideHeader && (
+                                <div className="wb-col-header" style={{ borderBottomColor: col.accentBorder }}>
+                                    <h3 className="wb-col-title">
+                                        <i className={`fa-solid ${col.icon}`} style={{ color: col.accent }} />
+                                        {col.title}
+                                    </h3>
+                                    <span className="wb-col-count" style={{ background: col.accentBg, color: col.accent }}>
+                                        {colNotes.length}
+                                    </span>
+                                </div>
+                            )}
 
                             <div className="wb-col-feed">
                                 {colNotes.length === 0 ? (

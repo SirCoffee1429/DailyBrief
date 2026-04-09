@@ -35,69 +35,128 @@ export default function OfficeDashboard() {
     }
 
     return (
-        <div className="office-dashboard">
-            <header className="dashboard-header">
-                <div className="header-left">
-                    <h1 className="header-title"><i className="fa-solid fa-building title-icon" /> Office Dashboard</h1>
-                    <p className="header-date">Manage briefings, recipes, and track daily progress</p>
-                </div>
-                <div className="header-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={handleLogout}><i className="fa-solid fa-lock" /> Lock</button>
-                </div>
-            </header>
-
-            <div className="office-grid">
-                <div className="office-weather-row">
-                    <WeatherWidget />
+        <div className="office-v2-content">
+            
+            {/* Top Stats Widgets */}
+            <section className="office-v2-stats-grid">
+                
+                {/* Weather Widget Wrapper */}
+                <div className="office-v2-widget" style={{ gridColumn: '1 / -1' }}>
+                    <WeatherWidget compact={true} />
                 </div>
 
-                <div className="office-weather-row">
-                    <WeeklyFeatures />
-                </div>
-
-                <Link to="/office/events" className="office-tile" style={{ borderColor: 'rgba(96, 165, 250, 0.2)' }}>
-                    <div className="office-tile-icon"><i className="fa-solid fa-champagne-glasses" style={{ color: '#60a5fa' }} /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.events}</span>
-                        <span className="office-tile-label">Events & Catering</span>
+                <Link to="/office/events" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.events}</div>
+                        <div className="office-v2-stat-label">Events & Catering</div>
                     </div>
-                    <div className="office-tile-desc">Manage special events and banquets</div>
+                    <i className="fa-solid fa-bread-slice office-v2-stat-icon"></i>
                 </Link>
 
-                <Link to="/office/briefings" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-clipboard-list" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.briefings}</span>
-                        <span className="office-tile-label">Briefings</span>
+                <Link to="/office/briefings" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.briefings}</div>
+                        <div className="office-v2-stat-label">Briefings</div>
                     </div>
-                    <div className="office-tile-desc">Create & edit daily briefings and tasks</div>
+                    <i className="fa-regular fa-clipboard office-v2-stat-icon"></i>
                 </Link>
 
-                <Link to="/office/workbooks" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-book-open" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.workbooks}</span>
-                        <span className="office-tile-label">Recipes</span>
+                <Link to="/office/workbooks" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.workbooks}</div>
+                        <div className="office-v2-stat-label">Recipes</div>
                     </div>
-                    <div className="office-tile-desc">Upload & manage recipe workbooks</div>
+                    <i className="fa-solid fa-book-open office-v2-stat-icon"></i>
                 </Link>
 
-                <Link to="/office/history" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-chart-bar" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.tasks}</span>
-                        <span className="office-tile-label">Task History</span>
+                <Link to="/office/history" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.tasks}</div>
+                        <div className="office-v2-stat-label">Task History</div>
                     </div>
-                    <div className="office-tile-desc">Daily task completion & briefing log</div>
+                    <i className="fa-regular fa-calendar-check office-v2-stat-icon"></i>
                 </Link>
+            </section>
 
-                <div className="office-weather-row">
-                    <SalesBriefing />
-                </div>
+            {/* Calendar Section (WeeklyFeatures natively renders the V2 block now) */}
+            <WeeklyFeatures />
 
-                {/* Manager Board — chat-style message board for managers */}
-                <div className="office-weather-row">
-                    <ManagementWhiteboard />
+            {/* Bottom Grid Layout */}
+            <div className="office-v2-bottom-grid">
+                
+                {/* Chat/Communication */}
+                <section className="office-v2-widget office-v2-chat-section" style={{ padding: 0 }}>
+                    <div className="office-v2-panel-header">
+                        <h2 className="office-v2-panel-title">Department Communication</h2>
+                        <button style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}><i className="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <ManagementWhiteboard hideHeader={true} />
+                    </div>
+                </section>
+
+                {/* Right Column (Sales Mock) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    
+                    {/* Sales Reports Chart Mock */}
+                    <section className="office-v2-widget" style={{ padding: '1rem' }}>
+                        <h2 className="office-v2-panel-title" style={{ marginBottom: '1rem' }}>Sales Reports</h2>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '0.5rem' }}>Previous Night's Sales</div>
+                                <div style={{ position: 'relative', height: '6rem', width: '100%', borderBottom: '1px solid #555', borderLeft: '1px solid #555' }}>
+                                    <div style={{ position: 'absolute', left: '-2.5rem', top: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', textAlign: 'right', width: '2rem' }}>
+                                        <span>$500</span><span>$400</span><span>$100</span><span>$0</span>
+                                    </div>
+                                    <div style={{ position: 'absolute', bottom: '-1.25rem', left: 0, right: 0, display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', padding: '0 0.25rem' }}>
+                                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                                    </div>
+                                    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} preserveAspectRatio="none" viewBox="0 0 100 100">
+                                        <polyline fill="none" stroke="#e66b35" strokeWidth="2" points="0,80 20,60 40,75 60,65 80,40 100,55" />
+                                        <polygon fill="url(#orange-grad)" opacity="0.2" points="0,100 0,80 20,60 40,75 60,65 80,40 100,55 100,100" />
+                                        <defs>
+                                            <linearGradient id="orange-grad" x1="0" x2="0" y1="0" y2="1">
+                                                <stop offset="0%" stopColor="#e66b35" />
+                                                <stop offset="100%" stopColor="#1e1e1e" stopOpacity="0" />
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '80px' }}>
+                                <div style={{ borderLeft: '2px solid #e66b35', paddingLeft: '0.5rem' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Total</div>
+                                    <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>$75.0K</div>
+                                </div>
+                                <div style={{ borderLeft: '2px solid #e66b35', paddingLeft: '0.5rem' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Nights Sales</div>
+                                    <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>$9.68K</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Recent Activity Mock */}
+                    <section className="office-v2-widget" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <h2 className="office-v2-panel-title" style={{ marginBottom: '1rem' }}>Recent Activity</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <i className="fa-solid fa-bread-slice" style={{ color: '#e66b35', width: '1.25rem', textAlign: 'center' }}></i>
+                                <div style={{ flex: 1, fontSize: '0.875rem', color: '#d1d5db', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>New Recipe Added: Spicy Thai Herb Sauce</div>
+                                <div style={{ fontSize: '0.75rem', color: '#6b7280', flexShrink: 0 }}>1:33 AM</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <i className="fa-solid fa-check" style={{ color: '#22c55e', width: '1.25rem', textAlign: 'center' }}></i>
+                                <div style={{ flex: 1, fontSize: '0.875rem', color: '#d1d5db', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Task Completed: Inventory Check</div>
+                                <div style={{ fontSize: '0.75rem', color: '#6b7280', flexShrink: 0 }}>2:38 AM</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <i className="fa-regular fa-clipboard" style={{ color: '#e66b35', width: '1.25rem', textAlign: 'center' }}></i>
+                                <div style={{ flex: 1, fontSize: '0.875rem', color: '#d1d5db', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Briefing Updated: Lunch Service Protocol</div>
+                                <div style={{ fontSize: '0.75rem', color: '#6b7280', flexShrink: 0 }}>1:57 AM</div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>

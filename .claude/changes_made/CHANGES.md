@@ -654,3 +654,20 @@ giving managers a chat-style message board to post notes for other managers.
   category
 - All existing CSS (`.wb-*` classes) was already in `index.css`
 - Supports posting, pinning, deleting, author names, and relative timestamps
+
+---
+
+### 2026-04-09 — Office Dashboard V2 Overhaul
+
+**File(s) Changed:** `index.css`, `OfficeLayout.jsx`, `OfficeDashboard.jsx`, `WeeklyFeatures.jsx`, `ManagementWhiteboard.jsx` **Type:** `feature`
+**Summary:** Completely overhauled the Office Dashboard layout, transitioning it to a premium desktop-first sidebar navigation and grid-based widget system based on V2 prototype design.
+
+**Details:**
+
+- **CSS Updates**: Migrated Tailwind styles from the design prototype into Vanilla CSS (`.office-v2-*`) to isolate and ensure safety for legacy components.
+- **OfficeLayout**: Refactored to support a responsive Sidebar (`.office-v2-sidebar`) on Desktop, which hides gracefully on mobile in favor of the existing bottom navigation bar.
+- **OfficeDashboard**: Entirely rebuilt the main template to match the V2 UI prototype grids, including a top stats bar, flexible widget structure, and 2-column communication & sales mock areas.
+- **Widget Refactoring**: 
+  - Updated `WeatherWidget` to render a `compact` mode specifically molded for the top V2 stats grid.
+  - Refactored `WeeklyFeatures` JSX block to directly weave the state hooks into `.office-v2-calendar-grid` layout provided in the mockup.
+  - Added a `hideHeader` prop to `ManagementWhiteboard` to integrate seamlessly beneath new standalone dashboard panel wrapper headers.
