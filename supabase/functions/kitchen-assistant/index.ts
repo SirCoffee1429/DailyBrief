@@ -25,16 +25,43 @@ function isSalesQuestion(q: string): boolean {
   return SALES_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+// ─── Date window parser ───────────────────────────────────────────────────────
+function getDateWindow(question: string): { from: string; to: string; label: string } {
+  const lower = question.toLowerCase();
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  if (lower.includes("yesterday")) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    return { from: fmt(d), to: fmt(d), label: "yesterday" };
+  }
+  if (lower.includes("last week")) {
+    const to = new Date(today);
+    to.setDate(to.getDate() - 7);
+    const from = new Date(to);
+    from.setDate(from.getDate() - 6);
+    return { from: fmt(from), to: fmt(to), label: "last week" };
+  }
+  if (lower.includes("this month") || lower.includes("last month")) {
+    const d = new Date(today);
+    if (lower.includes("last month")) d.setMonth(d.getMonth() - 1);
+    const from = new Date(d.getFullYear(), d.getMonth(), 1);
+    const to = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return { from: fmt(from), to: fmt(to), label: lower.includes("last month") ? "last month" : "this month" };
+  }
+  // Default: last 7 days ("this week")
+  const from = new Date(today);
+  from.setDate(from.getDate() - 6);
+  return { from: fmt(from), to: fmt(today), label: "the past 7 days" };
+}
+
 // ─── Sales context builder ────────────────────────────────────────────────────
 async function fetchSalesContext(
   supabase: any,
   _question: string
 ): Promise<string> {
-  const today = new Date();
-  const to = today.toISOString().split("T")[0];
-  const fromDate = new Date();
-  fromDate.setDate(today.getDate() - 30);
-  const from = fromDate.toISOString().split("T")[0];
+  const { from, to, label } = getDateWindow(_question);
 
   const { data, error } = await supabase
     .from("sales_data")
@@ -49,7 +76,7 @@ async function fetchSalesContext(
   }
 
   if (!data || data.length === 0) {
-    return `No sales data found for the last 30 days.`;
+    return `No sales data found for ${label} (${from} to ${to}).`;
   }
 
   // Aggregate by item across all dates in the window
@@ -70,7 +97,7 @@ async function fetchSalesContext(
 
   const sorted = Object.entries(itemMap).sort(([, a], [, b]) => b.units - a.units);
 
-  let ctx = `[30-DAY AGGREGATE SUMMARY: ${from} to ${to}]\n`;
+  let ctx = `[AGGREGATE SUMMARY FOR ${label.toUpperCase()}: ${from} to ${to}]\n`;
   ctx += `Grand totals: ${grandUnits} units sold, $${grandRevenue.toFixed(2)} revenue\n\n`;
 
   ctx += `AGGREGATE ITEM BREAKDOWN:\n`;
