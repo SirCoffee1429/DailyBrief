@@ -29,24 +29,35 @@ Deno.serve(async (req) => {
     // 3. Ask Gemini to parse the PDF
     const prompt = `
       You are an expert at parsing restaurant sales reports.
-      Attached is a PDF of an "Item Sales Report".
-
-      Return ONLY a JSON object with exactly two keys:
-      1. "report_date": The date of this report in YYYY-MM-DD format.
-         Look in the header, title, footer, or anywhere on the page for a date (e.g. "03/27/2026", "March 27, 2026", "2026-03-27").
-         If you cannot find any date, use null.
-      2. "items": An array of objects, each with these keys:
+      Attached is a PDF. You must first determine if this is an "Item Sales Report" or something else entirely (like a "Banquet Event Order").
+      
+      Look closely at the document title and headers. If it says "Banquet Event Order" or "BEO", or if it describes a private event with guest counts and event times, it is NOT a sales report.
+      
+      Return ONLY a JSON object with exactly three keys:
+      1. "is_valid_sales_report": (boolean) true if this is an Item Sales Report, false if it is a Banquet Event Order or something else.
+      2. "report_date": The date of this report in YYYY-MM-DD format. Look in the header, title, footer, or anywhere on the page for a date. If you cannot find any date, use null.
+      3. "items": An array of objects, each with these keys:
          - "item_name" (string): the name of the item
          - "units_sold" (number): the number of units sold
+         - "unit_price" (number): the individual price of the item. If not present, default to 0. Number only.
+         - "total_revenue" (number): the total revenue (amount) for that item. If not present, default to 0. Number only.
          - "category" (string): the category (e.g., Appetizers, BBQ, Desserts)
 
       Rules for items:
       - Ignore "Item Category Totals" and "Totals" lines
       - Ignore items with 0 units sold
+      - Strip out '$' signs and commas from prices and revenues to return clean numbers.
       - Sort items by units_sold descending
+      - If "is_valid_sales_report" is false, you can leave "items" as an empty array.
 
       Example response shape:
-      { "report_date": "2026-03-27", "items": [{"item_name": "Brisket", "units_sold": 42, "category": "BBQ"}] }
+      {
+        "is_valid_sales_report": true,
+        "report_date": "2026-03-27",
+        "items": [
+          {"item_name": "Brisket", "units_sold": 42, "unit_price": 14.50, "total_revenue": 609.00, "category": "BBQ"}
+        ]
+      }
     `;
 
     console.log("Sending PDF to Gemini for parsing...");
@@ -83,19 +94,36 @@ Deno.serve(async (req) => {
     const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
     const parsedData = JSON.parse(rawOutput);
 
+    if (parsedData.is_valid_sales_report === false) {
+      console.warn("PDF is not an Item Sales Report (likely a BEO). Rejecting.");
+      return new Response(JSON.stringify({ message: "Ignored non-sales report" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+
     // Extract date from Gemini response, fall back to today (UTC) if not found
     const reportDate: string = parsedData.report_date
       || new Date().toISOString().split("T")[0];
-    const items: { item_name: string; units_sold: number; category: string }[] = parsedData.items || [];
+    const items: { item_name: string; units_sold: number; unit_price: number; total_revenue: number; category: string }[] = parsedData.items || [];
 
     console.log(`Gemini parsed ${items.length} items from the PDF, report date: ${reportDate}`);
 
     if (items.length === 0) {
       console.warn("Gemini returned 0 items — check PDF or prompt");
+      return new Response(JSON.stringify({ message: "0 items found" }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
     // 4. Save to Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // First delete any existing data for this report date so we don't accidentally duplicate
+    const { error: deleteError } = await supabase
+      .from("sales_data")
+      .delete()
+      .eq("report_date", reportDate);
+
+    if (deleteError) {
+       console.error("Supabase delete error:", deleteError);
+       // we proceed anyway just in case it's a minor RLS issue, but with service role it shouldn't be
+    }
 
     const { error } = await supabase
       .from("sales_data")
@@ -103,7 +131,9 @@ Deno.serve(async (req) => {
         items.map((item) => ({
           report_date: reportDate,
           item_name: item.item_name,
-          units_sold: item.units_sold,
+          units_sold: Number(item.units_sold) || 0,
+          unit_price: Number(item.unit_price) || 0,
+          total_revenue: Number(item.total_revenue) || 0,
           category: item.category,
           metadata: { source: payload.From },
         }))

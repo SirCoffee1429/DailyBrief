@@ -5,12 +5,18 @@ import useVoiceInput, { isVoiceSupported } from '../lib/useVoiceInput.js'
 export default function AssistantWidget({ externalOpen, onExternalClose, voiceMode, onVoiceModeEnd }) {
     const [isOpen, setIsOpen] = useState(false)
     const [messages, setMessages] = useState([
-        { role: 'assistant', text: 'Hey Chef! 👋 Ask me anything about your recipes.' }
+        { role: 'assistant', text: 'Hey there! 👋 Ask me anything about your recipes or latest sales.' }
     ])
     const [input, setInput] = useState('')
     const [loading, setLoading] = useState(false)
     const [showVoiceOverlay, setShowVoiceOverlay] = useState(false)
     const messagesEndRef = useRef(null)
+
+    const suggestedPrompts = [
+        "What sold the most this week?",
+        "What % of sales were Handhelds?",
+        "How many Pretzel Bites did we sell?"
+    ]
 
     // Voice input hook
     const handleVoiceResult = useCallback((text) => {
@@ -164,6 +170,20 @@ export default function AssistantWidget({ externalOpen, onExternalClose, voiceMo
                                 {msg.text}
                             </div>
                         ))}
+                        {messages.length === 1 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '0 8px' }}>
+                                {suggestedPrompts.map((prompt, i) => (
+                                    <button
+                                        key={i}
+                                        className="btn btn-secondary btn-sm"
+                                        style={{ justifyContent: 'flex-start', textAlign: 'left', whiteSpace: 'normal', height: 'auto', padding: '8px 12px' }}
+                                        onClick={() => submitQuestion(prompt)}
+                                    >
+                                        <i className="fa-solid fa-sparkles" style={{ color: 'var(--orange)' }}></i> {prompt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {loading && (
                             <div className="chat-bubble assistant" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                                 <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} /> Thinking...
