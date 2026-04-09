@@ -108,12 +108,19 @@ async function fetchSalesContext(
     ctx += `${name} | ${v.category} | ${v.units} | ${rev} | ${pctUnits}%\n`;
   }
 
-  ctx += `\n[DAILY RAW DATA BREAKDOWN]\n`;
-  ctx += `Date | Item Name | Category | Units Sold | Unit Price | Total Revenue\n`;
-  for (const row of data as any[]) {
-    const p = row.unit_price ? `$${Number(row.unit_price).toFixed(2)}` : "0";
-    const r = row.total_revenue ? `$${Number(row.total_revenue).toFixed(2)}` : "0";
-    ctx += `${row.report_date} | ${row.item_name} | ${row.category} | ${row.units_sold} | ${p} | ${r}\n`;
+  // Only include raw daily breakdown if the user specifically refers to a date, day of week, or "daily"
+  const wantsDaily = /(daily|day|each|every|on (mon|tue|wed|thu|fri|sat|sun)|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}|\d{1,2}(st|nd|rd|th))/i.test(_question);
+
+  if (wantsDaily) {
+    ctx += `\n[DAILY RAW DATA BREAKDOWN]\n`;
+    ctx += `Date | Item Name | Category | Units Sold | Unit Price | Total Revenue\n`;
+    for (const row of data as any[]) {
+      const p = row.unit_price ? `$${Number(row.unit_price).toFixed(2)}` : "0";
+      const r = row.total_revenue ? `$${Number(row.total_revenue).toFixed(2)}` : "0";
+      ctx += `${row.report_date} | ${row.item_name} | ${row.category} | ${row.units_sold} | ${p} | ${r}\n`;
+    }
+  } else {
+    ctx += `\n(Note: Daily breakdown omitted for brevity. You only have aggregate totals spanning ${from} to ${to}.)\n`;
   }
 
   return ctx;
