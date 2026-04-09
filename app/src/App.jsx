@@ -31,6 +31,7 @@ export default function App() {
             <Route path="/kitchen/chat" element={<KitchenLayout><AiChat /></KitchenLayout>} />
             <Route path="/kitchen/sales" element={<KitchenLayout><SalesReports /></KitchenLayout>} />
             <Route path="/kitchen/sales/:date" element={<KitchenLayout><SalesReportDetail /></KitchenLayout>} />
+            <Route path="/kitchen/events" element={<KitchenLayout><EventsBanquetsPage /></KitchenLayout>} />
 
             {/* Office routes */}
             <Route path="/office" element={<OfficeGate><OfficeLayout><OfficeDashboard /></OfficeLayout></OfficeGate>} />
