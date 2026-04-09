@@ -114,11 +114,13 @@ Deno.serve(async (req) => {
     // 4. Save to Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // First delete any existing data for this report date so we don't accidentally duplicate
+    // First delete any existing data for this report date AND from this specific source 
+    // so we don't accidentally overwrite sales from other properties/terminals.
     const { error: deleteError } = await supabase
       .from("sales_data")
       .delete()
-      .eq("report_date", reportDate);
+      .eq("report_date", reportDate)
+      .eq("metadata->>source", payload.From);
 
     if (deleteError) {
        console.error("Supabase delete error:", deleteError);
