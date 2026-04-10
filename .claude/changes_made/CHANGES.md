@@ -671,3 +671,15 @@ giving managers a chat-style message board to post notes for other managers.
   - Updated `WeatherWidget` to render a `compact` mode specifically molded for the top V2 stats grid.
   - Refactored `WeeklyFeatures` JSX block to directly weave the state hooks into `.office-v2-calendar-grid` layout provided in the mockup.
   - Added a `hideHeader` prop to `ManagementWhiteboard` to integrate seamlessly beneath new standalone dashboard panel wrapper headers.
+
+---
+
+### 2026-04-09 — Dashboard Layout Hotfixes
+
+**File(s) Changed:** OfficeLayout.jsx, index.css, WeatherWidget.jsx **Type:** ix
+**Summary:** Resolved post-refactor layout bugs including a React crash caused by undefined icons and a global missing scrollbar blocking access to legacy pages.
+
+**Details:**
+- **Crash Fix:** Fixed WeatherWidget.jsx object destructuring that caused iconClass.includes to throw a fatal TypeError and crash the renderer with a black screen.
+**Scroll Fix:** The new rigid .office-v2-main wrapper previously prevented child pages from overflowing properly. Wrapped {children} in a { flex: 1, overflowY: 'auto' } div in OfficeLayout.jsx and removed redundant nested scroll-locks in index.css. This ensures legacy pages like Sales and Briefings can seamlessly scroll.
+- **UI Update:** Removed the bottom pill navigation container and integrated the AI Assistant toggle directly into the .office-v2-sidebar for a cleaner, unified desktop-first paradigm.

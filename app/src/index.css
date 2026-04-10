@@ -3522,7 +3522,6 @@ tr.beo-completed td .beo-check {
 
 .office-v2-content {
   flex: 1;
-  padding: 0 1.5rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -3703,9 +3702,4 @@ tr.beo-completed td .beo-check {
   font-weight: 600;
 }
 
-/* For mobile wrapper transition */
-@media (max-width: 767px) {
-  .office-v2-sidebar {
-    display: none; /* Let the bottom tab bar take over on mobile */
-  }
-}
+/* No mobile transitions yet */

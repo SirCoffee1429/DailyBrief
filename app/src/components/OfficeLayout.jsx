@@ -79,6 +79,27 @@ export default function OfficeLayout({ children }) {
                         <i className="fa-solid fa-comments office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Communication</span>
                     </NavLink>
+                    
+                    <div style={{ marginTop: 'auto', marginBottom: '0.5rem', padding: '0 0.5rem' }}>
+                        <button 
+                            className={`office-v2-nav-link ${assistantOpen ? 'active' : ''}`}
+                            style={{ 
+                                width: '100%', 
+                                border: 'none', 
+                                background: assistantOpen ? 'rgba(230, 107, 53, 0.2)' : 'transparent', 
+                                textAlign: 'left', 
+                                cursor: 'pointer',
+                                borderRadius: '0.5rem'
+                            }}
+                            onPointerDown={handlePointerDown}
+                            onPointerUp={handlePointerUp}
+                            onPointerLeave={handlePointerLeave}
+                            onContextMenu={e => e.preventDefault()}
+                        >
+                            <i className={`fa-solid ${longPressActive ? 'fa-microphone' : 'fa-brain'} office-v2-nav-icon`} style={{ color: assistantOpen ? '#e66b35' : '' }} />
+                            <span style={{ marginLeft: '0.75rem', color: assistantOpen ? '#e66b35' : '' }}>Assistant</span>
+                        </button>
+                    </div>
                 </nav>
 
                 <div style={{ padding: '1rem', borderTop: '1px solid #333' }}>
@@ -107,7 +128,7 @@ export default function OfficeLayout({ children }) {
                 </header>
 
                 {/* Sub-routes inject here */}
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="custom-scrollbar">
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: '0 1.5rem 1.5rem 1.5rem' }} className="custom-scrollbar">
                     {children}
                 </div>
             </main>
@@ -118,54 +139,6 @@ export default function OfficeLayout({ children }) {
                 voiceMode={voiceMode}
                 onVoiceModeEnd={() => setVoiceMode(false)}
             />
-
-            {/* Mobile Bottom Tab Bar */}
-            <nav className="bottom-tab-bar">
-                <NavLink
-                    to="/office"
-                    end
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-table-cells-large" />
-                    <span className="tab-label">Brief</span>
-                </NavLink>
-
-                <NavLink
-                    to="/office/sales"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-chart-line" />
-                    <span className="tab-label">Sales</span>
-                </NavLink>
-
-                <button
-                    className={`bottom-tab-link bottom-tab-center ${assistantOpen ? 'active' : ''} ${longPressActive ? 'long-press-active' : ''}`}
-                    onPointerDown={handlePointerDown}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerLeave}
-                    onContextMenu={e => e.preventDefault()}
-                    aria-label="Toggle Assistant (hold for voice)"
-                >
-                    <i className={`tab-icon fa-solid ${longPressActive ? 'fa-microphone' : 'fa-brain'}`} />
-                    <span className="tab-label">Assistant</span>
-                </button>
-
-                <NavLink
-                    to="/office/workbooks"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-utensils" />
-                    <span className="tab-label">Recipes</span>
-                </NavLink>
-
-                <NavLink
-                    to="/office/history"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-list-check" />
-                    <span className="tab-label">Tasks</span>
-                </NavLink>
-            </nav>
         </div>
     )
 }

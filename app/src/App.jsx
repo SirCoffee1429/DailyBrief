@@ -17,6 +17,7 @@ import SalesReports from './pages/SalesReports.jsx'
 import SalesReportDetail from './pages/SalesReportDetail.jsx'
 import EventsBanquetsPage from './pages/EventsBanquetsPage.jsx'
 import RecipeCreator from './pages/RecipeCreator.jsx'
+import Communication from './pages/Communication.jsx'
 
 export default function App() {
     return (
@@ -44,7 +45,7 @@ export default function App() {
             <Route path="/office/workbooks/:id" element={<OfficeGate><OfficeLayout><WorkbookViewer /></OfficeLayout></OfficeGate>} />
             <Route path="/office/history" element={<OfficeGate><OfficeLayout><History /></OfficeLayout></OfficeGate>} />
             <Route path="/office/events" element={<OfficeGate><OfficeLayout><EventsBanquetsPage /></OfficeLayout></OfficeGate>} />
-            <Route path="/office/chat" element={<OfficeGate><OfficeLayout><AiChat /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/chat" element={<OfficeGate><OfficeLayout><Communication /></OfficeLayout></OfficeGate>} />
             <Route path="/office/sales" element={<OfficeGate><OfficeLayout><SalesReports /></OfficeLayout></OfficeGate>} />
             <Route path="/office/sales/:date" element={<OfficeGate><OfficeLayout><SalesReportDetail /></OfficeLayout></OfficeGate>} />
         </Routes>
