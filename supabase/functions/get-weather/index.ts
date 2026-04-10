@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
         let lat = url.searchParams.get('lat')
         let lng = url.searchParams.get('lng')
 
+        // Parse lat/lng from POST body if available
         if (req.method === 'POST') {
             try {
                 const body = await req.json()
@@ -42,14 +43,19 @@ Deno.serve(async (req) => {
         }
 
         // Call Google Weather API for 5-day forecast
-        const weatherUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${apiKey}&location.latitude=${lat}&location.longitude=${lng}&unitsSystem=IMPERIAL&pageSize=5`
-        
-        const weatherRes = await fetch(weatherUrl)
-        
+        const weatherUrl = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${apiKey}&location.latitude=${lat}&location.longitude=${lng}&unitsSystem=IMPERIAL&days=5`
+
+        // Include Referer header to satisfy API key HTTP referrer restriction
+        const weatherRes = await fetch(weatherUrl, {
+            headers: {
+                'Referer': 'https://brief-club.vercel.app/',
+            }
+        })
+
         if (!weatherRes.ok) {
             const errorText = await weatherRes.text()
             console.error('Google Weather API error:', errorText)
-            throw new Error(`Google Weather API error: ${weatherRes.status}`)
+            throw new Error(`Google Weather API error: ${weatherRes.status} - ${errorText}`)
         }
 
         const weatherData = await weatherRes.json()

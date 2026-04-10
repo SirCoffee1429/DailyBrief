@@ -654,3 +654,25 @@ giving managers a chat-style message board to post notes for other managers.
   category
 - All existing CSS (`.wb-*` classes) was already in `index.css`
 - Supports posting, pinning, deleting, author names, and relative timestamps
+
+---
+
+### 2026-04-10 — Fix Weather Edge Function 500 Errors
+
+**File(s) Changed:** `supabase/functions/get-weather/index.ts` **Type:** `fix`
+**Summary:** Fixed the 5-day weather forecast returning 500 errors. The Google
+Weather API key has an HTTP referrer restriction in Google Cloud Console, and
+server-side calls from the Supabase edge function had no Referer header, causing
+Google to reject every request with `API_KEY_HTTP_REFERRER_BLOCKED`.
+
+**Details:**
+
+- Root cause: Google Cloud API key configured with HTTP referrer restrictions;
+  edge function requests had an empty `Referer` header, triggering 403 from
+  Google → caught and re-thrown as 500 by the function
+- Added `Referer: 'https://brief-club.vercel.app/'` header to the
+  `fetch(weatherUrl)` call to match the allowed referrer
+- Changed `pageSize=5` param to `days=5` to match current API docs
+- Improved error messages to include full Google API error body for easier
+  future debugging
+- Deployed as v8 to Supabase, verified 200 response with 5 forecast days
