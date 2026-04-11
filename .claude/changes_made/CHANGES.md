@@ -594,8 +594,7 @@ dashboard. It was auto-placed by the grid rather than locked below the forecast.
 **File(s) Changed:** `app/src/pages/Briefings.jsx`,
 `app/src/pages/OfficeDashboard.jsx`, `app/src/pages/SalesReports.jsx`,
 `app/src/pages/SalesReportDetail.jsx`, `app/src/components/SalesBriefing.jsx`
-**File(s) Deleted:** `app/src/pages/FohDashboard.jsx`
-**Type:** `fix`
+**File(s) Deleted:** `app/src/pages/FohDashboard.jsx` **Type:** `fix`
 **Summary:** Previous cleanup was done on a feature branch that was deleted
 before merging. Re-applied all FOH removal and dept-scoping fixes directly to
 main. Fixed the briefings page showing empty because it was filtering by an
@@ -603,9 +602,10 @@ undefined `:dept` param.
 
 **Details:**
 
-- `Briefings.jsx`: Removed `useParams`, `DEPT_LABELS`, and `.eq('department',
-  dept)` filter — briefings now load without department filtering. Links use
-  static `/office/briefings/...` paths
+- `Briefings.jsx`: Removed `useParams`, `DEPT_LABELS`, and
+  `.eq('department',
+  dept)` filter — briefings now load without department
+  filtering. Links use static `/office/briefings/...` paths
 - `OfficeDashboard.jsx`: Removed stale `notes` state and `management_notes`
   query for the deleted Board tile
 - `SalesReports.jsx`, `SalesReportDetail.jsx`, `SalesBriefing.jsx`: Removed
@@ -617,10 +617,11 @@ undefined `:dept` param.
 
 ### 2026-04-08 — Sales Intelligence for Assistant & Extracted Item Pricing
 
-**File(s) Changed:** `supabase/functions/process-sales-data/index.ts`, `supabase/functions/kitchen-assistant/index.ts`, `app/src/components/AssistantWidget.jsx`
-**Type:** `feature`
-**Summary:** Upgraded the AI Assistant to intelligently answer natural-language
-questions about sales data, and updated the sales parser to capture item pricing.
+**File(s) Changed:** `supabase/functions/process-sales-data/index.ts`,
+`supabase/functions/kitchen-assistant/index.ts`,
+`app/src/components/AssistantWidget.jsx` **Type:** `feature` **Summary:**
+Upgraded the AI Assistant to intelligently answer natural-language questions
+about sales data, and updated the sales parser to capture item pricing.
 
 **Details:**
 
@@ -631,14 +632,15 @@ questions about sales data, and updated the sales parser to capture item pricing
   to 0 for older unpriced fields. Added a delete-before-insert step so
   re-uploading same-day reports avoids duplicates.
 - **Assistant Backend:** Rewrote `kitchen-assistant` edge function. Added sales
-  intent keyword detection (`"sold", "revenue", "how many"`, etc.). If detected, it
-  short-circuits the vector RAG pipeline, queries `sales_data` for the 
+  intent keyword detection (`"sold", "revenue", "how many"`, etc.). If detected,
+  it short-circuits the vector RAG pipeline, queries `sales_data` for the
   inferred date window ("this week", "yesterday", "this month"), aggregates the
   data by item/category with percentages, formatting it into a text table.
   Passes the table directly to Gemini along with the user's question.
 - **Assistant UI:** Updated `AssistantWidget.jsx` with a new greeting including
   sales questions, and surfaced three common predefined sales prompts as
   quick-access chips when beginning a chat.
+
 ### 2026-04-08 — Add Manager Board to Office Dashboard
 
 **File(s) Changed:** `app/src/pages/OfficeDashboard.jsx` **Type:** `feature`
@@ -657,76 +659,15 @@ giving managers a chat-style message board to post notes for other managers.
 
 ---
 
-### 2026-04-09 — Office Dashboard V2 Overhaul
+### 2026-04-11 — Fix Pin/Trash Overlap on Communication Posts
 
-**File(s) Changed:** `index.css`, `OfficeLayout.jsx`, `OfficeDashboard.jsx`, `WeeklyFeatures.jsx`, `ManagementWhiteboard.jsx` **Type:** `feature`
-**Summary:** Completely overhauled the Office Dashboard layout, transitioning it to a premium desktop-first sidebar navigation and grid-based widget system based on V2 prototype design.
-
-**Details:**
-
-- **CSS Updates**: Migrated Tailwind styles from the design prototype into Vanilla CSS (`.office-v2-*`) to isolate and ensure safety for legacy components.
-- **OfficeLayout**: Refactored to support a responsive Sidebar (`.office-v2-sidebar`) on Desktop, which hides gracefully on mobile in favor of the existing bottom navigation bar.
-- **OfficeDashboard**: Entirely rebuilt the main template to match the V2 UI prototype grids, including a top stats bar, flexible widget structure, and 2-column communication & sales mock areas.
-- **Widget Refactoring**: 
-  - Updated `WeatherWidget` to render a `compact` mode specifically molded for the top V2 stats grid.
-  - Refactored `WeeklyFeatures` JSX block to directly weave the state hooks into `.office-v2-calendar-grid` layout provided in the mockup.
-  - Added a `hideHeader` prop to `ManagementWhiteboard` to integrate seamlessly beneath new standalone dashboard panel wrapper headers.
-
----
-
-### 2026-04-09 — Dashboard Layout Hotfixes
-
-**File(s) Changed:** OfficeLayout.jsx, index.css, WeatherWidget.jsx **Type:** ix
-**Summary:** Resolved post-refactor layout bugs including a React crash caused by undefined icons and a global missing scrollbar blocking access to legacy pages.
-
-**Details:**
-- **Crash Fix:** Fixed WeatherWidget.jsx object destructuring that caused iconClass.includes to throw a fatal TypeError and crash the renderer with a black screen.
-**Scroll Fix:** The new rigid .office-v2-main wrapper previously prevented child pages from overflowing properly. Wrapped {children} in a { flex: 1, overflowY: 'auto' } div in OfficeLayout.jsx and removed redundant nested scroll-locks in index.css. This ensures legacy pages like Sales and Briefings can seamlessly scroll.
-- **UI Update:** Removed the bottom pill navigation container and integrated the AI Assistant toggle directly into the .office-v2-sidebar for a cleaner, unified desktop-first paradigm.
-
----
-
-### 2026-04-11 — Compact Weather + Inline Stat Cards on Office Dashboard
-
-**File(s) Changed:** `app/src/components/WeatherWidget.jsx`,
-`app/src/pages/OfficeDashboard.jsx` **Type:** `fix`
-**Summary:** Moved the weather widget from spanning the full top row to sitting
-inline alongside the 4 stat cards (Events, Briefings, Recipes, Task History) in
-a single horizontal row, matching the reference mockup.
+**File(s) Changed:** `app/src/index.css` **Type:** `fix`
+**Summary:** The pin and trash action buttons on communication note cards were
+positioned at `top: 8px; right: 8px`, overlapping the posted date timestamp.
+Moved them to `bottom: 8px; right: 8px` so they appear at the bottom-right of
+each card on hover.
 
 **Details:**
 
-- Removed `gridColumn: '1 / -1'` from the weather widget wrapper in
-  OfficeDashboard so it takes one grid column instead of spanning all 5
-- Fixed compact WeatherWidget to read correct Google Weather API response
-  fields: `maxTemperature.degrees`, `minTemperature.degrees`,
-  `daytimeForecast.weatherCondition.type`, and
-  `daytimeForecast.precipitation.probability.percent` (was using non-existent
-  `minTemp`, `maxTemp`, `weatherType` fields which returned `--` for all temps)
-- Reduced compact mode from 5 days to 3 days to fit the narrower card width
-- Used `getDayLabel()` for date labels instead of manual day-of-week array
-  indexing, showing "TODAY", "SUN", "MON" etc.
-
----
-
-### 2026-04-11 — Make Communication Board Postable from Dashboard
-
-**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx`,
-`app/src/components/ManagementWhiteboard.jsx` **Type:** `fix`
-**Summary:** The Department Communication board on the dashboard was showing
-posts but the message input was clipped by `overflow: hidden` on the parent
-container, making it impossible to post from the dashboard without navigating to
-the full Communications page.
-
-**Details:**
-
-- Removed `overflow: hidden` from the communication wrapper div in
-  OfficeDashboard, replaced with `flex: 1, minHeight: 0` flex layout
-- Updated ManagementWhiteboard to apply embedded-aware flex styles when
-  `hideHeader={true}`: `.wb-board`, `.wb-columns`, and `.wb-column` all use
-  `flex: 1, minHeight: 0` and override the default `min-height: 400px` /
-  `max-height: 75vh` that were causing the input to overflow past the container
-- Replaced the ellipsis menu button with a "Full View" link to `/office/chat`
-  for quick access to the full communication page
-- The "Write a message..." input + send button are now always visible at the
-  bottom of the dashboard communication section
+- Changed `.wb-note-actions` from `top: 8px` to `bottom: 8px`
+- Buttons still only appear on hover (opacity transition unchanged)

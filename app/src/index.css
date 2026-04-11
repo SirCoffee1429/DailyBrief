@@ -1832,10 +1832,10 @@ tr.beo-completed td .beo-check {
   font-size: 9px;
 }
 
-/* Note Actions (appear on hover) */
+/* Note Actions (appear on hover at bottom-right) */
 .wb-note-actions {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 8px;
   display: flex;
   gap: 2px;
@@ -3702,4 +3702,4 @@ tr.beo-completed td .beo-check {
   font-weight: 600;
 }
 
-/* No mobile transitions yet */
+/* No mobile transitions yet */
