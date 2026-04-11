@@ -671,3 +671,33 @@ each card on hover.
 
 - Changed `.wb-note-actions` from `top: 8px` to `bottom: 8px`
 - Buttons still only appear on hover (opacity transition unchanged)
+
+---
+
+### 2026-04-11 — Sales Trend Chart with New Financial Columns
+
+**File(s) Changed:** `supabase/functions/process-sales-data/index.ts`,
+`app/src/components/SalesTrendChart.jsx` (NEW),
+`app/src/pages/SalesReports.jsx`, `app/src/index.css` **Type:** `feature`
+**Summary:** Added a weekly/monthly sales trend chart with 5 toggleable metrics
+(Units Sold, Sales, Discounts, Net Sales, Tax). Extended the database schema and
+Gemini parser to capture discounts, net_sales, and tax from item sales PDFs.
+
+**Details:**
+
+- **DB Migration:** Renamed `total_revenue` → `total_net_sales`, added
+  `discounts`, `net_sales`, `tax` columns (all numeric, default 0)
+- **Edge Function (`process-sales-data`):** Updated Gemini prompt to extract
+  discounts, net_sales, and tax from each line item; updated insert to persist
+  all new fields; fixed import to use `jsr:@supabase/supabase-js@2`
+- **New Component (`SalesTrendChart.jsx`):** Interactive SVG line chart with:
+  - Daily / Weekly / Monthly aggregation toggle
+  - 5 toggleable metric series with color-coded legends
+  - Hover tooltip with crosshair showing values for all active metrics
+  - Gradient area fills under each line
+  - Summary cards below showing totals and per-period averages
+- **SalesReports.jsx:** Added `SalesTrendChart` above the date cards grid
+- **index.css:** Added ~200 lines of CSS for chart card, mode toggle, legend
+  buttons, SVG container, tooltip, and summary cards
+- Historical data shows Units Sold correctly; Sales/Discounts/Net Sales/Tax
+  will populate when new PDFs are processed with the updated parser

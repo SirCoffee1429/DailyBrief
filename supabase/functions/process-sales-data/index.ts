@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js@^2.4.1/edge-runtime.d.ts";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
@@ -40,7 +40,10 @@ Deno.serve(async (req) => {
          - "item_name" (string): the name of the item
          - "units_sold" (number): the number of units sold
          - "unit_price" (number): the individual price of the item. If not present, default to 0. Number only.
-         - "total_revenue" (number): the total revenue (amount) for that item. If not present, default to 0. Number only.
+         - "total_net_sales" (number): the total net sales amount for that item. This is typically the "Amount" or "Net Sales" or "Sales" column. If not present, default to 0. Number only.
+         - "discounts" (number): the total discount amount for that item. Look for a "Discounts" or "Disc" column. If not present, default to 0. Number only. Should be positive (absolute value).
+         - "net_sales" (number): the net sales after discounts. Look for "Net Sales" column. If not present and you have total_net_sales and discounts, calculate as total_net_sales - discounts. Number only.
+         - "tax" (number): the tax amount for that item. Look for a "Tax" column. If not present, default to 0. Number only.
          - "category" (string): the category (e.g., Appetizers, BBQ, Desserts)
 
       Rules for items:
@@ -55,7 +58,7 @@ Deno.serve(async (req) => {
         "is_valid_sales_report": true,
         "report_date": "2026-03-27",
         "items": [
-          {"item_name": "Brisket", "units_sold": 42, "unit_price": 14.50, "total_revenue": 609.00, "category": "BBQ"}
+          {"item_name": "Brisket", "units_sold": 42, "unit_price": 14.50, "total_net_sales": 609.00, "discounts": 12.50, "net_sales": 596.50, "tax": 47.72, "category": "BBQ"}
         ]
       }
     `;
@@ -102,7 +105,16 @@ Deno.serve(async (req) => {
     // Extract date from Gemini response, fall back to today (UTC) if not found
     const reportDate: string = parsedData.report_date
       || new Date().toISOString().split("T")[0];
-    const items: { item_name: string; units_sold: number; unit_price: number; total_revenue: number; category: string }[] = parsedData.items || [];
+    const items: {
+      item_name: string;
+      units_sold: number;
+      unit_price: number;
+      total_net_sales: number;
+      discounts: number;
+      net_sales: number;
+      tax: number;
+      category: string;
+    }[] = parsedData.items || [];
 
     console.log(`Gemini parsed ${items.length} items from the PDF, report date: ${reportDate}`);
 
@@ -135,7 +147,10 @@ Deno.serve(async (req) => {
           item_name: item.item_name,
           units_sold: Number(item.units_sold) || 0,
           unit_price: Number(item.unit_price) || 0,
-          total_revenue: Number(item.total_revenue) || 0,
+          total_net_sales: Number(item.total_net_sales) || 0,
+          discounts: Number(item.discounts) || 0,
+          net_sales: Number(item.net_sales) || 0,
+          tax: Number(item.tax) || 0,
           category: item.category,
           metadata: { source: payload.From },
         }))

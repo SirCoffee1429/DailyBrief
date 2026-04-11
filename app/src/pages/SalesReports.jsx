@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import SalesTrendChart from '../components/SalesTrendChart.jsx'
 
 export default function SalesReports() {
     const [dates, setDates] = useState([])
@@ -46,6 +47,8 @@ export default function SalesReports() {
                     <i className="fa-solid fa-arrow-left" /> Back to Dashboard
                 </Link>
             </div>
+
+            <SalesTrendChart />
 
             {loading ? (
                 <div className="shimmer" style={{ height: '200px', borderRadius: 'var(--radius-md)' }}></div>
