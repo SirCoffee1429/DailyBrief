@@ -716,6 +716,201 @@ of aggregate financial metrics.
 
 - Each food category gets its own color-coded line on the SVG chart
 - Top 5 categories shown by default, with "Top 5" / "All" quick-select buttons
+**Summary:** Added event start time display to each BEO card between the date
+and guest count.
+
+**Details:**
+
+- Added clock icon (`fa-regular fa-clock`) and `b.start_time` display to the
+  event metadata row
+- Time shows between date and guest count (e.g. "Fri, Mar 27, 2026 · 🕐 5:00 PM
+  · 👥 21 guests")
+- Only renders when `start_time` is present (conditionally guarded)
+- Added `flexWrap: 'wrap'` to the metadata row for better mobile behavior
+- No DB or edge function changes needed — `start_time` column and Gemini
+  extraction already existed
+
+---
+
+### 2026-04-07 — Move Lunch & Dinner Features to Dashboards
+
+**File(s) Changed:** `app/src/components/ManagementWhiteboard.jsx`,
+`app/src/pages/OfficeDashboard.jsx`, `app/src/pages/Dashboard.jsx` **Type:**
+`feature` **Summary:** Moved the Lunch & Dinner Features weekly calendar from
+the Board/ManagementWhiteboard page onto both the Office and Kitchen dashboards,
+displayed directly below the weather forecast card.
+
+**Details:**
+
+- Removed `<WeeklyFeatures />` and its import from `ManagementWhiteboard.jsx`
+- Added `WeeklyFeatures` import and rendered it after `<WeatherWidget />` in
+  `OfficeDashboard.jsx` (wrapped in `office-weather-row` for consistent width)
+- Added `WeeklyFeatures` import and rendered it after `<WeatherWidget />` in
+  `Dashboard.jsx` (Kitchen dashboard)
+
+---
+
+### 2026-04-07 — Fix Features Card Grid Position on Kitchen Dashboard
+
+**File(s) Changed:** `app/src/index.css` **Type:** `fix` **Summary:** Fixed the
+Lunch & Dinner Features card appearing in the wrong grid position on the kitchen
+dashboard. It was auto-placed by the grid rather than locked below the forecast.
+
+**Details:**
+
+- Added `"features  features  features"` row to `dashboard-grid`
+  grid-template-areas immediately after the `weather` row
+- Replaced `margin-top` on `.wf-calendar` with `grid-area: features` so the card
+  locks into the correct named slot
+- Added `"features"` to the mobile breakpoint stack order (after weather, before
+  notes)
+
+---
+
+### 2026-04-07 — Fix Office Dashboard Route Mismatch
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx` **Type:** `fix`
+**Summary:** OfficeDashboard was still using department-scoped links
+(`/office/${dept}/...`) from a reverted commit, but App.jsx routes are at
+`/office/...`. Rewrote to use direct `/office/...` paths.
+
+**Details:**
+
+- Removed `useParams()`, `DEPT_META` config, and the `base` path builder
+- All tile links now use static `/office/...` paths matching App.jsx routes
+- Removed department-specific filtering on briefings/tasks queries
+- Removed "Departments" back-button (no longer applicable)
+- Kept WeeklyFeatures and SalesBriefing cards
+
+---
+
+### 2026-04-08 — Remove FOH Code & Fix Briefings on Main Branch
+
+**File(s) Changed:** `app/src/pages/Briefings.jsx`,
+`app/src/pages/OfficeDashboard.jsx`, `app/src/pages/SalesReports.jsx`,
+`app/src/pages/SalesReportDetail.jsx`, `app/src/components/SalesBriefing.jsx`
+**File(s) Deleted:** `app/src/pages/FohDashboard.jsx` **Type:** `fix`
+**Summary:** Previous cleanup was done on a feature branch that was deleted
+before merging. Re-applied all FOH removal and dept-scoping fixes directly to
+main. Fixed the briefings page showing empty because it was filtering by an
+undefined `:dept` param.
+
+**Details:**
+
+- `Briefings.jsx`: Removed `useParams`, `DEPT_LABELS`, and
+  `.eq('department',
+  dept)` filter — briefings now load without department
+  filtering. Links use static `/office/briefings/...` paths
+- `OfficeDashboard.jsx`: Removed stale `notes` state and `management_notes`
+  query for the deleted Board tile
+- `SalesReports.jsx`, `SalesReportDetail.jsx`, `SalesBriefing.jsx`: Removed
+  `/foh` path checks and dept-scoped office path parsing
+- Deleted `FohDashboard.jsx` on main
+- Final audit: zero `foh` references remain across all source files
+
+---
+
+### 2026-04-08 — Sales Intelligence for Assistant & Extracted Item Pricing
+
+**File(s) Changed:** `supabase/functions/process-sales-data/index.ts`,
+`supabase/functions/kitchen-assistant/index.ts`,
+`app/src/components/AssistantWidget.jsx` **Type:** `feature` **Summary:**
+Upgraded the AI Assistant to intelligently answer natural-language questions
+about sales data, and updated the sales parser to capture item pricing.
+
+**Details:**
+
+- **Database:** Added `unit_price` and `total_revenue` columns to the
+  `sales_data` table to allow tracking dollars not just units.
+- **Sales Parser:** Updated `process-sales-data` edge function prompt and schema
+  to extract `unit_price` and `total_revenue` from uploaded PDFs, falling back
+  to 0 for older unpriced fields. Added a delete-before-insert step so
+  re-uploading same-day reports avoids duplicates.
+- **Assistant Backend:** Rewrote `kitchen-assistant` edge function. Added sales
+  intent keyword detection (`"sold", "revenue", "how many"`, etc.). If detected,
+  it short-circuits the vector RAG pipeline, queries `sales_data` for the
+  inferred date window ("this week", "yesterday", "this month"), aggregates the
+  data by item/category with percentages, formatting it into a text table.
+  Passes the table directly to Gemini along with the user's question.
+- **Assistant UI:** Updated `AssistantWidget.jsx` with a new greeting including
+  sales questions, and surfaced three common predefined sales prompts as
+  quick-access chips when beginning a chat.
+
+### 2026-04-08 — Add Manager Board to Office Dashboard
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx` **Type:** `feature`
+**Summary:** Added the ManagementWhiteboard component to the Office Dashboard,
+giving managers a chat-style message board to post notes for other managers.
+
+**Details:**
+
+- Imported existing `ManagementWhiteboard` component (was unused after earlier
+  refactors)
+- Rendered it as a full-width card at the bottom of the office grid
+- No DB changes needed — uses existing `management_notes` table with `comms`
+  category
+- All existing CSS (`.wb-*` classes) was already in `index.css`
+- Supports posting, pinning, deleting, author names, and relative timestamps
+
+---
+
+### 2026-04-11 — Fix Pin/Trash Overlap on Communication Posts
+
+**File(s) Changed:** `app/src/index.css` **Type:** `fix`
+**Summary:** The pin and trash action buttons on communication note cards were
+positioned at `top: 8px; right: 8px`, overlapping the posted date timestamp.
+Moved them to `bottom: 8px; right: 8px` so they appear at the bottom-right of
+each card on hover.
+
+**Details:**
+
+- Changed `.wb-note-actions` from `top: 8px` to `bottom: 8px`
+- Buttons still only appear on hover (opacity transition unchanged)
+
+---
+
+### 2026-04-11 — Sales Trend Chart with New Financial Columns
+
+**File(s) Changed:** `supabase/functions/process-sales-data/index.ts`,
+`app/src/components/SalesTrendChart.jsx` (NEW),
+`app/src/pages/SalesReports.jsx`, `app/src/index.css` **Type:** `feature`
+**Summary:** Added a weekly/monthly sales trend chart with 5 toggleable metrics
+(Units Sold, Sales, Discounts, Net Sales, Tax). Extended the database schema and
+Gemini parser to capture discounts, net_sales, and tax from item sales PDFs.
+
+**Details:**
+
+- **DB Migration:** Renamed `total_revenue` → `total_net_sales`, added
+  `discounts`, `net_sales`, `tax` columns (all numeric, default 0)
+- **Edge Function (`process-sales-data`):** Updated Gemini prompt to extract
+  discounts, net_sales, and tax from each line item; updated insert to persist
+  all new fields; fixed import to use `jsr:@supabase/supabase-js@2`
+- **New Component (`SalesTrendChart.jsx`):** Interactive SVG line chart with:
+  - Daily / Weekly / Monthly aggregation toggle
+  - 5 toggleable metric series with color-coded legends
+  - Hover tooltip with crosshair showing values for all active metrics
+  - Gradient area fills under each line
+  - Summary cards below showing totals and per-period averages
+- **SalesReports.jsx:** Added `SalesTrendChart` above the date cards grid
+- **index.css:** Added ~200 lines of CSS for chart card, mode toggle, legend
+  buttons, SVG container, tooltip, and summary cards
+- Historical data shows Units Sold correctly; Sales/Discounts/Net Sales/Tax
+  will populate when new PDFs are processed with the updated parser
+
+---
+
+### 2026-04-11 — Refactor Sales Trend Chart to Show Food Categories
+
+**File(s) Changed:** `app/src/components/SalesTrendChart.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Rewrote the sales trend chart to display food categories (Handhelds,
+NEW SIDES, Salads, Features, Appetizers, etc.) as separate colored lines instead
+of aggregate financial metrics.
+
+**Details:**
+
+- Each food category gets its own color-coded line on the SVG chart
+- Top 5 categories shown by default, with "Top 5" / "All" quick-select buttons
 - All 14 categories individually toggleable via legend buttons
 - Metric selector: Units Sold | Sales ($) | Net Sales ($) — switches what the
   Y-axis represents for all category lines
@@ -723,3 +918,15 @@ of aggregate financial metrics.
 - Summary cards show top 6 categories with totals and per-period averages
 - Tooltip shows all active categories sorted by value descending
 - Added CSS for `.trend-legend-action` and `.trend-legend-divider`
+
+---
+
+### 2026-04-11 — Remove Recent Activity Widget
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx`  
+**Type:** `feature`  
+**Summary:** Removed the "Recent Activity" mock widget from the Office Dashboard to streamline the interface, leaving the "Sales Reports Chart" to occupy the right column.
+
+**Details:**
+
+- Deleted the `.office-v2-widget` section containing the Recent Activity mock.
