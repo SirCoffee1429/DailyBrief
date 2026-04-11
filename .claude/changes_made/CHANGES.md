@@ -683,3 +683,27 @@ giving managers a chat-style message board to post notes for other managers.
 - **Crash Fix:** Fixed WeatherWidget.jsx object destructuring that caused iconClass.includes to throw a fatal TypeError and crash the renderer with a black screen.
 **Scroll Fix:** The new rigid .office-v2-main wrapper previously prevented child pages from overflowing properly. Wrapped {children} in a { flex: 1, overflowY: 'auto' } div in OfficeLayout.jsx and removed redundant nested scroll-locks in index.css. This ensures legacy pages like Sales and Briefings can seamlessly scroll.
 - **UI Update:** Removed the bottom pill navigation container and integrated the AI Assistant toggle directly into the .office-v2-sidebar for a cleaner, unified desktop-first paradigm.
+
+---
+
+### 2026-04-11 — Compact Weather + Inline Stat Cards on Office Dashboard
+
+**File(s) Changed:** `app/src/components/WeatherWidget.jsx`,
+`app/src/pages/OfficeDashboard.jsx` **Type:** `fix`
+**Summary:** Moved the weather widget from spanning the full top row to sitting
+inline alongside the 4 stat cards (Events, Briefings, Recipes, Task History) in
+a single horizontal row, matching the reference mockup.
+
+**Details:**
+
+- Removed `gridColumn: '1 / -1'` from the weather widget wrapper in
+  OfficeDashboard so it takes one grid column instead of spanning all 5
+- Fixed compact WeatherWidget to read correct Google Weather API response
+  fields: `maxTemperature.degrees`, `minTemperature.degrees`,
+  `daytimeForecast.weatherCondition.type`, and
+  `daytimeForecast.precipitation.probability.percent` (was using non-existent
+  `minTemp`, `maxTemp`, `weatherType` fields which returned `--` for all temps)
+- Reduced compact mode from 5 days to 3 days to fit the narrower card width
+- Used `getDayLabel()` for date labels instead of manual day-of-week array
+  indexing, showing "TODAY", "SUN", "MON" etc.
+

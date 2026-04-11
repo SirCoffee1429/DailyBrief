@@ -40,8 +40,8 @@ export default function OfficeDashboard() {
             {/* Top Stats Widgets */}
             <section className="office-v2-stats-grid">
                 
-                {/* Weather Widget Wrapper */}
-                <div className="office-v2-widget" style={{ gridColumn: '1 / -1' }}>
+                {/* Weather Widget — compact 3-day inline card */}
+                <div className="office-v2-widget">
                     <WeatherWidget compact={true} />
                 </div>
 
