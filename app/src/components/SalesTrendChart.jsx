@@ -1,28 +1,17 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 
-const METRICS = [
-    { key: 'units_sold', label: 'Units Sold', color: '#f97316', format: v => v.toLocaleString() },
-    { key: 'total_net_sales', label: 'Sales', color: '#3b82f6', format: v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
-    { key: 'discounts', label: 'Discounts', color: '#f43f5e', format: v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
-    { key: 'net_sales', label: 'Net Sales', color: '#10b981', format: v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
-    { key: 'tax', label: 'Tax', color: '#a78bfa', format: v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+const CATEGORY_COLORS = [
+    '#f97316', '#3b82f6', '#10b981', '#a78bfa', '#f43f5e',
+    '#06b6d4', '#eab308', '#ec4899', '#14b8a6', '#8b5cf6',
+    '#ef4444', '#22c55e', '#f59e0b', '#6366f1', '#d946ef',
 ]
 
-function getWeekLabel(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00')
-    // Get Monday of that week
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    const monday = new Date(d)
-    monday.setDate(diff)
-    return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function getMonthLabel(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00')
-    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
-}
+const METRIC_OPTIONS = [
+    { key: 'units_sold', label: 'Units Sold', format: v => v.toLocaleString() },
+    { key: 'total_net_sales', label: 'Sales ($)', format: v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+    { key: 'net_sales', label: 'Net Sales ($)', format: v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+]
 
 function getWeekKey(dateStr) {
     const d = new Date(dateStr + 'T00:00:00')
@@ -33,15 +22,36 @@ function getWeekKey(dateStr) {
     return monday.toISOString().split('T')[0]
 }
 
+function getWeekLabel(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00')
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    const monday = new Date(d)
+    monday.setDate(diff)
+    return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 function getMonthKey(dateStr) {
-    return dateStr.substring(0, 7) // YYYY-MM
+    return dateStr.substring(0, 7)
+}
+
+function getMonthLabel(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+}
+
+function getDailyLabel(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export default function SalesTrendChart() {
     const [rawData, setRawData] = useState([])
     const [loading, setLoading] = useState(true)
-    const [mode, setMode] = useState('daily') // 'daily', 'weekly', 'monthly'
-    const [activeMetrics, setActiveMetrics] = useState(['units_sold', 'total_net_sales'])
+    const [mode, setMode] = useState('daily')
+    const [metric, setMetric] = useState('units_sold')
+    const [categories, setCategories] = useState([])
+    const [activeCategories, setActiveCategories] = useState([])
     const [tooltip, setTooltip] = useState(null)
     const svgRef = useRef(null)
 
@@ -50,10 +60,25 @@ export default function SalesTrendChart() {
             try {
                 const { data, error } = await supabase
                     .from('sales_data')
-                    .select('report_date, units_sold, total_net_sales, discounts, net_sales, tax')
+                    .select('report_date, category, units_sold, total_net_sales, net_sales')
+                    .not('category', 'is', null)
                     .order('report_date', { ascending: true })
 
                 if (error) throw error
+
+                // Discover categories sorted by total units
+                const catTotals = {}
+                ;(data || []).forEach(row => {
+                    const cat = row.category || 'Other'
+                    catTotals[cat] = (catTotals[cat] || 0) + (Number(row.units_sold) || 0)
+                })
+                const sortedCats = Object.entries(catTotals)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name]) => name)
+
+                setCategories(sortedCats)
+                // Default: show top 5 categories
+                setActiveCategories(sortedCats.slice(0, 5))
                 setRawData(data || [])
             } catch (err) {
                 console.error('Error fetching sales trend data:', err)
@@ -64,27 +89,35 @@ export default function SalesTrendChart() {
         fetchData()
     }, [])
 
-    const toggleMetric = (key) => {
-        setActiveMetrics(prev => {
-            if (prev.includes(key)) {
-                if (prev.length === 1) return prev // Keep at least one active
-                return prev.filter(k => k !== key)
+    const toggleCategory = (cat) => {
+        setActiveCategories(prev => {
+            if (prev.includes(cat)) {
+                if (prev.length === 1) return prev
+                return prev.filter(c => c !== cat)
             }
-            return [...prev, key]
+            return [...prev, cat]
         })
     }
 
-    // Aggregate data by mode
-    const chartData = (() => {
-        if (rawData.length === 0) return []
+    const selectAllCategories = () => setActiveCategories([...categories])
+    const selectTopCategories = () => setActiveCategories(categories.slice(0, 5))
 
-        const grouped = {}
+    const currentMetric = METRIC_OPTIONS.find(m => m.key === metric) || METRIC_OPTIONS[0]
+
+    // Build chart data: group by date-bucket, then by category
+    const chartData = (() => {
+        if (rawData.length === 0) return { buckets: [], catData: {} }
+
+        const bucketMap = {} // bucketKey -> { label, cats: { catName: value } }
+
         rawData.forEach(row => {
+            const cat = row.category || 'Other'
+            if (!activeCategories.includes(cat)) return
+
             let key, label
             if (mode === 'daily') {
                 key = row.report_date
-                const d = new Date(row.report_date + 'T00:00:00')
-                label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                label = getDailyLabel(row.report_date)
             } else if (mode === 'weekly') {
                 key = getWeekKey(row.report_date)
                 label = getWeekLabel(row.report_date)
@@ -93,72 +126,68 @@ export default function SalesTrendChart() {
                 label = getMonthLabel(row.report_date)
             }
 
-            if (!grouped[key]) {
-                grouped[key] = { key, label, units_sold: 0, total_net_sales: 0, discounts: 0, net_sales: 0, tax: 0 }
-            }
-            grouped[key].units_sold += Number(row.units_sold) || 0
-            grouped[key].total_net_sales += Number(row.total_net_sales) || 0
-            grouped[key].discounts += Number(row.discounts) || 0
-            grouped[key].net_sales += Number(row.net_sales) || 0
-            grouped[key].tax += Number(row.tax) || 0
+            if (!bucketMap[key]) bucketMap[key] = { key, label, cats: {} }
+            if (!bucketMap[key].cats[cat]) bucketMap[key].cats[cat] = 0
+            bucketMap[key].cats[cat] += Number(row[metric]) || 0
         })
 
-        return Object.values(grouped).sort((a, b) => a.key.localeCompare(b.key))
+        const buckets = Object.values(bucketMap).sort((a, b) => a.key.localeCompare(b.key))
+        return { buckets }
     })()
 
-    // SVG Chart dimensions
-    const W = 800, H = 320
-    const PAD = { top: 24, right: 24, bottom: 50, left: 60 }
+    const { buckets } = chartData
+
+    // SVG dimensions
+    const W = 800, H = 340
+    const PAD = { top: 24, right: 24, bottom: 55, left: 60 }
     const plotW = W - PAD.left - PAD.right
     const plotH = H - PAD.top - PAD.bottom
 
-    // Compute scale per metric (each metric gets its own Y scale since units vs dollars differ)
-    const getScale = (metricKey) => {
-        if (chartData.length === 0) return { min: 0, max: 1 }
-        const vals = chartData.map(d => d[metricKey])
-        const max = Math.max(...vals, 1)
-        return { min: 0, max: max * 1.1 }
-    }
+    // Find global max across all active categories
+    let globalMax = 1
+    buckets.forEach(b => {
+        activeCategories.forEach(cat => {
+            const val = b.cats[cat] || 0
+            if (val > globalMax) globalMax = val
+        })
+    })
+    globalMax *= 1.1
 
-    // We use the "primary" active metric for the Y axis labels
-    const primaryMetric = METRICS.find(m => activeMetrics.includes(m.key)) || METRICS[0]
-    const primaryScale = getScale(primaryMetric.key)
+    const getX = (i) => PAD.left + (buckets.length > 1 ? (i / (buckets.length - 1)) * plotW : plotW / 2)
+    const getY = (val) => PAD.top + plotH - (val / globalMax) * plotH
 
-    const getX = (i) => PAD.left + (chartData.length > 1 ? (i / (chartData.length - 1)) * plotW : plotW / 2)
-    const getY = (val, scale) => PAD.top + plotH - ((val - scale.min) / (scale.max - scale.min || 1)) * plotH
-
-    // Y axis ticks for primary metric
+    // Y axis ticks
     const yTicks = []
     const tickCount = 5
     for (let i = 0; i <= tickCount; i++) {
-        const val = primaryScale.min + (primaryScale.max - primaryScale.min) * (i / tickCount)
-        yTicks.push(val)
+        yTicks.push((globalMax / tickCount) * i)
     }
 
-    // Build line paths
-    const lines = METRICS.filter(m => activeMetrics.includes(m.key)).map(metric => {
-        const scale = getScale(metric.key)
-        const points = chartData.map((d, i) => `${getX(i)},${getY(d[metric.key], scale)}`)
-        return {
-            ...metric,
-            scale,
-            path: `M${points.join(' L')}`,
-            points: chartData.map((d, i) => ({ x: getX(i), y: getY(d[metric.key], scale), val: d[metric.key] }))
-        }
+    // Build line paths per category
+    const catColorMap = {}
+    categories.forEach((cat, i) => { catColorMap[cat] = CATEGORY_COLORS[i % CATEGORY_COLORS.length] })
+
+    const lines = activeCategories.map(cat => {
+        const points = buckets.map((b, i) => ({
+            x: getX(i),
+            y: getY(b.cats[cat] || 0),
+            val: b.cats[cat] || 0,
+        }))
+        const path = points.length > 0 ? `M${points.map(p => `${p.x},${p.y}`).join(' L')}` : ''
+        return { cat, color: catColorMap[cat], points, path }
     })
 
     const handleMouseMove = (e) => {
-        if (chartData.length === 0) return
+        if (buckets.length === 0) return
         const svg = svgRef.current
         if (!svg) return
         const rect = svg.getBoundingClientRect()
         const scaleX = W / rect.width
         const mouseX = (e.clientX - rect.left) * scaleX
 
-        // Find closest data point
         let closestIdx = 0
         let closestDist = Infinity
-        chartData.forEach((d, i) => {
+        buckets.forEach((_, i) => {
             const dist = Math.abs(getX(i) - mouseX)
             if (dist < closestDist) {
                 closestDist = dist
@@ -167,11 +196,7 @@ export default function SalesTrendChart() {
         })
 
         if (closestDist < 50) {
-            setTooltip({
-                idx: closestIdx,
-                x: getX(closestIdx),
-                data: chartData[closestIdx]
-            })
+            setTooltip({ idx: closestIdx, x: getX(closestIdx), bucket: buckets[closestIdx] })
         } else {
             setTooltip(null)
         }
@@ -180,18 +205,17 @@ export default function SalesTrendChart() {
     if (loading) {
         return (
             <div className="trend-chart-card">
-                <div className="shimmer" style={{ height: '400px', borderRadius: 'var(--radius-md)' }}></div>
+                <div className="shimmer" style={{ height: '400px', borderRadius: 'var(--radius-md)' }} />
             </div>
         )
     }
 
-    if (chartData.length === 0) {
+    if (buckets.length === 0) {
         return (
             <div className="trend-chart-card">
                 <div className="trend-chart-header">
                     <h2 className="trend-chart-title">
-                        <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} />
-                        Sales Trends
+                        <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} /> Sales Trends
                     </h2>
                 </div>
                 <div style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -203,35 +227,53 @@ export default function SalesTrendChart() {
 
     return (
         <div className="trend-chart-card">
+            {/* Header: title + mode toggle */}
             <div className="trend-chart-header">
                 <h2 className="trend-chart-title">
-                    <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} />
-                    Sales Trends
+                    <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} /> Sales Trends by Category
                 </h2>
-                <div className="trend-mode-toggle">
-                    {['daily', 'weekly', 'monthly'].map(m => (
-                        <button
-                            key={m}
-                            className={`trend-mode-btn ${mode === m ? 'active' : ''}`}
-                            onClick={() => setMode(m)}
-                        >
-                            {m.charAt(0).toUpperCase() + m.slice(1)}
-                        </button>
-                    ))}
+                <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Metric Selector */}
+                    <div className="trend-mode-toggle">
+                        {METRIC_OPTIONS.map(m => (
+                            <button
+                                key={m.key}
+                                className={`trend-mode-btn ${metric === m.key ? 'active' : ''}`}
+                                onClick={() => setMetric(m.key)}
+                            >
+                                {m.label}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Period Toggle */}
+                    <div className="trend-mode-toggle">
+                        {['daily', 'weekly', 'monthly'].map(m => (
+                            <button
+                                key={m}
+                                className={`trend-mode-btn ${mode === m ? 'active' : ''}`}
+                                onClick={() => setMode(m)}
+                            >
+                                {m.charAt(0).toUpperCase() + m.slice(1)}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* Metric Toggles */}
+            {/* Category Legend Toggles */}
             <div className="trend-legend">
-                {METRICS.map(m => (
+                <button className="trend-legend-action" onClick={selectTopCategories}>Top 5</button>
+                <button className="trend-legend-action" onClick={selectAllCategories}>All</button>
+                <span className="trend-legend-divider" />
+                {categories.map(cat => (
                     <button
-                        key={m.key}
-                        className={`trend-legend-btn ${activeMetrics.includes(m.key) ? 'active' : ''}`}
-                        style={{ '--legend-color': m.color }}
-                        onClick={() => toggleMetric(m.key)}
+                        key={cat}
+                        className={`trend-legend-btn ${activeCategories.includes(cat) ? 'active' : ''}`}
+                        style={{ '--legend-color': catColorMap[cat] }}
+                        onClick={() => toggleCategory(cat)}
                     >
-                        <span className="trend-legend-dot" style={{ background: activeMetrics.includes(m.key) ? m.color : '#555' }} />
-                        {m.label}
+                        <span className="trend-legend-dot" style={{ background: activeCategories.includes(cat) ? catColorMap[cat] : '#555' }} />
+                        {cat}
                     </button>
                 ))}
             </div>
@@ -249,24 +291,23 @@ export default function SalesTrendChart() {
                     {yTicks.map((val, i) => (
                         <g key={i}>
                             <line
-                                x1={PAD.left} y1={getY(val, primaryScale)}
-                                x2={W - PAD.right} y2={getY(val, primaryScale)}
+                                x1={PAD.left} y1={getY(val)}
+                                x2={W - PAD.right} y2={getY(val)}
                                 stroke="rgba(255,255,255,0.06)" strokeWidth="1"
                             />
                             <text
-                                x={PAD.left - 8} y={getY(val, primaryScale) + 4}
+                                x={PAD.left - 8} y={getY(val) + 4}
                                 fill="#9ca3af" fontSize="10" textAnchor="end"
                             >
-                                {primaryMetric.key === 'units_sold' ? Math.round(val) : `$${Math.round(val)}`}
+                                {metric === 'units_sold' ? Math.round(val) : `$${Math.round(val)}`}
                             </text>
                         </g>
                     ))}
 
                     {/* X axis labels */}
-                    {chartData.map((d, i) => {
-                        // Show at most ~12 labels to avoid crowding
-                        const step = Math.max(1, Math.floor(chartData.length / 12))
-                        if (i % step !== 0 && i !== chartData.length - 1) return null
+                    {buckets.map((d, i) => {
+                        const step = Math.max(1, Math.floor(buckets.length / 12))
+                        if (i % step !== 0 && i !== buckets.length - 1) return null
                         return (
                             <text
                                 key={i}
@@ -279,27 +320,26 @@ export default function SalesTrendChart() {
                         )
                     })}
 
-                    {/* Lines */}
+                    {/* Area fills + Lines per category */}
                     {lines.map(line => (
-                        <g key={line.key}>
-                            {/* Gradient area fill */}
+                        <g key={line.cat}>
                             <defs>
-                                <linearGradient id={`grad-${line.key}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={line.color} stopOpacity="0.2" />
+                                <linearGradient id={`grad-cat-${line.cat.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={line.color} stopOpacity="0.15" />
                                     <stop offset="100%" stopColor={line.color} stopOpacity="0" />
                                 </linearGradient>
                             </defs>
-                            {chartData.length > 1 && (
+                            {buckets.length > 1 && (
                                 <path
-                                    d={`${line.path} L${getX(chartData.length - 1)},${PAD.top + plotH} L${getX(0)},${PAD.top + plotH} Z`}
-                                    fill={`url(#grad-${line.key})`}
+                                    d={`${line.path} L${getX(buckets.length - 1)},${PAD.top + plotH} L${getX(0)},${PAD.top + plotH} Z`}
+                                    fill={`url(#grad-cat-${line.cat.replace(/\s+/g, '-')})`}
                                 />
                             )}
                             <path
                                 d={line.path}
                                 fill="none"
                                 stroke={line.color}
-                                strokeWidth="2.5"
+                                strokeWidth="2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             />
@@ -316,10 +356,11 @@ export default function SalesTrendChart() {
                             />
                             {lines.map(line => {
                                 const pt = line.points[tooltip.idx]
+                                if (!pt || pt.val === 0) return null
                                 return (
                                     <circle
-                                        key={line.key}
-                                        cx={pt.x} cy={pt.y} r="5"
+                                        key={line.cat}
+                                        cx={pt.x} cy={pt.y} r="4"
                                         fill={line.color} stroke="#1a1a2e" strokeWidth="2"
                                     />
                                 )
@@ -337,28 +378,36 @@ export default function SalesTrendChart() {
                             top: '16px',
                         }}
                     >
-                        <div className="trend-tooltip-date">{tooltip.data.label}</div>
-                        {lines.map(line => (
-                            <div key={line.key} className="trend-tooltip-row">
-                                <span className="trend-tooltip-dot" style={{ background: line.color }} />
-                                <span className="trend-tooltip-label">{line.label}:</span>
-                                <span className="trend-tooltip-val">{line.format(line.points[tooltip.idx].val)}</span>
-                            </div>
-                        ))}
+                        <div className="trend-tooltip-date">{tooltip.bucket.label}</div>
+                        {lines
+                            .filter(l => (l.points[tooltip.idx]?.val || 0) > 0)
+                            .sort((a, b) => (b.points[tooltip.idx]?.val || 0) - (a.points[tooltip.idx]?.val || 0))
+                            .map(line => (
+                                <div key={line.cat} className="trend-tooltip-row">
+                                    <span className="trend-tooltip-dot" style={{ background: line.color }} />
+                                    <span className="trend-tooltip-label">{line.cat}:</span>
+                                    <span className="trend-tooltip-val">{currentMetric.format(line.points[tooltip.idx].val)}</span>
+                                </div>
+                            ))
+                        }
                     </div>
                 )}
             </div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards for active categories */}
             <div className="trend-summary-row">
-                {METRICS.filter(m => activeMetrics.includes(m.key)).map(m => {
-                    const total = chartData.reduce((sum, d) => sum + d[m.key], 0)
-                    const avg = chartData.length > 0 ? total / chartData.length : 0
+                {lines.sort((a, b) => {
+                    const totalA = a.points.reduce((s, p) => s + p.val, 0)
+                    const totalB = b.points.reduce((s, p) => s + p.val, 0)
+                    return totalB - totalA
+                }).slice(0, 6).map(line => {
+                    const total = line.points.reduce((s, p) => s + p.val, 0)
+                    const avg = buckets.length > 0 ? total / buckets.length : 0
                     return (
-                        <div key={m.key} className="trend-summary-card" style={{ '--summary-color': m.color }}>
-                            <div className="trend-summary-label">{m.label}</div>
-                            <div className="trend-summary-total">{m.format(total)}</div>
-                            <div className="trend-summary-avg">avg {m.format(Math.round(avg))} / {mode === 'monthly' ? 'mo' : mode === 'weekly' ? 'wk' : 'day'}</div>
+                        <div key={line.cat} className="trend-summary-card" style={{ '--summary-color': line.color }}>
+                            <div className="trend-summary-label">{line.cat}</div>
+                            <div className="trend-summary-total">{currentMetric.format(total)}</div>
+                            <div className="trend-summary-avg">avg {currentMetric.format(Math.round(avg))} / {mode === 'monthly' ? 'mo' : mode === 'weekly' ? 'wk' : 'day'}</div>
                         </div>
                     )
                 })}

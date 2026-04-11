@@ -701,3 +701,25 @@ Gemini parser to capture discounts, net_sales, and tax from item sales PDFs.
   buttons, SVG container, tooltip, and summary cards
 - Historical data shows Units Sold correctly; Sales/Discounts/Net Sales/Tax
   will populate when new PDFs are processed with the updated parser
+
+---
+
+### 2026-04-11 — Refactor Sales Trend Chart to Show Food Categories
+
+**File(s) Changed:** `app/src/components/SalesTrendChart.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Rewrote the sales trend chart to display food categories (Handhelds,
+NEW SIDES, Salads, Features, Appetizers, etc.) as separate colored lines instead
+of aggregate financial metrics.
+
+**Details:**
+
+- Each food category gets its own color-coded line on the SVG chart
+- Top 5 categories shown by default, with "Top 5" / "All" quick-select buttons
+- All 14 categories individually toggleable via legend buttons
+- Metric selector: Units Sold | Sales ($) | Net Sales ($) — switches what the
+  Y-axis represents for all category lines
+- Period selector: Daily | Weekly | Monthly aggregation unchanged
+- Summary cards show top 6 categories with totals and per-period averages
+- Tooltip shows all active categories sorted by value descending
+- Added CSS for `.trend-legend-action` and `.trend-legend-divider`

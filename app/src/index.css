@@ -3802,6 +3802,32 @@ tr.beo-completed td .beo-check {
   flex-shrink: 0;
 }
 
+.trend-legend-action {
+  padding: 4px 10px;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  border-radius: var(--radius-full);
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-family);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.trend-legend-action:hover {
+  background: rgba(249, 115, 22, 0.2);
+}
+
+.trend-legend-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
 /* SVG Chart */
 .trend-chart-container {
   position: relative;
