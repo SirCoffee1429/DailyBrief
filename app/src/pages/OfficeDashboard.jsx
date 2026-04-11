@@ -84,13 +84,15 @@ export default function OfficeDashboard() {
             {/* Bottom Grid Layout */}
             <div className="office-v2-bottom-grid">
                 
-                {/* Chat/Communication */}
-                <section className="office-v2-widget office-v2-chat-section" style={{ padding: 0 }}>
+                {/* Chat/Communication — full whiteboard with posting capability */}
+                <section className="office-v2-widget office-v2-chat-section" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
                     <div className="office-v2-panel-header">
                         <h2 className="office-v2-panel-title">Department Communication</h2>
-                        <button style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}><i className="fa-solid fa-ellipsis-vertical"></i></button>
+                        <Link to="/office/chat" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', textDecoration: 'none', fontSize: '0.75rem' }}>
+                            <i className="fa-solid fa-expand" style={{ marginRight: '0.35rem' }} />Full View
+                        </Link>
                     </div>
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ManagementWhiteboard hideHeader={true} />
                     </div>
                 </section>

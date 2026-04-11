@@ -69,8 +69,13 @@ export default function ManagementWhiteboard({ hideHeader = false }) {
         }
     }
 
+    // When embedded on the dashboard (hideHeader), use flex layout to fill container
+    const embeddedBoardStyle = hideHeader ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: '100%' } : {}
+    const embeddedColumnsStyle = hideHeader ? { flex: 1, minHeight: 0 } : {}
+    const embeddedColumnStyle = hideHeader ? { border: 'none', background: 'transparent', minHeight: 0, maxHeight: 'none', flex: 1 } : {}
+
     return (
-        <div className="wb-board">
+        <div className="wb-board" style={embeddedBoardStyle}>
             {/* Author name bar */}
             {!hideHeader && (
                 <div className="wb-author-bar">
@@ -87,11 +92,11 @@ export default function ManagementWhiteboard({ hideHeader = false }) {
             )}
 
             {/* Column grid */}
-            <div className="wb-columns">
+            <div className="wb-columns" style={embeddedColumnsStyle}>
                 {COLUMNS.map(col => {
                     const colNotes = notes.filter(n => n.category === col.key)
                     return (
-                        <div key={col.key} className="wb-column" style={hideHeader ? { border: 'none', background: 'transparent' } : {}}>
+                        <div key={col.key} className="wb-column" style={embeddedColumnStyle}>
                             
                             {!hideHeader && (
                                 <div className="wb-col-header" style={{ borderBottomColor: col.accentBorder }}>

@@ -707,3 +707,26 @@ a single horizontal row, matching the reference mockup.
 - Used `getDayLabel()` for date labels instead of manual day-of-week array
   indexing, showing "TODAY", "SUN", "MON" etc.
 
+---
+
+### 2026-04-11 — Make Communication Board Postable from Dashboard
+
+**File(s) Changed:** `app/src/pages/OfficeDashboard.jsx`,
+`app/src/components/ManagementWhiteboard.jsx` **Type:** `fix`
+**Summary:** The Department Communication board on the dashboard was showing
+posts but the message input was clipped by `overflow: hidden` on the parent
+container, making it impossible to post from the dashboard without navigating to
+the full Communications page.
+
+**Details:**
+
+- Removed `overflow: hidden` from the communication wrapper div in
+  OfficeDashboard, replaced with `flex: 1, minHeight: 0` flex layout
+- Updated ManagementWhiteboard to apply embedded-aware flex styles when
+  `hideHeader={true}`: `.wb-board`, `.wb-columns`, and `.wb-column` all use
+  `flex: 1, minHeight: 0` and override the default `min-height: 400px` /
+  `max-height: 75vh` that were causing the input to overflow past the container
+- Replaced the ellipsis menu button with a "Full View" link to `/office/chat`
+  for quick access to the full communication page
+- The "Write a message..." input + send button are now always visible at the
+  bottom of the dashboard communication section
