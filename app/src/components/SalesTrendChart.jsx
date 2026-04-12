@@ -321,7 +321,7 @@ export default function SalesTrendChart() {
                     })}
 
                     {/* Area fills + Lines per category */}
-                    {lines.map(line => (
+                    {lines.map((line,i)=> (
                         <g key={line.cat}>
                             <defs>
                                 <linearGradient id={`grad-cat-${i}`} x1="0" y1="0" x2="0" y2="1">
