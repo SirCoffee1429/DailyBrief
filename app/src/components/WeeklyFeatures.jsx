@@ -156,7 +156,14 @@ export default function WeeklyFeatures() {
                                         title="Lunch Feature"
                                         value={editValue}
                                         onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => handleKeyDown(e, dayIdx, 'lunch')}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                e.target.blur()
+                                            } else if (e.key === 'Escape') {
+                                                setEditing(null)
+                                            }
+                                        }}
                                         onBlur={() => saveEdit(dayIdx, 'lunch')}
                                         disabled={saving}
                                         placeholder="Add lunch..."
@@ -182,7 +189,14 @@ export default function WeeklyFeatures() {
                                         title="Dinner Feature"
                                         value={editValue}
                                         onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => handleKeyDown(e, dayIdx, 'dinner')}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                e.target.blur()
+                                            } else if (e.key === 'Escape') {
+                                                setEditing(null)
+                                            }
+                                        }}
                                         onBlur={() => saveEdit(dayIdx, 'dinner')}
                                         disabled={saving}
                                         placeholder="Add dinner..."
