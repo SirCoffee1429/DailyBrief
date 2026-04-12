@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import WeatherWidget from '../components/WeatherWidget.jsx'
-import SalesBriefing from '../components/SalesBriefing.jsx'
+import SalesTrendChart from '../components/SalesTrendChart.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
 import ManagementWhiteboard from '../components/ManagementWhiteboard.jsx'
 
@@ -35,69 +35,75 @@ export default function OfficeDashboard() {
     }
 
     return (
-        <div className="office-dashboard">
-            <header className="dashboard-header">
-                <div className="header-left">
-                    <h1 className="header-title"><i className="fa-solid fa-building title-icon" /> Office Dashboard</h1>
-                    <p className="header-date">Manage briefings, recipes, and track daily progress</p>
-                </div>
-                <div className="header-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={handleLogout}><i className="fa-solid fa-lock" /> Lock</button>
-                </div>
-            </header>
-
-            <div className="office-grid">
-                <div className="office-weather-row">
-                    <WeatherWidget />
+        <div className="office-v2-content">
+            
+            {/* Top Stats Widgets */}
+            <section className="office-v2-stats-grid">
+                
+                {/* Weather Widget — compact 3-day inline card */}
+                <div className="office-v2-widget">
+                    <WeatherWidget compact={true} />
                 </div>
 
-                <div className="office-weather-row">
-                    <WeeklyFeatures />
-                </div>
-
-                <Link to="/office/events" className="office-tile" style={{ borderColor: 'rgba(96, 165, 250, 0.2)' }}>
-                    <div className="office-tile-icon"><i className="fa-solid fa-champagne-glasses" style={{ color: '#60a5fa' }} /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.events}</span>
-                        <span className="office-tile-label">Events & Catering</span>
+                <Link to="/office/events" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.events}</div>
+                        <div className="office-v2-stat-label">Events & Catering</div>
                     </div>
-                    <div className="office-tile-desc">Manage special events and banquets</div>
+                    <i className="fa-solid fa-bread-slice office-v2-stat-icon"></i>
                 </Link>
 
-                <Link to="/office/briefings" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-clipboard-list" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.briefings}</span>
-                        <span className="office-tile-label">Briefings</span>
+                <Link to="/office/briefings" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.briefings}</div>
+                        <div className="office-v2-stat-label">Briefings</div>
                     </div>
-                    <div className="office-tile-desc">Create & edit daily briefings and tasks</div>
+                    <i className="fa-regular fa-clipboard office-v2-stat-icon"></i>
                 </Link>
 
-                <Link to="/office/workbooks" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-book-open" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.workbooks}</span>
-                        <span className="office-tile-label">Recipes</span>
+                <Link to="/office/workbooks" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.workbooks}</div>
+                        <div className="office-v2-stat-label">Recipes</div>
                     </div>
-                    <div className="office-tile-desc">Upload & manage recipe workbooks</div>
+                    <i className="fa-solid fa-book-open office-v2-stat-icon"></i>
                 </Link>
 
-                <Link to="/office/history" className="office-tile">
-                    <div className="office-tile-icon"><i className="fa-solid fa-chart-bar" /></div>
-                    <div className="office-tile-info">
-                        <span className="office-tile-value">{stats.tasks}</span>
-                        <span className="office-tile-label">Task History</span>
+                <Link to="/office/history" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">{stats.tasks}</div>
+                        <div className="office-v2-stat-label">Task History</div>
                     </div>
-                    <div className="office-tile-desc">Daily task completion & briefing log</div>
+                    <i className="fa-regular fa-calendar-check office-v2-stat-icon"></i>
                 </Link>
+            </section>
 
-                <div className="office-weather-row">
-                    <SalesBriefing />
-                </div>
+            {/* Calendar Section (WeeklyFeatures natively renders the V2 block now) */}
+            <WeeklyFeatures />
 
-                {/* Manager Board — chat-style message board for managers */}
-                <div className="office-weather-row">
-                    <ManagementWhiteboard />
+            {/* Bottom Grid Layout */}
+            <div className="office-v2-bottom-grid">
+                
+                {/* Chat/Communication — full whiteboard with posting capability */}
+                <section className="office-v2-widget office-v2-chat-section" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
+                    <div className="office-v2-panel-header">
+                        <h2 className="office-v2-panel-title">Department Communication</h2>
+                        <Link to="/office/chat" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', textDecoration: 'none', fontSize: '0.75rem' }}>
+                            <i className="fa-solid fa-expand" style={{ marginRight: '0.35rem' }} />Full View
+                        </Link>
+                    </div>
+                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                        <ManagementWhiteboard hideHeader={true} />
+                    </div>
+                </section>
+
+                {/* Right Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    
+                    {/* Sales Reports Chart */}
+                    <Link to="/office/sales" style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <SalesTrendChart />
+                    </Link>
                 </div>
             </div>
         </div>

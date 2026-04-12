@@ -101,91 +101,122 @@ export default function WeeklyFeatures() {
     const todayIdx = todayDow === 0 ? 6 : todayDow - 1
 
     return (
-        <div className="wf-calendar">
-            {/* Calendar Header */}
-            <div className="wf-cal-header">
-                <div className="wf-cal-title">
-                    <i className="fa-solid fa-utensils" />
-                    <h3>Lunch & Dinner Features</h3>
-                </div>
-                <div className="wf-cal-nav">
-                    <button className="wf-nav-btn" onClick={() => shiftWeek(-1)}><i className="fa-solid fa-chevron-left" /></button>
-                    <span className="wf-cal-month">{monthLabel}</span>
-                    <button className="wf-nav-btn" onClick={() => shiftWeek(1)}><i className="fa-solid fa-chevron-right" /></button>
+        <section className="office-v2-widget" style={{ padding: 0, paddingBottom: 0, display: 'flex', flexDirection: 'column' }}>
+            {/* V2 Calendar Header */}
+            <div className="office-v2-panel-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h2 className="office-v2-panel-title">Lunch & Dinner Features</h2>
                     {!isCurrentWeek && (
-                        <button className="wf-today-btn" onClick={() => setWeekStart(getWeekStart())}>Today</button>
+                        <button onClick={() => setWeekStart(getWeekStart())} style={{ background: 'rgba(230,107,53,0.1)', color: '#e66b35', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>TODAY</button>
                     )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
+                    <button onClick={() => shiftWeek(-1)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><i className="fa-solid fa-chevron-left" style={{ fontSize: '0.75rem' }}></i></button>
+                    <span style={{ margin: '0 0.5rem', fontSize: '0.875rem' }}>{monthLabel}</span>
+                    <button onClick={() => shiftWeek(1)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><i className="fa-solid fa-chevron-right" style={{ fontSize: '0.75rem' }}></i></button>
                 </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="wf-cal-grid">
+            {/* V2 Calendar Days Header Line */}
+            <div className="office-v2-calendar-grid">
                 {DAYS.map((dayName, dayIdx) => {
                     const isToday = isCurrentWeek && dayIdx === todayIdx
                     const dateNum = getDayDate(weekStart, dayIdx)
+                    return (
+                        <div key={`header-${dayIdx}`} className={`office-v2-cal-header-cell ${isToday ? 'active' : ''}`}>
+                            {dayName} {dateNum}
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* V2 Calendar Content Grid */}
+            <div className="office-v2-calendar-grid" style={{ minHeight: '120px' }}>
+                {DAYS.map((dayName, dayIdx) => {
+                    const isToday = isCurrentWeek && dayIdx === todayIdx
                     const lunchKey = `${dayIdx}-lunch`
                     const dinnerKey = `${dayIdx}-dinner`
                     const lunch = features[lunchKey]
                     const dinner = features[dinnerKey]
 
-                    return (
-                        <div key={dayIdx} className={`wf-cal-day ${isToday ? 'wf-cal-today' : ''}`}>
-                            <div className="wf-cal-day-head">
-                                <span className="wf-cal-day-name">{dayName}</span>
-                                <span className={`wf-cal-day-num ${isToday ? 'wf-cal-num-today' : ''}`}>{dateNum}</span>
-                            </div>
+                    const handleCellClick = (mealKey, content) => {
+                        setEditing(mealKey)
+                        setEditValue(content || '')
+                    }
 
+                    return (
+                        <div key={`cell-${dayIdx}`} className={`office-v2-cal-cell ${isToday ? 'active' : ''}`}>
+                            
                             {/* Lunch */}
-                            <div className="wf-cal-meal">
-                                <span className="wf-cal-meal-tag wf-cal-lunch">Lunch</span>
+                            <div className="office-v2-cal-item">
+                                <span className="office-v2-cal-item-label">Lunch: </span>
                                 {editing === lunchKey ? (
-                                    <input
-                                        className="wf-cal-input"
+                                    <textarea
                                         autoFocus
+                                        title="Lunch Feature"
                                         value={editValue}
                                         onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => handleKeyDown(e, dayIdx, 'lunch')}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                e.target.blur()
+                                            } else if (e.key === 'Escape') {
+                                                setEditing(null)
+                                            }
+                                        }}
                                         onBlur={() => saveEdit(dayIdx, 'lunch')}
                                         disabled={saving}
-                                        placeholder="Lunch special..."
+                                        placeholder="Add lunch..."
+                                        style={{ width: '100%', background: 'transparent', color: '#fff', border: 'none', outline: 'none', resize: 'none', fontSize: '0.75rem', marginTop: '0.25rem', padding: 0 }}
+                                        rows={3}
                                     />
                                 ) : (
-                                    <div
-                                        className={`wf-cal-meal-text ${lunch?.content ? '' : 'wf-cal-empty'}`}
-                                        onClick={() => startEdit(dayIdx, 'lunch')}
+                                    <span 
+                                        onClick={() => handleCellClick(lunchKey, lunch?.content)}
+                                        style={{ color: '#d1d5db', cursor: 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: lunch?.content ? 1 : 0.5 }}
                                     >
                                         {lunch?.content || '+ Add'}
-                                    </div>
+                                    </span>
                                 )}
                             </div>
 
                             {/* Dinner */}
-                            <div className="wf-cal-meal">
-                                <span className="wf-cal-meal-tag wf-cal-dinner">Dinner</span>
+                            <div className="office-v2-cal-item">
+                                <span className="office-v2-cal-item-label">Dinner: </span>
                                 {editing === dinnerKey ? (
-                                    <input
-                                        className="wf-cal-input"
+                                    <textarea
                                         autoFocus
+                                        title="Dinner Feature"
                                         value={editValue}
                                         onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => handleKeyDown(e, dayIdx, 'dinner')}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                e.target.blur()
+                                            } else if (e.key === 'Escape') {
+                                                setEditing(null)
+                                            }
+                                        }}
                                         onBlur={() => saveEdit(dayIdx, 'dinner')}
                                         disabled={saving}
-                                        placeholder="Dinner special..."
+                                        placeholder="Add dinner..."
+                                        style={{ width: '100%', background: 'transparent', color: '#fff', border: 'none', outline: 'none', resize: 'none', fontSize: '0.75rem', marginTop: '0.25rem', padding: 0 }}
+                                        rows={3}
                                     />
                                 ) : (
-                                    <div
-                                        className={`wf-cal-meal-text ${dinner?.content ? '' : 'wf-cal-empty'}`}
-                                        onClick={() => startEdit(dayIdx, 'dinner')}
+                                    <span 
+                                        onClick={() => handleCellClick(dinnerKey, dinner?.content)}
+                                        style={{ color: '#d1d5db', cursor: 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: dinner?.content ? 1 : 0.5 }}
                                     >
                                         {dinner?.content || '+ Add'}
-                                    </div>
+                                    </span>
                                 )}
                             </div>
+
                         </div>
                     )
                 })}
             </div>
-        </div>
+        </section>
     )
 }
