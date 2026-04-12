@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 
 const CATEGORY_COLORS = [
@@ -45,11 +45,19 @@ function getDailyLabel(dateStr) {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const DATE_RANGES = [
+    { key: '7d', label: '7D', days: 7 },
+    { key: '14d', label: '14D', days: 14 },
+    { key: '30d', label: '30D', days: 30 },
+    { key: 'all', label: 'All', days: null },
+]
+
 export default function SalesTrendChart() {
     const [rawData, setRawData] = useState([])
     const [loading, setLoading] = useState(true)
     const [mode, setMode] = useState('daily')
     const [metric, setMetric] = useState('units_sold')
+    const [dateRange, setDateRange] = useState('30d')
     const [categories, setCategories] = useState([])
     const [activeCategories, setActiveCategories] = useState([])
     const [tooltip, setTooltip] = useState(null)
@@ -57,12 +65,25 @@ export default function SalesTrendChart() {
 
     useEffect(() => {
         async function fetchData() {
+            setLoading(true)
             try {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('sales_data')
                     .select('report_date, category, units_sold, total_net_sales, net_sales')
                     .not('category', 'is', null)
                     .order('report_date', { ascending: true })
+
+                if (dateRange !== 'all') {
+                    const range = DATE_RANGES.find(r => r.key === dateRange)
+                    if (range && range.days) {
+                        const d = new Date()
+                        d.setDate(d.getDate() - range.days)
+                        const dateStr = d.toISOString().split('T')[0]
+                        query = query.gte('report_date', dateStr)
+                    }
+                }
+
+                const { data, error } = await query
 
                 if (error) throw error
 
@@ -87,7 +108,7 @@ export default function SalesTrendChart() {
             }
         }
         fetchData()
-    }, [])
+    }, [dateRange])
 
     const toggleCategory = (cat) => {
         setActiveCategories(prev => {
@@ -233,6 +254,18 @@ export default function SalesTrendChart() {
                     <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} /> Sales Trends by Category
                 </h2>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Time Frame Selector */}
+                    <div className="trend-mode-toggle">
+                        {DATE_RANGES.map(r => (
+                            <button
+                                key={r.key}
+                                className={`trend-mode-btn ${dateRange === r.key ? 'active' : ''}`}
+                                onClick={() => setDateRange(r.key)}
+                            >
+                                {r.label}
+                            </button>
+                        ))}
+                    </div>
                     {/* Metric Selector */}
                     <div className="trend-mode-toggle">
                         {METRIC_OPTIONS.map(m => (
@@ -321,10 +354,10 @@ export default function SalesTrendChart() {
                     })}
 
                     {/* Area fills + Lines per category */}
-                    {lines.map((line,i)=> (
+                    {lines.map(line => (
                         <g key={line.cat}>
                             <defs>
-                                <linearGradient id={`grad-cat-${i}`} x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id={`grad-cat-${line.cat.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor={line.color} stopOpacity="0.15" />
                                     <stop offset="100%" stopColor={line.color} stopOpacity="0" />
                                 </linearGradient>
