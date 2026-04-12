@@ -324,7 +324,7 @@ export default function SalesTrendChart() {
                     {lines.map(line => (
                         <g key={line.cat}>
                             <defs>
-                                <linearGradient id={`grad-cat-${line.cat.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id={`grad-cat-${i}`} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stopColor={line.color} stopOpacity="0.15" />
                                     <stop offset="100%" stopColor={line.color} stopOpacity="0" />
                                 </linearGradient>
