@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import AssistantWidget from './AssistantWidget.jsx'
+import { useNavigate } from 'react-router-dom'
 
 export default function OfficeLayout({ children }) {
     const [assistantOpen, setAssistantOpen] = useState(false)
@@ -34,10 +35,12 @@ export default function OfficeLayout({ children }) {
         setLongPressActive(false)
     }, [])
 
-    function handleLogout() {
-        sessionStorage.removeItem('officeUnlocked')
-        window.location.href = '/'
-    }
+    const navigate = useNavigate()
+
+   function handleLogout() {
+     sessionStorage.removeItem('officeUnlocked')
+     navigate('/')
+   }
 
     return (
         <div className="office-v2-container">
