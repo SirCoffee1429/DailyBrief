@@ -179,3 +179,6 @@ If either file does not exist, flag it immediately before proceeding.
 8. Think outside the box and come up with creative solutions to problems.
 9. Always put explanations for your code using // above each function or block
    of code.
+10. Never cut corners just for the sake of saving time, tokens, or to get
+    something "working" just for the sake of pleasing me.
+11. Never store JWT locally
