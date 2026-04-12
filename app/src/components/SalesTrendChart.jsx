@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 
 const CATEGORY_COLORS = [
@@ -58,6 +58,7 @@ export default function SalesTrendChart() {
     const [mode, setMode] = useState('daily')
     const [metric, setMetric] = useState('units_sold')
     const [dateRange, setDateRange] = useState('30d')
+    const [drillDownCategory, setDrillDownCategory] = useState(null)
     const [categories, setCategories] = useState([])
     const [activeCategories, setActiveCategories] = useState([])
     const [tooltip, setTooltip] = useState(null)
@@ -69,7 +70,7 @@ export default function SalesTrendChart() {
             try {
                 let query = supabase
                     .from('sales_data')
-                    .select('report_date, category, units_sold, total_net_sales, net_sales')
+                    .select('report_date, category, item_name, units_sold, total_net_sales, net_sales')
                     .not('category', 'is', null)
                     .order('report_date', { ascending: true })
 
@@ -87,19 +88,6 @@ export default function SalesTrendChart() {
 
                 if (error) throw error
 
-                // Discover categories sorted by total units
-                const catTotals = {}
-                ;(data || []).forEach(row => {
-                    const cat = row.category || 'Other'
-                    catTotals[cat] = (catTotals[cat] || 0) + (Number(row.units_sold) || 0)
-                })
-                const sortedCats = Object.entries(catTotals)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([name]) => name)
-
-                setCategories(sortedCats)
-                // Default: show top 5 categories
-                setActiveCategories(sortedCats.slice(0, 5))
                 setRawData(data || [])
             } catch (err) {
                 console.error('Error fetching sales trend data:', err)
@@ -109,6 +97,21 @@ export default function SalesTrendChart() {
         }
         fetchData()
     }, [dateRange])
+
+    useEffect(() => {
+        const catTotals = {}
+        ;(rawData || []).forEach(row => {
+            if (drillDownCategory && row.category !== drillDownCategory) return
+            const cat = drillDownCategory ? (row.item_name || 'Unknown Item') : (row.category || 'Other')
+            catTotals[cat] = (catTotals[cat] || 0) + (Number(row.units_sold) || 0)
+        })
+        const sortedCats = Object.entries(catTotals)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name]) => name)
+
+        setCategories(sortedCats)
+        setActiveCategories(sortedCats.slice(0, 5))
+    }, [rawData, drillDownCategory])
 
     const toggleCategory = (cat) => {
         setActiveCategories(prev => {
@@ -132,7 +135,9 @@ export default function SalesTrendChart() {
         const bucketMap = {} // bucketKey -> { label, cats: { catName: value } }
 
         rawData.forEach(row => {
-            const cat = row.category || 'Other'
+            if (drillDownCategory && row.category !== drillDownCategory) return
+
+            const cat = drillDownCategory ? (row.item_name || 'Unknown Item') : (row.category || 'Other')
             if (!activeCategories.includes(cat)) return
 
             let key, label
@@ -250,9 +255,21 @@ export default function SalesTrendChart() {
         <div className="trend-chart-card">
             {/* Header: title + mode toggle */}
             <div className="trend-chart-header">
-                <h2 className="trend-chart-title">
-                    <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} /> Sales Trends by Category
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    {drillDownCategory && (
+                        <button 
+                            className="btn btn-secondary btn-sm" 
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                            onClick={() => setDrillDownCategory(null)}
+                        >
+                            <i className="fa-solid fa-arrow-left" /> Back
+                        </button>
+                    )}
+                    <h2 className="trend-chart-title">
+                        <i className="fa-solid fa-chart-line" style={{ color: 'var(--orange)' }} /> 
+                        {drillDownCategory ? `Sales Trends: ${drillDownCategory}` : 'Sales Trends by Category'}
+                    </h2>
+                </div>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
                     {/* Time Frame Selector */}
                     <div className="trend-mode-toggle">
@@ -437,7 +454,18 @@ export default function SalesTrendChart() {
                     const total = line.points.reduce((s, p) => s + p.val, 0)
                     const avg = buckets.length > 0 ? total / buckets.length : 0
                     return (
-                        <div key={line.cat} className="trend-summary-card" style={{ '--summary-color': line.color }}>
+                        <div 
+                            key={line.cat} 
+                            className="trend-summary-card" 
+                            style={{ 
+                                '--summary-color': line.color, 
+                                cursor: drillDownCategory ? 'default' : 'pointer',
+                                transition: 'transform 0.1s'
+                            }}
+                            onClick={() => { if (!drillDownCategory) setDrillDownCategory(line.cat) }}
+                            onMouseOver={(e) => { if (!drillDownCategory) e.currentTarget.style.transform = 'translateY(-2px)' }}
+                            onMouseOut={(e) => e.currentTarget.style.transform = 'none'}
+                        >
                             <div className="trend-summary-label">{line.cat}</div>
                             <div className="trend-summary-total">{currentMetric.format(total)}</div>
                             <div className="trend-summary-avg">avg {currentMetric.format(Math.round(avg))} / {mode === 'monthly' ? 'mo' : mode === 'weekly' ? 'wk' : 'day'}</div>

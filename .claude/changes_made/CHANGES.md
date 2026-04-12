@@ -949,3 +949,18 @@ Google to reject every request with `API_KEY_HTTP_REFERRER_BLOCKED`.
 - Improved error messages to include full Google API error body for easier
   future debugging
 - Deployed as v8 to Supabase, verified 200 response with 5 forecast days
+
+---
+
+### 2026-04-12 — Sales Trend Item Drill-Down & Timeframes
+
+**File(s) Changed:** `app/src/components/SalesTrendChart.jsx`  
+**Type:** `feature`  
+**Summary:** Added a timeframe selector (7D/14D/30D/All) and an interactive Item Drill-Down to the Sales Trend Chart. Users can now click on a category's Summary Card to view performance lines for individual food items instead of broad categories.
+
+**Details:**
+
+- Added `dateRange` state and modified Supabase query with a dynamic `.gte('report_date')` filter for the timeframes.
+- Added `drillDownCategory` state to allow users to click a category summary card and view granular item details (`row.item_name` instead of `row.category`).
+- Wrapped data grouping in a new `useEffect` that listens to `rawData` and `drillDownCategory` to compute `categories` efficiently without re-fetching from the database.
+- Dynamic Header adds a `< Back to Categories` button when drilled down.
