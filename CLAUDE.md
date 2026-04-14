@@ -2,9 +2,14 @@
 
 ## What This App Is
 
-DailyBrief is a digital kitchen management web app built for Old Hawthorne
-Country Club in Mid-Missouri. It serves two types of users — kitchen crew and
-office/management — through separate password-protected dashboards.
+DailyBrief is a digital kitchen management web app built exclusively for **Old
+Hawthorne Country Club** in Mid-Missouri. It serves two types of users —
+kitchen crew and office/management — through separate password-protected
+dashboards.
+
+**This is a single-org, standalone app. It will NOT be refactored for
+multi-tenancy.** All multi-tenant and commercial scaling work has been forked
+into a separate product: **MisenMore** (see below).
 
 The app is live at: https://brief-club.vercel.app
 
