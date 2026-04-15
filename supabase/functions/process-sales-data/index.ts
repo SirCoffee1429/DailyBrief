@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       
       Return ONLY a JSON object with exactly three keys:
       1. "is_valid_sales_report": (boolean) true if this is an Item Sales Report, false if it is a Banquet Event Order or something else.
-      2. "report_date": The date of this report in YYYY-MM-DD format. Look in the header, title, footer, or anywhere on the page for a date. If you cannot find any date, use null.
+      2. "report_date": The date of this report in YYYY-MM-DD format. Look in the header, title, footer, or anywhere on the page for a date. IF THERE IS A DATE RANGE (e.g., "04/13/2026 to 04/14/2026" or "04/13/2026 - 04/14/2026"), ALWAYS extract and return the START date (the earlier date) as the report date. This is critical because sales running past midnight belong to the previous business day. If you cannot find any date, use null.
       3. "items": An array of objects, each with these keys:
          - "item_name" (string): the name of the item
          - "units_sold" (number): the number of units sold
@@ -102,9 +102,26 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: "Ignored non-sales report" }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    // Extract date from Gemini response, fall back to today (UTC) if not found
-    const reportDate: string = parsedData.report_date
-      || new Date().toISOString().split("T")[0];
+    // Normalize the Gemini date to YYYY-MM-DD for Postgres
+    // Gemini may return MM/DD/YYYY or YYYY-MM-DD depending on the PDF format
+    console.log("Raw Gemini report_date:", parsedData.report_date);
+    let reportDate: string;
+    if (parsedData.report_date) {
+      const raw = parsedData.report_date.trim();
+      // Check if it's MM/DD/YYYY format and convert to YYYY-MM-DD
+      const mdyMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (mdyMatch) {
+        const mm = mdyMatch[1].padStart(2, "0");
+        const dd = mdyMatch[2].padStart(2, "0");
+        reportDate = `${mdyMatch[3]}-${mm}-${dd}`;
+      } else {
+        // Assume it's already YYYY-MM-DD
+        reportDate = raw;
+      }
+    } else {
+      reportDate = new Date().toISOString().split("T")[0];
+    }
+    console.log("Normalized report_date for DB:", reportDate);
     const items: {
       item_name: string;
       units_sold: number;

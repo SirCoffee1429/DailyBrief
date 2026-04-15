@@ -964,3 +964,26 @@ Google to reject every request with `API_KEY_HTTP_REFERRER_BLOCKED`.
 - Added `drillDownCategory` state to allow users to click a category summary card and view granular item details (`row.item_name` instead of `row.category`).
 - Wrapped data grouping in a new `useEffect` that listens to `rawData` and `drillDownCategory` to compute `categories` efficiently without re-fetching from the database.
 - Dynamic Header adds a `< Back to Categories` button when drilled down.
+
+---
+
+### 2026-04-15 — Fix Item Sales Date Off-By-One
+
+**File(s) Changed:** `supabase/functions/process-sales-data/index.ts`
+**Type:** `fix`
+**Summary:** Item sales reports contain a date range (e.g., "04/13/2026 to
+04/14/2026") because service runs past midnight. The parser was picking up the
+end date (04/14) instead of the start date (04/13), causing sales to display
+under the wrong business day.
+
+**Details:**
+
+- Updated Gemini prompt to explicitly instruct: when a date range exists, always
+  return the START (earlier) date as the report_date
+- Changed requested date format in prompt to MM/DD/YYYY to match the source PDF
+  format, reducing Gemini's interpretation errors
+- Added a date normalizer after Gemini response that detects MM/DD/YYYY format
+  and converts it to YYYY-MM-DD before storing in Postgres
+- Added diagnostic logging: raw Gemini date and normalized DB date for future
+  debugging
+- Deployed updated edge function to Supabase
