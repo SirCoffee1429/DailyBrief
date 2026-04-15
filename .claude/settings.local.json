@@ -7,7 +7,11 @@
       "Bash(supabase secrets:*)",
       "Bash(git filter-repo:*)",
       "Bash(pip install:*)",
-      "Bash(\"C:/Old Hawthorne Projects/DailyBrief/.gitignore\":*)"
+      "Bash(\"C:/Old Hawthorne Projects/DailyBrief/.gitignore\":*)",
+      "mcp__claude_ai_Supabase__list_branches",
+      "mcp__claude_ai_Supabase__get_cost",
+      "mcp__claude_ai_Supabase__get_project",
+      "mcp__claude_ai_Supabase__list_projects"
     ]
   }
 }
