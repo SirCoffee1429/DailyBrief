@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
+function DestinationBadge({ destination }) {
+    const label = destination === 'boh' ? 'BOH' : destination === 'foh' ? 'FOH' : 'Both'
+    const icon = destination === 'boh' ? 'fa-fire-burner' : destination === 'foh' ? 'fa-utensils' : 'fa-people-group'
+    return (
+        <span className={`briefing-destination-badge ${destination}`}>
+            <i className={`fa-solid ${icon}`} /> {label}
+        </span>
+    )
+}
+
 export default function Briefings() {
     const [briefings, setBriefings] = useState([])
     const [loading, setLoading] = useState(true)
@@ -73,8 +83,9 @@ export default function Briefings() {
                         <div key={b.id} className="briefing-card">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
-                                    <div className="briefing-card-date">
+                                    <div className="briefing-card-date" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                                         {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                        <DestinationBadge destination={b.destination || 'boh'} />
                                     </div>
                                     <div className="briefing-card-title">{b.title}</div>
                                 </div>

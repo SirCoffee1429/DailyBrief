@@ -7,24 +7,64 @@ const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+// CORS headers for direct browser uploads from the Office Dashboard
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req) => {
+  // Preflight for browser uploads
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
   try {
-    // 1. Get the payload from Postmark
+    // 1. Determine the request shape. This edge function accepts TWO inputs:
+    //    (a) Postmark inbound webhook → { Attachments: [...], From: "..." }
+    //    (b) Direct upload from the Office Dashboard modal →
+    //        { pdfBase64: "...", source?: "manual-upload", filename?: "..." }
     const payload = await req.json();
-    console.log("Received Postmark payload from:", payload.From);
 
-    const attachment = payload.Attachments?.find((a: { ContentType: string; Name: string; Content: string }) =>
-      a.ContentType === "application/pdf" || a.Name.toLowerCase().endsWith(".pdf")
-    );
+    let pdfBase64: string;
+    let sourceLabel: string;
+    let filename: string;
+    let isDirectUpload = false;
 
-    if (!attachment) {
-      console.log("No PDF attachment found in payload");
-      return new Response(JSON.stringify({ message: "No PDF found" }), { status: 200 });
+    if (payload.Attachments) {
+      // Postmark path (unchanged behavior)
+      console.log("Received Postmark payload from:", payload.From);
+      const attachment = payload.Attachments?.find(
+        (a: { ContentType: string; Name: string; Content: string }) =>
+          a.ContentType === "application/pdf" || a.Name.toLowerCase().endsWith(".pdf"),
+      );
+
+      if (!attachment) {
+        console.log("No PDF attachment found in payload");
+        return new Response(JSON.stringify({ message: "No PDF found" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+        });
+      }
+
+      pdfBase64 = attachment.Content;
+      sourceLabel = payload.From;
+      filename = attachment.Name;
+      console.log(`Found PDF: ${filename}, size: ${pdfBase64.length} chars base64`);
+    } else if (payload.pdfBase64) {
+      // Direct upload path (new)
+      isDirectUpload = true;
+      pdfBase64 = payload.pdfBase64;
+      sourceLabel = payload.source || "manual-upload";
+      filename = payload.filename || "manual-upload.pdf";
+      console.log(`Direct upload: ${filename}, size: ${pdfBase64.length} chars base64`);
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Request must include either Postmark Attachments or pdfBase64" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
     }
-
-    // 2. Extract PDF content (Base64)
-    const pdfBase64 = attachment.Content;
-    console.log(`Found PDF: ${attachment.Name}, size: ${attachment.Content.length} chars base64`);
 
     // 3. Ask Gemini to parse the PDF
     const prompt = `
@@ -99,7 +139,15 @@ Deno.serve(async (req) => {
 
     if (parsedData.is_valid_sales_report === false) {
       console.warn("PDF is not an Item Sales Report (likely a BEO). Rejecting.");
-      return new Response(JSON.stringify({ message: "Ignored non-sales report" }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          ignored: true,
+          reason: "PDF does not appear to be an Item Sales Report",
+          filename,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
     }
 
     // Normalize the Gemini date to YYYY-MM-DD for Postgres
@@ -137,23 +185,29 @@ Deno.serve(async (req) => {
 
     if (items.length === 0) {
       console.warn("Gemini returned 0 items — check PDF or prompt");
-      return new Response(JSON.stringify({ message: "0 items found" }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ success: false, ignored: true, reason: "No items extracted from PDF", filename }),
+        { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
     }
 
     // 4. Save to Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // First delete any existing data for this report date AND from this specific source 
-    // so we don't accidentally overwrite sales from other properties/terminals.
-    const { error: deleteError } = await supabase
-      .from("sales_data")
-      .delete()
-      .eq("report_date", reportDate)
-      .eq("metadata->>source", payload.From);
+    // Delete-before-insert strategy differs by source:
+    // - Direct upload: wipe ALL rows for this report_date (regardless of source) so
+    //   a manual upload becomes the single source of truth for that day. This is
+    //   the fix for Postmark duplicates piling up under different sender aliases.
+    // - Postmark (legacy): keep existing behavior — scoped to the same sender so
+    //   different terminals/properties don't clobber each other.
+    const deleteQuery = supabase.from("sales_data").delete().eq("report_date", reportDate);
+    const { error: deleteError } = isDirectUpload
+      ? await deleteQuery
+      : await deleteQuery.eq("metadata->>source", sourceLabel);
 
     if (deleteError) {
-       console.error("Supabase delete error:", deleteError);
-       // we proceed anyway just in case it's a minor RLS issue, but with service role it shouldn't be
+      console.error("Supabase delete error:", deleteError);
+      // proceed anyway; service role should not hit RLS issues
     }
 
     const { error } = await supabase
@@ -169,7 +223,7 @@ Deno.serve(async (req) => {
           net_sales: Number(item.net_sales) || 0,
           tax: Number(item.tax) || 0,
           category: item.category,
-          metadata: { source: payload.From },
+          metadata: { source: sourceLabel, filename },
         }))
       );
 
@@ -180,17 +234,17 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully saved ${items.length} items to sales_data for ${reportDate}`);
 
-    return new Response(JSON.stringify({ success: true, count: items.length, report_date: reportDate }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: true, count: items.length, report_date: reportDate, filename }),
+      { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+    );
 
   } catch (err: unknown) {
     console.error("Error processing sales data:", err);
     const errorMessage = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
 });

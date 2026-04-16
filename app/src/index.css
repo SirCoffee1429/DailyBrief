@@ -1504,6 +1504,11 @@ tr.beo-completed td .beo-check {
   box-shadow: 0 12px 40px rgba(10, 132, 255, 0.15);
 }
 
+.foh-card:hover {
+  border-color: #06b6d4;
+  box-shadow: 0 12px 40px rgba(6, 182, 212, 0.15);
+}
+
 .role-card-icon {
   font-size: 4rem;
 }
@@ -3702,6 +3707,80 @@ tr.beo-completed td .beo-check {
   font-weight: 600;
 }
 
+/* Kitchen-themed variant: restyles the Lunch & Dinner Features calendar
+   to match the kitchen dashboard's dash-card aesthetic. */
+.office-v2-widget.kitchen-themed {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.office-v2-widget.kitchen-themed:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(249, 115, 22, 0.25);
+}
+
+.office-v2-widget.kitchen-themed .office-v2-panel-header {
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-panel-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-panel-title::before {
+  content: '\f784';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  color: var(--accent);
+  margin-right: 0.5rem;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-cal-header-cell {
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.65rem 0.5rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-cal-header-cell.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-cal-cell {
+  border-right: 1px solid var(--border-color);
+  border-left: 3px solid transparent;
+  padding: 0.65rem 0.5rem;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-cal-cell.active {
+  background: var(--accent-subtle);
+  border-right: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent);
+  box-shadow: none;
+}
+
+.office-v2-widget.kitchen-themed .office-v2-cal-item-label {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 /* ── Sales Trend Chart ────────────────────────────────── */
 
 .trend-chart-card {
@@ -3926,3 +4005,112 @@ tr.beo-completed td .beo-check {
 }
 
 /* No mobile transitions yet */
+
+/* Destination picker used in the Office briefing editor */
+.destination-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.destination-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-3);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.destination-option:hover {
+  border-color: var(--border-color-hover);
+  color: var(--text-primary);
+}
+
+.destination-option i {
+  font-size: 1.25rem;
+}
+
+.destination-option.active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  color: var(--text-bright);
+}
+
+.destination-option.active i {
+  color: var(--accent);
+}
+
+/* Destination badge on the briefings list */
+.briefing-destination-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-color);
+}
+
+.briefing-destination-badge.boh {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.briefing-destination-badge.foh {
+  color: #06b6d4;
+  background: rgba(6, 182, 212, 0.1);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.briefing-destination-badge.both {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+/* ============================================
+   Front of House Theme (cyan variant)
+   ============================================
+   Applied by <FOHLayout> on the app-shell root. Overrides the orange accent
+   variables so every component that reads from them (buttons, highlights,
+   dash-card hover glow, weekly-features calendar, etc.) paints cyan without
+   needing component-level changes.
+*/
+.app-shell.foh-theme {
+  --accent: #06b6d4;
+  --accent-hover: #0891b2;
+  --accent-glow: rgba(6, 182, 212, 0.3);
+  --accent-subtle: rgba(6, 182, 212, 0.08);
+  --orange: #06b6d4;
+  --orange-bg: rgba(6, 182, 212, 0.12);
+}
+
+/* The .btn-orange class has an explicit background rule that doesn't read
+   from --accent, so we have to retarget it inside the FOH theme. */
+.app-shell.foh-theme .btn-orange {
+  background: var(--accent);
+  color: #ffffff;
+}
+.app-shell.foh-theme .btn-orange:hover {
+  background: var(--accent-hover);
+}
+
+/* Kitchen dashboard tile hover uses a hardcoded orange glow; override it. */
+.app-shell.foh-theme .dash-card:hover {
+  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(6, 182, 212, 0.25);
+}
+

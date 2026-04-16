@@ -10,6 +10,7 @@ export default function BriefingEditor() {
     const [title, setTitle] = useState('')
     const [body, setBody] = useState('')
     const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const [destination, setDestination] = useState('boh')
     const [tasks, setTasks] = useState([])
     const [newTask, setNewTask] = useState('')
     const [saving, setSaving] = useState(false)
@@ -32,6 +33,7 @@ export default function BriefingEditor() {
             setTitle(data.title)
             setBody(data.body || '')
             setDate(data.date)
+            setDestination(data.destination || 'boh')
             setTasks(
                 (data.briefing_tasks || [])
                     .sort((a, b) => a.sort_order - b.sort_order)
@@ -72,7 +74,7 @@ export default function BriefingEditor() {
             if (isEditing) {
                 await supabase
                     .from('briefings')
-                    .update({ title, body, date })
+                    .update({ title, body, date, destination })
                     .eq('id', id)
 
                 // Delete old tasks and re-insert
@@ -80,7 +82,7 @@ export default function BriefingEditor() {
             } else {
                 const { data, error } = await supabase
                     .from('briefings')
-                    .insert({ title, body, date })
+                    .insert({ title, body, date, destination })
                     .select()
                     .single()
 
@@ -144,6 +146,27 @@ export default function BriefingEditor() {
                             onChange={e => setDate(e.target.value)}
                             required
                         />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Post to</label>
+                        <div className="destination-picker">
+                            {[
+                                { value: 'boh', label: 'BOH (Kitchen)', icon: 'fa-fire-burner' },
+                                { value: 'foh', label: 'FOH', icon: 'fa-utensils' },
+                                { value: 'both', label: 'Both', icon: 'fa-people-group' },
+                            ].map(opt => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setDestination(opt.value)}
+                                    className={`destination-option ${destination === opt.value ? 'active' : ''}`}
+                                >
+                                    <i className={`fa-solid ${opt.icon}`} />
+                                    <span>{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="form-group">

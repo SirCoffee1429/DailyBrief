@@ -18,7 +18,7 @@ function getDayDate(weekStart, dayIdx) {
     return d.getDate()
 }
 
-export default function WeeklyFeatures() {
+export default function WeeklyFeatures({ readOnly = false }) {
     const [weekStart, setWeekStart] = useState(() => getWeekStart())
     const [features, setFeatures] = useState({})
     const [editing, setEditing] = useState(null)
@@ -27,6 +27,22 @@ export default function WeeklyFeatures() {
 
     useEffect(() => {
         loadFeatures()
+    }, [weekStart])
+
+    // Live sync: refetch whenever any row in weekly_features changes so the
+    // kitchen dashboard reflects office edits without a manual refresh.
+    useEffect(() => {
+        const channel = supabase
+            .channel(`weekly_features_${weekStart}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'weekly_features' },
+                () => loadFeatures()
+            )
+            .subscribe()
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [weekStart])
 
     async function loadFeatures() {
@@ -101,7 +117,7 @@ export default function WeeklyFeatures() {
     const todayIdx = todayDow === 0 ? 6 : todayDow - 1
 
     return (
-        <section className="office-v2-widget" style={{ padding: 0, paddingBottom: 0, display: 'flex', flexDirection: 'column' }}>
+        <section className={`office-v2-widget${readOnly ? ' kitchen-themed' : ''}`} style={{ padding: 0, paddingBottom: 0, display: 'flex', flexDirection: 'column' }}>
             {/* V2 Calendar Header */}
             <div className="office-v2-panel-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -140,9 +156,12 @@ export default function WeeklyFeatures() {
                     const dinner = features[dinnerKey]
 
                     const handleCellClick = (mealKey, content) => {
+                        if (readOnly) return
                         setEditing(mealKey)
                         setEditValue(content || '')
                     }
+
+                    const placeholderText = readOnly ? '—' : '+ Add'
 
                     return (
                         <div key={`cell-${dayIdx}`} className={`office-v2-cal-cell ${isToday ? 'active' : ''}`}>
@@ -150,7 +169,7 @@ export default function WeeklyFeatures() {
                             {/* Lunch */}
                             <div className="office-v2-cal-item">
                                 <span className="office-v2-cal-item-label">Lunch: </span>
-                                {editing === lunchKey ? (
+                                {editing === lunchKey && !readOnly ? (
                                     <textarea
                                         autoFocus
                                         title="Lunch Feature"
@@ -171,11 +190,11 @@ export default function WeeklyFeatures() {
                                         rows={3}
                                     />
                                 ) : (
-                                    <span 
+                                    <span
                                         onClick={() => handleCellClick(lunchKey, lunch?.content)}
-                                        style={{ color: '#d1d5db', cursor: 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: lunch?.content ? 1 : 0.5 }}
+                                        style={{ color: '#d1d5db', cursor: readOnly ? 'default' : 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: lunch?.content ? 1 : 0.5 }}
                                     >
-                                        {lunch?.content || '+ Add'}
+                                        {lunch?.content || placeholderText}
                                     </span>
                                 )}
                             </div>
@@ -183,7 +202,7 @@ export default function WeeklyFeatures() {
                             {/* Dinner */}
                             <div className="office-v2-cal-item">
                                 <span className="office-v2-cal-item-label">Dinner: </span>
-                                {editing === dinnerKey ? (
+                                {editing === dinnerKey && !readOnly ? (
                                     <textarea
                                         autoFocus
                                         title="Dinner Feature"
@@ -204,11 +223,11 @@ export default function WeeklyFeatures() {
                                         rows={3}
                                     />
                                 ) : (
-                                    <span 
+                                    <span
                                         onClick={() => handleCellClick(dinnerKey, dinner?.content)}
-                                        style={{ color: '#d1d5db', cursor: 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: dinner?.content ? 1 : 0.5 }}
+                                        style={{ color: '#d1d5db', cursor: readOnly ? 'default' : 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: dinner?.content ? 1 : 0.5 }}
                                     >
-                                        {dinner?.content || '+ Add'}
+                                        {dinner?.content || placeholderText}
                                     </span>
                                 )}
                             </div>

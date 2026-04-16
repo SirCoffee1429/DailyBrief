@@ -1,52 +1,60 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import SalesTrendChart from '../components/SalesTrendChart.jsx'
+import SalesUploadModal from '../components/SalesUploadModal.jsx'
 
 export default function SalesReports() {
     const [dates, setDates] = useState([])
     const [loading, setLoading] = useState(true)
+    const [showUpload, setShowUpload] = useState(false)
     const location = useLocation()
-    
-    // Build the correct base path depending on dashboard context
-    const getBasePath = () => {
-        if (location.pathname.startsWith('/office')) return '/office/sales'
-        return '/kitchen/sales'
-    }
-    const basePath = getBasePath()
 
-    useEffect(() => {
-        async function fetchDates() {
-            try {
-                // Fetch distinct dates (we can just fetch all and deduplicate, or use a specific RPC if we had one)
-                // For simplicity, fetch report_date from all items, order by it, and deduplicate in JS.
-                const { data, error } = await supabase
-                    .from('sales_data')
-                    .select('report_date')
-                    .order('report_date', { ascending: false })
+    const isOffice = location.pathname.startsWith('/office')
+    const basePath = isOffice ? '/office/sales' : '/kitchen/sales'
 
-                if (error) throw error
-                
-                // Deduplicate dates
-                const uniqueDates = [...new Set(data.map(item => item.report_date))]
-                setDates(uniqueDates)
-            } catch (err) {
-                console.error("Error fetching sales dates:", err)
-            } finally {
-                setLoading(false)
-            }
+    const fetchDates = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('sales_data')
+                .select('report_date')
+                .order('report_date', { ascending: false })
+
+            if (error) throw error
+
+            const uniqueDates = [...new Set(data.map(item => item.report_date))]
+            setDates(uniqueDates)
+        } catch (err) {
+            console.error("Error fetching sales dates:", err)
+        } finally {
+            setLoading(false)
         }
-        fetchDates()
     }, [])
+
+    useEffect(() => { fetchDates() }, [fetchDates])
 
     return (
         <div className="card">
             <div className="card-header-row mb-6">
                 <h1 className="page-title"><i className="fa-solid fa-file-invoice-dollar" style={{ color: 'var(--orange)' }} /> Sales Reports</h1>
-                <Link to={basePath.replace('/sales', '')} className="btn btn-secondary">
-                    <i className="fa-solid fa-arrow-left" /> Back to Dashboard
-                </Link>
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    {isOffice && (
+                        <button className="btn btn-primary btn-orange" onClick={() => setShowUpload(true)}>
+                            <i className="fa-solid fa-file-arrow-up" /> Upload Reports
+                        </button>
+                    )}
+                    <Link to={basePath.replace('/sales', '')} className="btn btn-secondary">
+                        <i className="fa-solid fa-arrow-left" /> Back to Dashboard
+                    </Link>
+                </div>
             </div>
+
+            {showUpload && (
+                <SalesUploadModal
+                    onClose={() => setShowUpload(false)}
+                    onComplete={fetchDates}
+                />
+            )}
 
             <SalesTrendChart />
 

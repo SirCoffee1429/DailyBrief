@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import RoleSelect from './pages/RoleSelect.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import FOHDashboard from './pages/FOHDashboard.jsx'
 import OfficeDashboard from './pages/OfficeDashboard.jsx'
 import WorkbookUpload from './pages/WorkbookUpload.jsx'
 import WorkbookLibrary from './pages/WorkbookLibrary.jsx'
@@ -11,6 +12,7 @@ import Briefings from './pages/Briefings.jsx'
 import BriefingEditor from './pages/BriefingEditor.jsx'
 import History from './pages/History.jsx'
 import KitchenLayout from './components/KitchenLayout.jsx'
+import FOHLayout from './components/FOHLayout.jsx'
 import OfficeLayout from './components/OfficeLayout.jsx'
 import OfficeGate from './components/OfficeGate.jsx'
 import SalesReports from './pages/SalesReports.jsx'
@@ -33,6 +35,13 @@ export default function App() {
             <Route path="/kitchen/sales" element={<KitchenLayout><SalesReports /></KitchenLayout>} />
             <Route path="/kitchen/sales/:date" element={<KitchenLayout><SalesReportDetail /></KitchenLayout>} />
             <Route path="/kitchen/events" element={<KitchenLayout><EventsBanquetsPage /></KitchenLayout>} />
+
+            {/* Front of House routes */}
+            <Route path="/foh" element={<FOHLayout><FOHDashboard /></FOHLayout>} />
+            <Route path="/foh/recipes" element={<FOHLayout><KitchenRecipes /></FOHLayout>} />
+            <Route path="/foh/recipes/:id" element={<FOHLayout><WorkbookViewer /></FOHLayout>} />
+            <Route path="/foh/chat" element={<FOHLayout><AiChat /></FOHLayout>} />
+            <Route path="/foh/events" element={<FOHLayout><EventsBanquetsPage /></FOHLayout>} />
 
             {/* Office routes */}
             <Route path="/office" element={<OfficeGate><OfficeLayout><OfficeDashboard /></OfficeLayout></OfficeGate>} />

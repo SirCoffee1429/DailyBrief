@@ -2,6 +2,72 @@
 
 ---
 
+### 2026-04-16 — Item Sales Multi-PDF Upload on Office Dashboard
+
+**File(s) Changed:**
+`supabase/functions/process-sales-data/index.ts`,
+`app/src/components/SalesUploadModal.jsx` (new),
+`app/src/pages/SalesReports.jsx`
+**Type:** feature
+**Summary:** Added a modal on `/office/sales` for uploading multiple Item Sales
+PDFs. Parses via the existing `process-sales-data` edge function and replaces
+any prior data for the uploaded report date.
+
+**Details:**
+
+- Extended `process-sales-data` to accept two input shapes:
+  (a) Postmark webhook payload (unchanged), or
+  (b) direct upload `{ pdfBase64, filename, source }`
+- Added CORS preflight so the function can be invoked from the browser
+- Direct uploads wipe **all** rows for the target `report_date` before inserting
+  — uploads become the single source of truth for that date, overwriting any
+  Postmark-ingested rows as well. Postmark path still scopes delete by sender.
+- Response is now structured: `{ success, count, report_date, filename }` on
+  success, `{ success: false, ignored: true, reason }` when Gemini rejects the
+  PDF (e.g. it was a BEO), or `{ success: false, error }` on failure.
+- New `SalesUploadModal.jsx`: drag-and-drop or click-to-select, 8 MB per-file
+  guard, sequential processing with per-file status (pending → reading →
+  parsing → ✓/✗), footer summary counts, close button disabled during run.
+- `SalesReports.jsx` now renders an "Upload Reports" button (office-only) that
+  opens the modal and refetches the date list when uploads finish.
+- Edge function redeployed and end-to-end tested successfully.
+
+---
+
+### 2026-04-16 — Kitchen Dashboard Lunch & Dinner Features Mirror
+
+**File(s) Changed:**
+`app/src/components/WeeklyFeatures.jsx`,
+`app/src/pages/Dashboard.jsx`,
+`app/src/index.css`
+**Type:** feature
+**Summary:** The "Lunch & Dinner Features" calendar from the Office Dashboard
+is now mirrored on the Kitchen Dashboard as a read-only widget, synced live so
+kitchen staff see updates the moment a manager posts them.
+
+**Details:**
+
+- Added a `readOnly` prop to `WeeklyFeatures`. When true: clicks no longer
+  enter edit mode, the `+ Add` placeholder becomes `—`, and cursor drops to
+  default.
+- Added a Supabase realtime subscription on the `weekly_features` table so both
+  dashboards refetch automatically whenever a row is inserted, updated, or
+  deleted (no manual refresh needed).
+- Mounted `<WeeklyFeatures readOnly />` full-width below the kitchen dashboard
+  grid in `Dashboard.jsx`.
+- Added a `.kitchen-themed` CSS variant that restyles the calendar to match the
+  kitchen `dash-card` look: `--bg-card` background, 2px `--border-color`
+  border, `--radius-lg` corners, hover lift + orange glow, uppercase header
+  with calendar icon, orange accent on meal labels, and orange highlight for
+  the active (today) column.
+- Office-side styling left untouched.
+
+**Note:** Realtime requires the `weekly_features` table to be in the
+`supabase_realtime` publication. If updates don't appear live, run once:
+`ALTER PUBLICATION supabase_realtime ADD TABLE public.weekly_features;`
+
+---
+
 ### 2026-03-19 — Fix Embedding API 404 Errors
 
 **File(s) Changed:** pp/src/pages/SalesReportDetail.jsx **Type:** eature
@@ -987,3 +1053,18 @@ under the wrong business day.
 - Added diagnostic logging: raw Gemini date and normalized DB date for future
   debugging
 - Deployed updated edge function to Supabase
+
+---
+
+### 2026-04-15 — Fix Edge Function 401 Unauthorized Error
+
+**File(s) Changed:** `supabase/config.toml`
+**Type:** `fix`
+**Summary:** Postmark webhook was receiving an HTTP 401 Unauthorized because the
+`process-sales-data` edge function defaulted to requiring a valid JWT for execution.
+
+**Details:**
+
+- Configured `[functions.process-sales-data]` in `supabase/config.toml`
+- Set `verify_jwt = false` so Postmark can trigger the inbound webhook without Supabase auth headers
+- Redeployed the edge function using the CLI to apply the configuration change
