@@ -120,9 +120,15 @@ export default function Dashboard() {
                 </div>
             </header>
 
-            <div className="dashboard-grid">
+            <div style={{ marginBottom: 'var(--space-5)' }}>
                 <WeatherWidget />
-                
+            </div>
+
+            <div style={{ marginBottom: 'var(--space-5)' }}>
+                <WeeklyFeatures readOnly />
+            </div>
+
+            <div className="dashboard-grid">
                 <div className="dash-card morning-notes-card">
                     {todaysBriefings.length > 1 && (
                         <div className="briefing-cycler">
@@ -216,10 +222,6 @@ export default function Dashboard() {
                     <div className="recipes-number">{stats.workbooks}</div>
                     <div className="recipes-subtitle">Active Recipes</div>
                 </Link>
-            </div>
-
-            <div style={{ marginTop: 'var(--space-5)' }}>
-                <WeeklyFeatures readOnly />
             </div>
 
         </div>

@@ -3795,14 +3795,9 @@ tr.beo-completed td .beo-check {
   text-transform: uppercase;
 }
 
-/* ── Weekly Features: desktop / mobile toggle ─────────── */
-.features-desktop { display: block; }
-.features-mobile  { display: none; }
-
-@media (max-width: 768px) {
-  .features-desktop { display: none; }
-  .features-mobile  { display: block; }
-}
+/* ── Weekly Features: desktop grid hidden, mobile layout used everywhere ── */
+.features-desktop { display: none; }
+.features-mobile  { display: block; }
 
 /* Day pill strip */
 .features-mobile-pills {
