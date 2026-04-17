@@ -3795,6 +3795,220 @@ tr.beo-completed td .beo-check {
   text-transform: uppercase;
 }
 
+/* ── Weekly Features: desktop / mobile toggle ─────────── */
+.features-desktop { display: block; }
+.features-mobile  { display: none; }
+
+@media (max-width: 768px) {
+  .features-desktop { display: none; }
+  .features-mobile  { display: block; }
+}
+
+/* Day pill strip */
+.features-mobile-pills {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.75rem 0.75rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.features-mobile-pill {
+  flex: 1 0 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.5rem 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #333;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.features-mobile-pill.today {
+  border-color: rgba(230, 107, 53, 0.4);
+}
+
+.features-mobile-pill.selected {
+  background: rgba(230, 107, 53, 0.12);
+  border-color: #e66b35;
+  color: #fff;
+}
+
+.features-mobile-pill-day {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.features-mobile-pill-date {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Dot indicating content exists */
+.features-mobile-pill-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e66b35;
+  position: absolute;
+  bottom: 4px;
+}
+
+/* Expanded day card */
+.features-mobile-expanded {
+  padding: 1rem 0.75rem;
+}
+
+.features-mobile-day-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.features-mobile-today-tag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(230, 107, 53, 0.15);
+  color: #e66b35;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.features-mobile-meal {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #333;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.features-mobile-meal-label {
+  color: #e66b35;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.features-mobile-meal-content {
+  display: block;
+  margin-top: 0.35rem;
+  color: #d1d5db;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.features-mobile-textarea {
+  width: 100%;
+  background: transparent;
+  color: #fff;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-top: 0.35rem;
+  padding: 0;
+}
+
+/* Kitchen-themed overrides for mobile */
+.office-v2-widget.kitchen-themed .features-mobile-pill.today {
+  border-color: var(--accent-glow);
+}
+
+.office-v2-widget.kitchen-themed .features-mobile-pill.selected {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+}
+
+.office-v2-widget.kitchen-themed .features-mobile-pill-dot {
+  background: var(--accent);
+}
+
+.office-v2-widget.kitchen-themed .features-mobile-today-tag {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.office-v2-widget.kitchen-themed .features-mobile-meal {
+  border-color: var(--border-color);
+}
+
+.office-v2-widget.kitchen-themed .features-mobile-meal-label {
+  color: var(--accent);
+}
+
+/* ── Office Dashboard Mobile Polish ──────────────────── */
+@media (max-width: 768px) {
+  .office-v2-content {
+    gap: 1rem;
+  }
+
+  .office-v2-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .office-v2-widget {
+    padding: 0.75rem;
+  }
+
+  .office-v2-stat-value {
+    font-size: 1.5rem;
+  }
+
+  .office-v2-stat-icon {
+    font-size: 1.25rem;
+  }
+
+  .office-v2-stat-label {
+    font-size: 0.65rem;
+  }
+
+  .office-v2-panel-header {
+    padding: 0.75rem;
+  }
+
+  .office-v2-panel-title {
+    font-size: 0.95rem;
+  }
+
+  .office-v2-chat-section {
+    height: 300px;
+  }
+
+  .office-v2-bottom-grid {
+    gap: 1rem;
+  }
+
+  /* Compact weather: allow wrapping on very small screens */
+  .office-v2-weather-compact {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .office-v2-weather-day + .office-v2-weather-day {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
 /* ── Sales Trend Chart ────────────────────────────────── */
 
 .trend-chart-card {

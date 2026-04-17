@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 function getWeekStart(date = new Date()) {
     const d = new Date(date)
@@ -25,12 +26,19 @@ export default function WeeklyFeatures({ readOnly = false }) {
     const [editValue, setEditValue] = useState('')
     const [saving, setSaving] = useState(false)
 
+    const isCurrentWeek = weekStart === getWeekStart()
+    const now = new Date()
+    const todayDow = now.getDay()
+    const todayIdx = todayDow === 0 ? 6 : todayDow - 1
+
+    // Mobile: which day is expanded (defaults to today)
+    const [mobileDay, setMobileDay] = useState(todayIdx)
+
     useEffect(() => {
         loadFeatures()
     }, [weekStart])
 
-    // Live sync: refetch whenever any row in weekly_features changes so the
-    // kitchen dashboard reflects office edits without a manual refresh.
+    // Live sync
     useEffect(() => {
         const channel = supabase
             .channel(`weekly_features_${weekStart}`)
@@ -99,31 +107,67 @@ export default function WeeklyFeatures({ readOnly = false }) {
         await loadFeatures()
     }
 
-    function handleKeyDown(e, dayIdx, meal) {
-        if (e.key === 'Enter') saveEdit(dayIdx, meal)
-        else if (e.key === 'Escape') setEditing(null)
-    }
-
     // Week label
     const ws = new Date(weekStart + 'T00:00:00')
     const we = new Date(ws)
     we.setDate(we.getDate() + 6)
-    const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     const monthLabel = ws.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-    const isCurrentWeek = weekStart === getWeekStart()
-    const now = new Date()
-    const todayDow = now.getDay()
-    const todayIdx = todayDow === 0 ? 6 : todayDow - 1
+    const placeholderText = readOnly ? '—' : '+ Add'
+
+    // Renders the editable/read-only cell for a single meal
+    function renderMealCell(dayIdx, meal, label, mobileSized) {
+        const key = `${dayIdx}-${meal}`
+        const entry = features[key]
+        const isEditing = editing === key && !readOnly
+
+        const handleCellClick = () => {
+            if (readOnly) return
+            setEditing(key)
+            setEditValue(entry?.content || '')
+        }
+
+        return (
+            <div className={mobileSized ? 'features-mobile-meal' : 'office-v2-cal-item'}>
+                <span className={mobileSized ? 'features-mobile-meal-label' : 'office-v2-cal-item-label'}>{label}: </span>
+                {isEditing ? (
+                    <textarea
+                        autoFocus
+                        title={`${label} Feature`}
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); e.target.blur() }
+                            else if (e.key === 'Escape') setEditing(null)
+                        }}
+                        onBlur={() => saveEdit(dayIdx, meal)}
+                        disabled={saving}
+                        placeholder={`Add ${meal}...`}
+                        className={mobileSized ? 'features-mobile-textarea' : undefined}
+                        style={mobileSized ? undefined : { width: '100%', background: 'transparent', color: '#fff', border: 'none', outline: 'none', resize: 'none', fontSize: '0.75rem', marginTop: '0.25rem', padding: 0 }}
+                        rows={mobileSized ? 2 : 3}
+                    />
+                ) : (
+                    <span
+                        onClick={handleCellClick}
+                        className={mobileSized ? 'features-mobile-meal-content' : undefined}
+                        style={mobileSized ? { opacity: entry?.content ? 1 : 0.5, cursor: readOnly ? 'default' : 'pointer' } : { color: '#d1d5db', cursor: readOnly ? 'default' : 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: entry?.content ? 1 : 0.5 }}
+                    >
+                        {entry?.content || placeholderText}
+                    </span>
+                )}
+            </div>
+        )
+    }
 
     return (
         <section className={`office-v2-widget${readOnly ? ' kitchen-themed' : ''}`} style={{ padding: 0, paddingBottom: 0, display: 'flex', flexDirection: 'column' }}>
-            {/* V2 Calendar Header */}
+            {/* Header */}
             <div className="office-v2-panel-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h2 className="office-v2-panel-title">Lunch & Dinner Features</h2>
                     {!isCurrentWeek && (
-                        <button onClick={() => setWeekStart(getWeekStart())} style={{ background: 'rgba(230,107,53,0.1)', color: '#e66b35', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>TODAY</button>
+                        <button onClick={() => { setWeekStart(getWeekStart()); setMobileDay(todayIdx) }} style={{ background: 'rgba(230,107,53,0.1)', color: '#e66b35', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>TODAY</button>
                     )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
@@ -133,108 +177,67 @@ export default function WeeklyFeatures({ readOnly = false }) {
                 </div>
             </div>
 
-            {/* V2 Calendar Days Header Line */}
-            <div className="office-v2-calendar-grid">
-                {DAYS.map((dayName, dayIdx) => {
-                    const isToday = isCurrentWeek && dayIdx === todayIdx
-                    const dateNum = getDayDate(weekStart, dayIdx)
-                    return (
-                        <div key={`header-${dayIdx}`} className={`office-v2-cal-header-cell ${isToday ? 'active' : ''}`}>
-                            {dayName} {dateNum}
-                        </div>
-                    )
-                })}
+            {/* ── Desktop: 7-column grid (hidden on mobile) ── */}
+            <div className="features-desktop">
+                <div className="office-v2-calendar-grid">
+                    {DAYS.map((dayName, dayIdx) => {
+                        const isToday = isCurrentWeek && dayIdx === todayIdx
+                        const dateNum = getDayDate(weekStart, dayIdx)
+                        return (
+                            <div key={`header-${dayIdx}`} className={`office-v2-cal-header-cell ${isToday ? 'active' : ''}`}>
+                                {dayName} {dateNum}
+                            </div>
+                        )
+                    })}
+                </div>
+
+                <div className="office-v2-calendar-grid" style={{ minHeight: '120px' }}>
+                    {DAYS.map((dayName, dayIdx) => {
+                        const isToday = isCurrentWeek && dayIdx === todayIdx
+                        return (
+                            <div key={`cell-${dayIdx}`} className={`office-v2-cal-cell ${isToday ? 'active' : ''}`}>
+                                {renderMealCell(dayIdx, 'lunch', 'Lunch', false)}
+                                {renderMealCell(dayIdx, 'dinner', 'Dinner', false)}
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
 
-            {/* V2 Calendar Content Grid */}
-            <div className="office-v2-calendar-grid" style={{ minHeight: '120px' }}>
-                {DAYS.map((dayName, dayIdx) => {
-                    const isToday = isCurrentWeek && dayIdx === todayIdx
-                    const lunchKey = `${dayIdx}-lunch`
-                    const dinnerKey = `${dayIdx}-dinner`
-                    const lunch = features[lunchKey]
-                    const dinner = features[dinnerKey]
+            {/* ── Mobile: today-focused (hidden on desktop) ── */}
+            <div className="features-mobile">
+                {/* Day pills */}
+                <div className="features-mobile-pills">
+                    {DAYS.map((dayName, dayIdx) => {
+                        const isToday = isCurrentWeek && dayIdx === todayIdx
+                        const isSelected = dayIdx === mobileDay
+                        const dateNum = getDayDate(weekStart, dayIdx)
+                        const hasContent = features[`${dayIdx}-lunch`]?.content || features[`${dayIdx}-dinner`]?.content
+                        return (
+                            <button
+                                key={dayIdx}
+                                onClick={() => setMobileDay(dayIdx)}
+                                className={`features-mobile-pill ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
+                            >
+                                <span className="features-mobile-pill-day">{dayName}</span>
+                                <span className="features-mobile-pill-date">{dateNum}</span>
+                                {hasContent && <span className="features-mobile-pill-dot" />}
+                            </button>
+                        )
+                    })}
+                </div>
 
-                    const handleCellClick = (mealKey, content) => {
-                        if (readOnly) return
-                        setEditing(mealKey)
-                        setEditValue(content || '')
-                    }
-
-                    const placeholderText = readOnly ? '—' : '+ Add'
-
-                    return (
-                        <div key={`cell-${dayIdx}`} className={`office-v2-cal-cell ${isToday ? 'active' : ''}`}>
-                            
-                            {/* Lunch */}
-                            <div className="office-v2-cal-item">
-                                <span className="office-v2-cal-item-label">Lunch: </span>
-                                {editing === lunchKey && !readOnly ? (
-                                    <textarea
-                                        autoFocus
-                                        title="Lunch Feature"
-                                        value={editValue}
-                                        onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault()
-                                                e.target.blur()
-                                            } else if (e.key === 'Escape') {
-                                                setEditing(null)
-                                            }
-                                        }}
-                                        onBlur={() => saveEdit(dayIdx, 'lunch')}
-                                        disabled={saving}
-                                        placeholder="Add lunch..."
-                                        style={{ width: '100%', background: 'transparent', color: '#fff', border: 'none', outline: 'none', resize: 'none', fontSize: '0.75rem', marginTop: '0.25rem', padding: 0 }}
-                                        rows={3}
-                                    />
-                                ) : (
-                                    <span
-                                        onClick={() => handleCellClick(lunchKey, lunch?.content)}
-                                        style={{ color: '#d1d5db', cursor: readOnly ? 'default' : 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: lunch?.content ? 1 : 0.5 }}
-                                    >
-                                        {lunch?.content || placeholderText}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Dinner */}
-                            <div className="office-v2-cal-item">
-                                <span className="office-v2-cal-item-label">Dinner: </span>
-                                {editing === dinnerKey && !readOnly ? (
-                                    <textarea
-                                        autoFocus
-                                        title="Dinner Feature"
-                                        value={editValue}
-                                        onChange={e => setEditValue(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault()
-                                                e.target.blur()
-                                            } else if (e.key === 'Escape') {
-                                                setEditing(null)
-                                            }
-                                        }}
-                                        onBlur={() => saveEdit(dayIdx, 'dinner')}
-                                        disabled={saving}
-                                        placeholder="Add dinner..."
-                                        style={{ width: '100%', background: 'transparent', color: '#fff', border: 'none', outline: 'none', resize: 'none', fontSize: '0.75rem', marginTop: '0.25rem', padding: 0 }}
-                                        rows={3}
-                                    />
-                                ) : (
-                                    <span
-                                        onClick={() => handleCellClick(dinnerKey, dinner?.content)}
-                                        style={{ color: '#d1d5db', cursor: readOnly ? 'default' : 'pointer', whiteSpace: 'pre-wrap', display: 'block', minHeight: '1.5rem', opacity: dinner?.content ? 1 : 0.5 }}
-                                    >
-                                        {dinner?.content || placeholderText}
-                                    </span>
-                                )}
-                            </div>
-
-                        </div>
-                    )
-                })}
+                {/* Expanded day content */}
+                <div className="features-mobile-expanded">
+                    <div className="features-mobile-day-title">
+                        {DAYS_FULL[mobileDay]}
+                        {isCurrentWeek && mobileDay === todayIdx && (
+                            <span className="features-mobile-today-tag">Today</span>
+                        )}
+                    </div>
+                    {renderMealCell(mobileDay, 'lunch', 'Lunch', true)}
+                    {renderMealCell(mobileDay, 'dinner', 'Dinner', true)}
+                </div>
             </div>
         </section>
     )
