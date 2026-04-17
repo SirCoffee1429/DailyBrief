@@ -212,8 +212,6 @@ export default function Dashboard() {
                     <div className="recipes-subtitle">Upcoming Events</div>
                 </Link>
 
-                <SalesBriefing />
-
                 <Link to="/kitchen/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="recipes-top-row">
                         <div className="recipes-icon-box"><i className="fa-solid fa-book-open" /></div>
@@ -222,6 +220,8 @@ export default function Dashboard() {
                     <div className="recipes-number">{stats.workbooks}</div>
                     <div className="recipes-subtitle">Active Recipes</div>
                 </Link>
+
+                <SalesBriefing />
             </div>
 
         </div>
