@@ -160,6 +160,7 @@ export default function BriefingEditor() {
                                     key={opt.value}
                                     type="button"
                                     onClick={() => setDestination(opt.value)}
+                                    data-destination={opt.value}
                                     className={`destination-option ${destination === opt.value ? 'active' : ''}`}
                                 >
                                     <i className={`fa-solid ${opt.icon}`} />

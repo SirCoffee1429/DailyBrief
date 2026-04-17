@@ -15,15 +15,11 @@ export default function SalesReports() {
 
     const fetchDates = useCallback(async () => {
         try {
-            const { data, error } = await supabase
-                .from('sales_data')
-                .select('report_date')
-                .order('report_date', { ascending: false })
+            const { data, error } = await supabase.rpc('get_sales_dates')
 
             if (error) throw error
 
-            const uniqueDates = [...new Set(data.map(item => item.report_date))]
-            setDates(uniqueDates)
+            setDates(data.map(row => row.report_date))
         } catch (err) {
             console.error("Error fetching sales dates:", err)
         } finally {

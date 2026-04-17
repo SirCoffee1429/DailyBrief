@@ -82,18 +82,21 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
         setUploadingBEO(true);
         try {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                const base64 = reader.result.split(',')[1];
-                const { data, error } = await supabase.functions.invoke('process-beo', {
-                    body: { pdfBase64: base64 }
-                });
+            // Read the file as base64 — wrapped in a Promise so await works
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsDataURL(file);
+            });
 
-                if (error) throw error;
-                await loadBEOS();
-                alert("BEO Parsed Successfully!");
-            };
+            const { error } = await supabase.functions.invoke('process-beo', {
+                body: { pdfBase64: base64 }
+            });
+
+            if (error) throw error;
+            await loadBEOS();
+            alert("BEO Parsed Successfully!");
         } catch (err) {
             console.error("Error uploading BEO:", err);
             alert("Failed to parse BEO. Check console for details.");

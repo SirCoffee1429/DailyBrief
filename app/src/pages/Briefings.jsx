@@ -80,7 +80,7 @@ export default function Briefings() {
             ) : (
                 <div className="briefing-list">
                     {briefings.map(b => (
-                        <div key={b.id} className="briefing-card">
+                        <div key={b.id} className={`briefing-card ${b.destination === 'foh' ? 'briefing-card--foh' : ''}`}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
                                     <div className="briefing-card-date" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>

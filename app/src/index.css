@@ -1217,6 +1217,20 @@ tr.beo-completed td .beo-check {
   border-color: var(--orange);
 }
 
+/* FOH briefings paint their accent (left rail, date label, title, hover
+   border) in the cyan FOH theme color so BOH vs FOH reads at a glance. */
+.briefing-card--foh {
+  border-left-color: #06b6d4;
+}
+
+.briefing-card--foh:hover {
+  border-color: #06b6d4;
+}
+
+.briefing-card--foh .briefing-card-date {
+  color: #06b6d4;
+}
+
 .briefing-card-date {
   font-size: var(--font-size-xs);
   color: var(--orange);
@@ -4047,6 +4061,18 @@ tr.beo-completed td .beo-check {
 
 .destination-option.active i {
   color: var(--accent);
+}
+
+/* FOH option uses the cyan front-of-house theme color when active,
+   matching the FOH badge and FOHLayout accent so the picker reads
+   the same cyan as the Front of House shell. */
+.destination-option[data-destination="foh"].active {
+  border-color: #06b6d4;
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.destination-option[data-destination="foh"].active i {
+  color: #06b6d4;
 }
 
 /* Destination badge on the briefings list */
