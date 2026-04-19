@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 export default function EventsBanquetsPage({ readOnly = false }) {
+    const location = useLocation()
+    const isOffice = location.pathname.startsWith('/office')
+    const isFOH = location.pathname.startsWith('/foh')
+    const isKitchen = location.pathname.startsWith('/kitchen')
+
     const [notes, setNotes] = useState([])
     const [banquets, setBanquets] = useState([])
     const [beos, setBeos] = useState([])
@@ -11,6 +16,10 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [posting, setPosting] = useState(false)
     const [loadingBanquets, setLoadingBanquets] = useState(true)
     const [uploadingBEO, setUploadingBEO] = useState(false)
+
+    // Event tasks keyed by beo_id
+    const [tasksByBeo, setTasksByBeo] = useState({})
+    const [newTaskText, setNewTaskText] = useState({})
 
     const accent = '#60a5fa'
     const accentBg = 'rgba(96, 165, 250, 0.08)'
@@ -21,6 +30,13 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         loadBanquets()
         loadBEOS()
     }, [])
+
+    // Load event tasks whenever BEOs change
+    useEffect(() => {
+        if (beos.length > 0 && !isFOH) {
+            loadAllEventTasks()
+        }
+    }, [beos])
 
     async function loadNotes() {
         const { data } = await supabase
@@ -55,6 +71,68 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         setBeos(data || [])
     }
 
+    // Fetch all event tasks for loaded BEOs
+    async function loadAllEventTasks() {
+        const beoIds = beos.map(b => b.id)
+        const { data } = await supabase
+            .from('event_tasks')
+            .select('*')
+            .in('beo_id', beoIds)
+            .order('sort_order')
+            .order('created_at')
+        // Group tasks by beo_id
+        const grouped = {}
+        ;(data || []).forEach(t => {
+            if (!grouped[t.beo_id]) grouped[t.beo_id] = []
+            grouped[t.beo_id].push(t)
+        })
+        setTasksByBeo(grouped)
+    }
+
+    // Add a task to a specific BEO (office only)
+    async function addEventTask(beoId) {
+        const text = (newTaskText[beoId] || '').trim()
+        if (!text) return
+        const currentTasks = tasksByBeo[beoId] || []
+        const nextOrder = currentTasks.length
+        const { error } = await supabase
+            .from('event_tasks')
+            .insert({ beo_id: beoId, description: text, sort_order: nextOrder })
+        if (!error) {
+            setNewTaskText(prev => ({ ...prev, [beoId]: '' }))
+            await loadAllEventTasks()
+        }
+    }
+
+    // Toggle task completion (kitchen + office)
+    async function toggleEventTask(taskId, isCompleted) {
+        await supabase
+            .from('event_tasks')
+            .update({ is_completed: !isCompleted })
+            .eq('id', taskId)
+        setTasksByBeo(prev => {
+            const updated = {}
+            for (const [beoId, tasks] of Object.entries(prev)) {
+                updated[beoId] = tasks.map(t =>
+                    t.id === taskId ? { ...t, is_completed: !isCompleted } : t
+                )
+            }
+            return updated
+        })
+    }
+
+    // Delete a task (office only)
+    async function deleteEventTask(taskId) {
+        await supabase.from('event_tasks').delete().eq('id', taskId)
+        setTasksByBeo(prev => {
+            const updated = {}
+            for (const [beoId, tasks] of Object.entries(prev)) {
+                updated[beoId] = tasks.filter(t => t.id !== taskId)
+            }
+            return updated
+        })
+    }
+
     async function handlePost() {
         const content = newText.trim()
         if (!content) return
@@ -82,7 +160,6 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
         setUploadingBEO(true);
         try {
-            // Read the file as base64 — wrapped in a Promise so await works
             const base64 = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -146,6 +223,84 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         }
     }
 
+    // Whether to show event tasks (kitchen + office, not FOH)
+    const showTasks = !isFOH
+
+    // Renders the tasks section for a specific BEO
+    function renderBeoTasks(beoId) {
+        if (!showTasks) return null
+        const tasks = tasksByBeo[beoId] || []
+        const completedCount = tasks.filter(t => t.is_completed).length
+
+        return (
+            <div className="event-tasks-section">
+                <div className="event-tasks-header">
+                    <span className="event-tasks-label">
+                        <i className="fa-solid fa-list-check" style={{ marginRight: '6px', color: accent }} />
+                        Tasks
+                    </span>
+                    {tasks.length > 0 && (
+                        <span className="event-tasks-count">{completedCount}/{tasks.length}</span>
+                    )}
+                </div>
+
+                {tasks.length > 0 && (
+                    <div className="event-tasks-list">
+                        {tasks.map(task => (
+                            <label key={task.id} className="event-task-row">
+                                <input
+                                    type="checkbox"
+                                    className="task-box"
+                                    checked={task.is_completed}
+                                    onChange={() => toggleEventTask(task.id, task.is_completed)}
+                                />
+                                <span className={`task-label ${task.is_completed ? 'completed' : ''}`}>
+                                    {task.description}
+                                </span>
+                                {isOffice && (
+                                    <button
+                                        className="wb-act-btn wb-act-delete"
+                                        onClick={(e) => { e.preventDefault(); deleteEventTask(task.id) }}
+                                        title="Delete task"
+                                        style={{ marginLeft: 'auto', fontSize: '0.75rem', flexShrink: 0 }}
+                                    >
+                                        <i className="fa-solid fa-xmark" />
+                                    </button>
+                                )}
+                            </label>
+                        ))}
+                    </div>
+                )}
+
+                {isOffice && (
+                    <div className="event-task-add">
+                        <input
+                            className="input"
+                            type="text"
+                            placeholder="Add a task..."
+                            value={newTaskText[beoId] || ''}
+                            onChange={e => setNewTaskText(prev => ({ ...prev, [beoId]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEventTask(beoId) } }}
+                            style={{ fontSize: '0.85rem' }}
+                        />
+                        <button
+                            className="btn btn-sm"
+                            style={{ background: accent, color: '#fff', borderColor: accent, flexShrink: 0 }}
+                            onClick={() => addEventTask(beoId)}
+                            disabled={!(newTaskText[beoId] || '').trim()}
+                        >
+                            Add
+                        </button>
+                    </div>
+                )}
+
+                {tasks.length === 0 && !isOffice && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0' }}>No tasks assigned</div>
+                )}
+            </div>
+        )
+    }
+
     return (
         <div className="dashboard-container">
             <header className="dashboard-header">
@@ -161,21 +316,21 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                             <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={handleBEOUpload} disabled={uploadingBEO} />
                         </label>
                     )}
-                    <Link to={readOnly ? '/kitchen' : '/office'} className="btn btn-secondary btn-sm"><i className="fa-solid fa-arrow-left" /> Back</Link>
+                    <Link to={isOffice ? '/office' : isFOH ? '/foh' : '/kitchen'} className="btn btn-secondary btn-sm"><i className="fa-solid fa-arrow-left" /> Back</Link>
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: readOnly ? '1fr' : 'minmax(0, 1fr) 300px', gap: 'var(--space-6)', alignItems: 'start' }}>
-                
+            <div style={{ display: 'grid', gridTemplateColumns: isOffice ? 'minmax(0, 1fr) 300px' : '1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
+
                 {/* Left Panel: Parsed upcoming banquets & BEOs */}
                 <div className="card-column" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-                    
+
                     {/* BEO Details Card */}
                     {beos.length > 0 && (
                         <div className="card">
                             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h2 className="card-title"><i className="fa-solid fa-file-invoice" style={{ color: '#3b82f6', marginRight: '8px' }}/> Banquet Event Orders</h2>
-                                {!readOnly && (
+                                {isOffice && (
                                     <button
                                         className="btn btn-secondary btn-sm"
                                         style={{ fontSize: 'var(--font-size-xs)', color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
@@ -196,13 +351,12 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                             borderRadius: 'var(--radius-md)',
                                             padding: 'var(--space-4)',
                                             opacity: b.completed ? 0.5 : 1,
-                                            textDecoration: b.completed ? 'line-through' : 'none',
                                             transition: 'opacity 0.2s ease',
                                         }}
                                     >
                                         {/* Event Header Row */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-3)' }}>
-                                            {!readOnly && (
+                                            {isOffice && (
                                                 <input
                                                     type="checkbox"
                                                     className="beo-check"
@@ -212,7 +366,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                                 />
                                             )}
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em', textDecoration: b.completed ? 'line-through' : 'none' }}>
                                                     {b.event_name}
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px', flexWrap: 'wrap' }}>
@@ -227,7 +381,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                                     )}
                                                 </div>
                                             </div>
-                                            {!readOnly && (
+                                            {isOffice && (
                                                 <button
                                                     className="wb-act-btn wb-act-delete"
                                                     onClick={() => handleDeleteBEO(b.id)}
@@ -265,6 +419,9 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                                 ))}
                                             </div>
                                         )}
+
+                                        {/* Event Tasks */}
+                                        {renderBeoTasks(b.id)}
                                     </div>
                                 ))}
                             </div>
@@ -314,7 +471,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 </div>
 
                 {/* Right Panel: Single Whiteboard Column for coordination */}
-                {!readOnly && (
+                {isOffice && (
                 <div className="wb-column" style={{ background: 'var(--bg-card)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
                     <div className="wb-author-bar" style={{ marginBottom: 'var(--space-4)' }}>
                         <i className="fa-solid fa-user-pen" />
