@@ -2,6 +2,51 @@
 
 ---
 
+### 2026-04-21 — Time Off Request Calendar
+
+**File(s) Changed:**
+`supabase/migrations/20260421000000_time_off_requests.sql` (new),
+`app/src/pages/TimeOff.jsx` (new),
+`app/src/App.jsx`,
+`app/src/components/KitchenLayout.jsx`,
+`app/src/components/OfficeLayout.jsx`,
+`app/src/index.css`
+**Type:** feature
+**Summary:** Added a time off request calendar accessible from both kitchen
+(`/kitchen/time-off`) and office (`/office/time-off`). Crew members type their
+name and submit a request for a day or date range with full-day / AM / PM /
+custom-time options. Visible to everyone; office can delete.
+
+**Details:**
+
+- New `time_off_requests` table: `id, created_at, employee_name, start_date,
+  end_date, time_type ('full'|'am'|'pm'|'custom'), start_time, end_time`. CHECK
+  constraints enforce `end_date >= start_date` and require both times when
+  `time_type = 'custom'`. RLS enabled with open policies (matches existing app
+  pattern — no real auth yet). Added to `supabase_realtime` publication.
+- `TimeOff.jsx` is a single component used by both routes, with an
+  `officeMode` prop that enables the delete button in the Upcoming list.
+- Month-grid calendar (6 weeks × 7 days) with prev/next navigation and a today
+  highlight. Each day shows up to 3 name pills color-coded by time type:
+  orange (full), blue (AM), purple (PM), green (custom); `+N more` when
+  overflowing.
+- Tapping any day opens the submit modal with that date pre-filled. The
+  header button opens it with today pre-filled.
+- Form: name (free text), start/end date, time type as 4-button selector;
+  custom reveals from/until time pickers. Client validation for name, date
+  order, and custom time order.
+- "Upcoming" list shows all requests where `end_date >= today`, sorted
+  ascending. Office mode shows a trash icon per row.
+- Realtime subscription on `time_off_requests` so both dashboards update the
+  moment anyone submits — no manual refresh.
+- Added "Time Off" nav item: 6th tab in the kitchen bottom bar
+  (`fa-regular fa-calendar`) and a new sidebar entry under "Events" in the
+  office layout.
+- Mobile styles shrink day cells and collapse the 4-button time-type grid to
+  2 columns.
+
+---
+
 ### 2026-04-16 — Item Sales Multi-PDF Upload on Office Dashboard
 
 **File(s) Changed:**

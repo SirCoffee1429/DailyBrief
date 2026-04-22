@@ -420,8 +420,8 @@ a:hover {
     "weather   weather   weather"
     "notes     notes     tasks"
     "notes     notes     eightysix"
-    "events    recipes   sales"
-    "kb        kb        kb";
+    "events    events    recipes"
+    "sales     sales     sales";
 }
 
 .weather-forecast-card {
@@ -681,6 +681,12 @@ a:hover {
   grid-area: events;
   display: flex;
   flex-direction: column;
+  min-height: 160px;
+}
+
+/* Sales Briefing (previous night's sales) — full-width bottom row */
+.sales-briefing-card {
+  grid-area: sales;
   min-height: 160px;
 }
 
@@ -4423,3 +4429,215 @@ tr.beo-completed td .beo-check {
   border-color: rgba(6, 182, 212, 0.25);
 }
 
+
+/* ===== Time Off Calendar ===== */
+.time-off-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.time-off-weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.time-off-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.time-off-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.time-off-day {
+  min-height: 120px;
+  background: #0f0f12;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.time-off-day:hover {
+  border-color: #e66b35;
+  background: #141418;
+}
+
+.time-off-day.out-of-month {
+  opacity: 0.35;
+}
+
+.time-off-day.today {
+  border-color: #e66b35;
+  box-shadow: inset 0 0 0 1px #e66b35;
+}
+
+.time-off-day-number {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.time-off-day.today .time-off-day-number {
+  color: #e66b35;
+}
+
+.time-off-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.time-off-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(230, 107, 53, 0.18);
+  color: #f5a87a;
+  border-left: 3px solid #e66b35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time-off-pill-am {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  border-left-color: #3b82f6;
+}
+
+.time-off-pill-pm {
+  background: rgba(168, 85, 247, 0.18);
+  color: #d8b4fe;
+  border-left-color: #a855f7;
+}
+
+.time-off-pill-custom {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border-left-color: #22c55e;
+}
+
+.time-off-pill-time {
+  font-size: 0.98rem;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.time-off-pill-more {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  padding: 0 6px;
+}
+
+.time-off-time-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.time-off-time-type-btn {
+  padding: 0.5rem;
+  background: #0f0f12;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.time-off-time-type-btn:hover {
+  border-color: #e66b35;
+}
+
+.time-off-time-type-btn.active {
+  background: rgba(230, 107, 53, 0.2);
+  border-color: #e66b35;
+  color: #e66b35;
+  font-weight: 600;
+}
+
+.time-off-upcoming-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.time-off-upcoming-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: #0f0f12;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.time-off-upcoming-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.time-off-upcoming-dates {
+  color: #e66b35;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.time-off-upcoming-time {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Mobile: smaller day cells, pills shrink */
+@media (max-width: 640px) {
+  .time-off-day {
+    min-height: 90px;
+    padding: 4px;
+  }
+  .time-off-day-number {
+    font-size: 1rem;
+  }
+  .time-off-pill {
+    font-size: 0.9rem;
+    padding: 2px 5px;
+  }
+  .time-off-pill-time {
+    display: none;
+  }
+  .time-off-time-type-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
