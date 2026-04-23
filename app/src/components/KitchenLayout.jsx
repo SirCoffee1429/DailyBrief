@@ -90,14 +90,6 @@ export default function KitchenLayout({ children }) {
                 </NavLink>
 
                 <NavLink
-                    to="/kitchen/chat"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-list-check" />
-                    <span className="tab-label">Tasks</span>
-                </NavLink>
-
-                <NavLink
                     to="/kitchen/time-off"
                     className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
                 >
