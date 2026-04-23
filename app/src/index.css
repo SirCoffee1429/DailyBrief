@@ -309,6 +309,7 @@ a:hover {
   gap: var(--space-6);
 }
 
+
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -417,7 +418,6 @@ a:hover {
   grid-auto-rows: minmax(160px, auto);
   gap: var(--space-5);
   grid-template-areas:
-    "weather   weather   weather"
     "notes     notes     tasks"
     "notes     notes     eightysix"
     "events    events    recipes"
@@ -432,7 +432,6 @@ a:hover {
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "weather"
       "notes"
       "tasks"
       "eightysix"
