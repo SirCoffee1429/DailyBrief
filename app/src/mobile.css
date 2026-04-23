@@ -27,11 +27,10 @@
     padding: var(--space-4) var(--space-5);
   }
 
-  /* ---- Weather Forecast — compact strip at top ---- */
+  /* ---- Weather Forecast — compact on mobile ---- */
   .weather-forecast-card {
     border-radius: 20px;
     padding: var(--space-3) var(--space-4);
-    order: -1; /* always first */
   }
 
   .weather-card-title {
@@ -112,10 +111,6 @@
     min-height: auto;
   }
 
-  /* ---- Knowledge Base — HIDDEN on mobile ---- */
-  .kb-section {
-    display: none !important;
-  }
 
   /* ---- Sales Briefing ---- */
   .sales-briefing-card {

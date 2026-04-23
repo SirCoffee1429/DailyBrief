@@ -124,9 +124,7 @@ export default function FOHDashboard() {
                 <WeatherWidget />
             </div>
 
-            <div style={{ marginBottom: 'var(--space-5)' }}>
-                <WeeklyFeatures readOnly />
-            </div>
+            <WeeklyFeatures readOnly />
 
             <div className="dashboard-grid">
                 <div className="dash-card morning-notes-card">

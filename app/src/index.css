@@ -424,9 +424,6 @@ a:hover {
     "sales     sales     sales";
 }
 
-.weather-forecast-card {
-  grid-area: weather;
-}
 
 @media (max-width: 768px) {
   .dashboard-grid {
@@ -437,8 +434,7 @@ a:hover {
       "eightysix"
       "events"
       "sales"
-      "recipes"
-      "kb";
+      "recipes";
   }
 }
 
@@ -880,13 +876,6 @@ tr.beo-completed td .beo-check {
   font-size: var(--font-size-sm);
 }
 
-/* Knowledge Base */
-.kb-section {
-  grid-area: kb;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.05), rgba(0, 0, 0, 0.2));
-  display: flex;
-  flex-direction: column;
-}
 
 .kb-search-container {
   display: flex;
@@ -1494,11 +1483,6 @@ tr.beo-completed td .beo-check {
       "recipes";
   }
 
-  .kb-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-4);
-  }
 
   .kb-search-container {
     width: 100%;
