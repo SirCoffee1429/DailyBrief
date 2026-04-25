@@ -21,6 +21,14 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [tasksByBeo, setTasksByBeo] = useState({})
     const [newTaskText, setNewTaskText] = useState({})
 
+    // Track which BEO cards are expanded
+    const [expandedBeos, setExpandedBeos] = useState({})
+
+    // Office edit state: { [beoId]: editedDraft }
+    const [editingBeo, setEditingBeo] = useState(null)
+    const [editDraft, setEditDraft] = useState(null)
+    const [savingEdit, setSavingEdit] = useState(false)
+
     const accent = '#60a5fa'
     const accentBg = 'rgba(96, 165, 250, 0.08)'
     const accentBorder = 'rgba(96, 165, 250, 0.2)'
@@ -226,6 +234,343 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     // Whether to show event tasks (kitchen + office, not FOH)
     const showTasks = !isFOH
 
+    function toggleExpand(beoId) {
+        setExpandedBeos(prev => ({ ...prev, [beoId]: !prev[beoId] }))
+    }
+
+    function formatEventDateRange(b) {
+        const start = new Date(b.event_date + 'T12:00:00')
+        const startStr = start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+        if (b.event_end_date && b.event_end_date !== b.event_date) {
+            const end = new Date(b.event_end_date + 'T12:00:00')
+            const endStr = end.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+            return `${startStr} – ${endStr}`
+        }
+        return startStr
+    }
+
+    function startEdit(b) {
+        setEditingBeo(b.id)
+        setEditDraft({
+            event_name: b.event_name || '',
+            event_date: b.event_date || '',
+            event_end_date: b.event_end_date || '',
+            start_time: b.start_time || '',
+            guest_count: b.guest_count || 0,
+            location: b.location || '',
+            timeline: JSON.parse(JSON.stringify(b.timeline || [])),
+            sections: JSON.parse(JSON.stringify(b.sections || [])),
+            notes_text: b.notes_text || '',
+        })
+    }
+
+    function cancelEdit() {
+        setEditingBeo(null)
+        setEditDraft(null)
+    }
+
+    async function saveEdit(beoId) {
+        if (!editDraft) return
+        setSavingEdit(true)
+        const payload = {
+            event_name: editDraft.event_name || 'Unknown Event',
+            event_date: editDraft.event_date,
+            event_end_date: editDraft.event_end_date || null,
+            start_time: editDraft.start_time || '',
+            guest_count: parseInt(editDraft.guest_count) || 0,
+            location: editDraft.location || null,
+            timeline: editDraft.timeline || [],
+            sections: editDraft.sections || [],
+            notes_text: editDraft.notes_text || null,
+        }
+        const { error } = await supabase.from('banquet_event_orders').update(payload).eq('id', beoId)
+        setSavingEdit(false)
+        if (!error) {
+            setBeos(prev => prev.map(x => x.id === beoId ? { ...x, ...payload } : x))
+            cancelEdit()
+        } else {
+            alert('Failed to save: ' + error.message)
+        }
+    }
+
+    // Render a single BEO card (collapsed header + expanded body)
+    function renderBeoCard(b) {
+        const expanded = !!expandedBeos[b.id]
+        const isEditing = editingBeo === b.id
+        const accentBlue = '#3b82f6'
+
+        return (
+            <div
+                key={b.id}
+                style={{
+                    background: b.completed ? 'rgba(100,100,100,0.05)' : 'rgba(59, 130, 246, 0.04)',
+                    border: `1px solid ${b.completed ? 'var(--border-color)' : 'rgba(59, 130, 246, 0.18)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'hidden',
+                    opacity: b.completed ? 0.55 : 1,
+                    transition: 'opacity 0.2s ease',
+                }}
+            >
+                {/* Collapsed Header — always visible */}
+                <button
+                    type="button"
+                    onClick={() => toggleExpand(b.id)}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: 'var(--space-4)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        color: 'inherit',
+                    }}
+                    aria-expanded={expanded}
+                >
+                    <i
+                        className="fa-solid fa-chevron-right"
+                        style={{
+                            color: accentBlue,
+                            fontSize: '0.85rem',
+                            transition: 'transform 0.25s ease',
+                            transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                            flexShrink: 0,
+                        }}
+                    />
+                    {isOffice && (
+                        <input
+                            type="checkbox"
+                            className="beo-check"
+                            checked={!!b.completed}
+                            onChange={(e) => { e.stopPropagation(); toggleBEOComplete(b.id, b.completed) }}
+                            onClick={(e) => e.stopPropagation()}
+                            title={b.completed ? 'Mark incomplete' : 'Mark complete'}
+                            style={{ flexShrink: 0 }}
+                        />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em', textDecoration: b.completed ? 'line-through' : 'none' }}>
+                            {b.event_name}
+                        </div>
+                        <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px', flexWrap: 'wrap' }}>
+                            <span><i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: accentBlue }} />
+                                {formatEventDateRange(b)}
+                            </span>
+                            {b.start_time && (
+                                <span><i className="fa-regular fa-clock" style={{ marginRight: '5px', color: accentBlue }} />{b.start_time}</span>
+                            )}
+                            {b.guest_count > 0 && (
+                                <span><i className="fa-solid fa-users" style={{ marginRight: '5px', color: accentBlue }} />{b.guest_count} guests</span>
+                            )}
+                            {b.location && (
+                                <span><i className="fa-solid fa-location-dot" style={{ marginRight: '5px', color: accentBlue }} />{b.location}</span>
+                            )}
+                        </div>
+                    </div>
+                    {isOffice && !isEditing && (
+                        <>
+                            <button
+                                className="wb-act-btn"
+                                onClick={(e) => { e.stopPropagation(); startEdit(b); setExpandedBeos(prev => ({ ...prev, [b.id]: true })) }}
+                                title="Edit BEO"
+                                style={{ fontSize: '0.85rem', flexShrink: 0 }}
+                            >
+                                <i className="fa-solid fa-pen" />
+                            </button>
+                            <button
+                                className="wb-act-btn wb-act-delete"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteBEO(b.id) }}
+                                title="Delete this BEO"
+                                style={{ fontSize: '0.9rem', flexShrink: 0 }}
+                            >
+                                <i className="fa-solid fa-xmark" />
+                            </button>
+                        </>
+                    )}
+                </button>
+
+                {/* Expanded Body — animated drop down */}
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateRows: expanded ? '1fr' : '0fr',
+                        transition: 'grid-template-rows 0.3s ease',
+                    }}
+                >
+                    <div style={{ overflow: 'hidden' }}>
+                        <div style={{ padding: '0 var(--space-4) var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            {isEditing ? renderBeoEditor(b) : renderBeoDetails(b)}
+                            {!isEditing && renderBeoTasks(b.id)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Read-only BEO body matching the PDF layout
+    function renderBeoDetails(b) {
+        const accentBlue = '#3b82f6'
+        const cellBorder = '1px solid var(--border-color)'
+        const headerBg = 'rgba(59,130,246,0.10)'
+        const subHeaderBg = 'rgba(255,255,255,0.04)'
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', fontSize: '0.92rem' }}>
+                {/* Event summary table — mirrors top of PDF */}
+                <div style={{ border: cellBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr' }}>
+                        <div style={{ padding: '8px 12px', background: headerBg, fontWeight: 700, borderBottom: cellBorder, borderRight: cellBorder }}>Event Headcount</div>
+                        <div style={{ padding: '8px 12px', borderBottom: cellBorder, textAlign: 'right' }}>{b.guest_count || '—'}</div>
+                        <div style={{ padding: '8px 12px', background: headerBg, fontWeight: 700, borderBottom: cellBorder, borderRight: cellBorder }}>Event Date(s)</div>
+                        <div style={{ padding: '8px 12px', borderBottom: cellBorder, textAlign: 'right' }}>
+                            {b.event_date ? new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US') : '—'}
+                            {b.event_end_date && b.event_end_date !== b.event_date && ` – ${new Date(b.event_end_date + 'T12:00:00').toLocaleDateString('en-US')}`}
+                        </div>
+                        <div style={{ padding: '8px 12px', background: headerBg, fontWeight: 700, borderRight: cellBorder }}>Event Location(s)</div>
+                        <div style={{ padding: '8px 12px', textAlign: 'right' }}>{b.location || '—'}</div>
+                    </div>
+
+                    {/* Timeline table */}
+                    {(b.timeline || []).length > 0 && (
+                        <div style={{ borderTop: cellBorder }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 1.5fr', background: headerBg, fontWeight: 700 }}>
+                                <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>Start Date</div>
+                                <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>Start Time</div>
+                                <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>Timeline Item</div>
+                                <div style={{ padding: '8px 12px', textAlign: 'center' }}>Description</div>
+                            </div>
+                            {(b.timeline || []).map((row, idx) => (
+                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 1.5fr', borderTop: cellBorder }}>
+                                    <div style={{ padding: '6px 12px', borderRight: cellBorder }}>{row.date ? new Date(row.date + 'T12:00:00').toLocaleDateString('en-US') : ''}</div>
+                                    <div style={{ padding: '6px 12px', borderRight: cellBorder }}>{row.time || ''}</div>
+                                    <div style={{ padding: '6px 12px', borderRight: cellBorder }}>{row.item || ''}</div>
+                                    <div style={{ padding: '6px 12px' }}>{row.description || ''}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Sections — one block per meal/activity */}
+                {(b.sections || []).map((section, sIdx) => (
+                    <div key={sIdx} style={{ border: cellBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                        {/* Section header row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 80px', background: headerBg, fontWeight: 700 }}>
+                            <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>{section.day_label || section.date}</div>
+                            <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>
+                                {[section.meal_type, section.time, section.location].filter(Boolean).join(' - ')}
+                            </div>
+                            <div style={{ padding: '8px 12px', textAlign: 'center' }}>Qty</div>
+                        </div>
+                        {(section.categories || []).map((cat, cIdx) => (
+                            <div key={cIdx} style={{ borderTop: cellBorder }}>
+                                <div style={{ background: subHeaderBg, padding: '6px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                    {cat.name}
+                                </div>
+                                {(cat.items || []).map((item, iIdx) => (
+                                    <div key={iIdx} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 80px', borderTop: cellBorder }}>
+                                        <div style={{ padding: '8px 12px', borderRight: cellBorder, fontWeight: 600 }}>{item.label || ''}</div>
+                                        <div style={{ padding: '8px 12px', borderRight: cellBorder, whiteSpace: 'pre-wrap', textAlign: 'center' }}>{item.description || ''}</div>
+                                        <div style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: accentBlue }}>{item.qty || ''}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                ))}
+
+                {/* Notes */}
+                {b.notes_text && (
+                    <div style={{ border: cellBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                        <div style={{ background: headerBg, padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Notes</div>
+                        <div style={{ padding: '12px', whiteSpace: 'pre-wrap', borderTop: cellBorder }}>{b.notes_text}</div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Office editor — JSON-style form for header fields + free-form JSON for sections/timeline
+    function renderBeoEditor(b) {
+        if (!editDraft) return null
+        const inputStyle = { width: '100%', padding: '6px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }
+        const labelStyle = { fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }
+
+        const setDraft = (patch) => setEditDraft(prev => ({ ...prev, ...patch }))
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={labelStyle}>Event Name</label>
+                        <input style={inputStyle} value={editDraft.event_name} onChange={e => setDraft({ event_name: e.target.value })} />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Start Date</label>
+                        <input type="date" style={inputStyle} value={editDraft.event_date} onChange={e => setDraft({ event_date: e.target.value })} />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>End Date</label>
+                        <input type="date" style={inputStyle} value={editDraft.event_end_date} onChange={e => setDraft({ event_end_date: e.target.value })} />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Start Time</label>
+                        <input style={inputStyle} value={editDraft.start_time} onChange={e => setDraft({ start_time: e.target.value })} placeholder="7:00am" />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Headcount</label>
+                        <input type="number" style={inputStyle} value={editDraft.guest_count} onChange={e => setDraft({ guest_count: e.target.value })} />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={labelStyle}>Location</label>
+                        <input style={inputStyle} value={editDraft.location} onChange={e => setDraft({ location: e.target.value })} />
+                    </div>
+                </div>
+
+                <div>
+                    <label style={labelStyle}>Notes</label>
+                    <textarea
+                        style={{ ...inputStyle, minHeight: '100px', fontFamily: 'inherit' }}
+                        value={editDraft.notes_text}
+                        onChange={e => setDraft({ notes_text: e.target.value })}
+                    />
+                </div>
+
+                <div>
+                    <label style={labelStyle}>Timeline (JSON)</label>
+                    <textarea
+                        style={{ ...inputStyle, minHeight: '120px', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                        value={JSON.stringify(editDraft.timeline, null, 2)}
+                        onChange={e => {
+                            try { setDraft({ timeline: JSON.parse(e.target.value) }) } catch { /* leave unchanged on parse error */ }
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <label style={labelStyle}>Sections (JSON)</label>
+                    <textarea
+                        style={{ ...inputStyle, minHeight: '240px', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                        value={JSON.stringify(editDraft.sections, null, 2)}
+                        onChange={e => {
+                            try { setDraft({ sections: JSON.parse(e.target.value) }) } catch { /* leave unchanged on parse error */ }
+                        }}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <button className="btn btn-secondary btn-sm" onClick={cancelEdit} disabled={savingEdit}>Cancel</button>
+                    <button className="btn btn-primary btn-sm" style={{ background: '#3b82f6', borderColor: '#3b82f6' }} onClick={() => saveEdit(b.id)} disabled={savingEdit}>
+                        {savingEdit ? 'Saving…' : 'Save Changes'}
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
     // Renders the tasks section for a specific BEO
     function renderBeoTasks(beoId) {
         if (!showTasks) return null
@@ -341,89 +686,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                     </button>
                                 )}
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', padding: 'var(--space-4)' }}>
-                                {beos.map(b => (
-                                    <div
-                                        key={b.id}
-                                        style={{
-                                            background: b.completed ? 'rgba(100,100,100,0.05)' : 'rgba(59, 130, 246, 0.04)',
-                                            border: `1px solid ${b.completed ? 'var(--border-color)' : 'rgba(59, 130, 246, 0.15)'}`,
-                                            borderRadius: 'var(--radius-md)',
-                                            padding: 'var(--space-4)',
-                                            opacity: b.completed ? 0.5 : 1,
-                                            transition: 'opacity 0.2s ease',
-                                        }}
-                                    >
-                                        {/* Event Header Row */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 'var(--space-3)' }}>
-                                            {isOffice && (
-                                                <input
-                                                    type="checkbox"
-                                                    className="beo-check"
-                                                    checked={!!b.completed}
-                                                    onChange={() => toggleBEOComplete(b.id, b.completed)}
-                                                    title={b.completed ? 'Mark incomplete' : 'Mark complete'}
-                                                />
-                                            )}
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em', textDecoration: b.completed ? 'line-through' : 'none' }}>
-                                                    {b.event_name}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px', flexWrap: 'wrap' }}>
-                                                    <span><i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: '#3b82f6' }} />
-                                                        {new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                                                    </span>
-                                                    {b.start_time && (
-                                                        <span><i className="fa-regular fa-clock" style={{ marginRight: '5px', color: '#3b82f6' }} />{b.start_time}</span>
-                                                    )}
-                                                    {b.guest_count && (
-                                                        <span><i className="fa-solid fa-users" style={{ marginRight: '5px', color: '#3b82f6' }} />{b.guest_count} guests</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {isOffice && (
-                                                <button
-                                                    className="wb-act-btn wb-act-delete"
-                                                    onClick={() => handleDeleteBEO(b.id)}
-                                                    title="Delete this BEO"
-                                                    style={{ fontSize: '0.9rem', flexShrink: 0 }}
-                                                >
-                                                    <i className="fa-solid fa-xmark" />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Food Items */}
-                                        {(b.food_items || []).length > 0 && (
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '1fr auto',
-                                                gap: '6px 20px',
-                                                fontSize: '0.95rem',
-                                                lineHeight: '1.5',
-                                                padding: 'var(--space-3)',
-                                                background: 'rgba(0,0,0,0.1)',
-                                                borderRadius: 'var(--radius-sm)',
-                                            }}>
-                                                <div style={{ fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>Item</div>
-                                                <div style={{ fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', textAlign: 'right' }}>Qty</div>
-                                                {(b.food_items || []).map((fi, idx) => (
-                                                    <>
-                                                        <div key={`item-${idx}`} style={{ color: 'var(--text-primary)', paddingBlock: '3px', borderBottom: idx < b.food_items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                                                            {fi.item}
-                                                        </div>
-                                                        <div key={`qty-${idx}`} style={{ fontWeight: 700, color: '#3b82f6', textAlign: 'right', paddingBlock: '3px', whiteSpace: 'nowrap', borderBottom: idx < b.food_items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                                                            {fi.quantity}
-                                                        </div>
-                                                    </>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Event Tasks */}
-                                        {renderBeoTasks(b.id)}
-                                    </div>
-                                ))}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', padding: 'var(--space-4)' }}>
+                                {beos.map(b => renderBeoCard(b))}
                             </div>
                         </div>
                     )}

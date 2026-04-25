@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Get the payload (expecting { pdfBase64: string } or multipart/form-data)
     let pdfBase64 = "";
     const contentType = req.headers.get("content-type") || "";
 
@@ -26,13 +25,11 @@ Deno.serve(async (req) => {
         const payload = await req.json();
         pdfBase64 = payload.pdfBase64;
     } else {
-        // Handle multipart fallback if needed
         const formData = await req.formData();
         const file = formData.get("file") as File;
         if (file) {
            const arrayBuffer = await file.arrayBuffer();
            const bytes = new Uint8Array(arrayBuffer);
-           // Chunked base64 encoding to avoid stack overflow on large files
            let binary = "";
            const chunkSize = 8192;
            for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -44,7 +41,7 @@ Deno.serve(async (req) => {
     }
 
     if (!pdfBase64) {
-      return new Response(JSON.stringify({ error: "No PDF content found" }), { 
+      return new Response(JSON.stringify({ error: "No PDF content found" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -52,25 +49,60 @@ Deno.serve(async (req) => {
 
     console.log(`Starting BEO parsing via Gemini...`);
 
-    // 2. Ask Gemini to parse the PDF for BEO details
     const prompt = `
-      You are an expert at parsing Banquet Event Orders (BEOs).
-      This PDF may contain ONE or MULTIPLE BEOs/events. Extract ALL of them.
-      
-      For EACH event found, extract:
-      - Event Name (the title or name of the banquet/event)
-      - Event Date (in YYYY-MM-DD format)
-      - Start Time (e.g. "5:00 PM")
-      - Guest Count (integer — look for "Guaranteed", "Expected", "# of Guests", or similar fields)
-      - Food Items: ALL food, catering dishes, and beverages listed, with quantities
+You are an expert at parsing Banquet Event Orders (BEOs) for a country club.
+This PDF may contain ONE or MULTIPLE BEOs. Each new BEO begins on its own page with the club logo and a new event title in the top-right.
 
-      IMPORTANT RULES:
-      - ALWAYS return a JSON array, even if there is only one event. Example: [{ ... }]
-      - Each element must have these keys: "event_name", "event_date", "start_time", "guest_count", "food_items"
-      - "food_items" is an array of objects with keys "item" (string) and "quantity" (string or number)
-      - If you cannot find a value, use null for strings and 0 for guest_count
-      - Do NOT wrap in markdown code fences, return ONLY the JSON array
-    `;
+EXTRACT every event in the PDF. For EACH event, return an object with these EXACT keys:
+
+{
+  "event_name": string,                       // event title (e.g. "Spring Scramble")
+  "event_date": "YYYY-MM-DD",                 // first/start day of event
+  "event_end_date": "YYYY-MM-DD" | null,      // last day if multi-day, else null
+  "start_time": string | null,                // earliest meal/activity time (e.g. "7:00am")
+  "guest_count": integer,                     // from "Event Headcount" row
+  "location": string | null,                  // from "Event Location(s)" row (full text)
+  "timeline": [                               // from the "Start Date / Start Time / Timeline Item / Description" table at the top of the BEO. May be empty.
+    { "date": "YYYY-MM-DD", "time": "7:00am", "item": "Range Opens", "description": "" }
+  ],
+  "sections": [                               // every meal/activity block. Each block starts with a header row like "Sat, 04/25/2026 | Breakfast - 7:00am - Hitching Post | Qty"
+    {
+      "date": "YYYY-MM-DD",
+      "day_label": "Sat, 04/25/2026",         // exact label from the PDF
+      "meal_type": "Breakfast",               // Breakfast / Lunch / Dinner / Cocktail / Golf / Drop-Off Order / Kid's Activity / Awards / etc.
+      "time": "7:00am",
+      "location": "Hitching Post",
+      "categories": [                          // sub-tables inside the section. Each has a centered header like "Member Event - Buffets", "Non-Alcoholic Beverages", "Bar Services", etc.
+        {
+          "name": "Member Event - Buffets",
+          "items": [
+            {
+              "label": "Custom Buffets",      // left-column label (e.g. "Custom Buffets", "Beverages", "Services", "Entrée 1")
+              "description": "Ham, Egg, & Cheese English Muffin Breakfast Sandwiches\\nGrad & Go at The Turn",  // full center-column text, preserve line breaks with \\n
+              "qty": "73"                     // right-column qty as string. "" if blank.
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "notes_text": string | null                  // full text from any "Notes" block(s) at the end of the BEO. Preserve line breaks with \\n. Concatenate multiple Notes blocks with two newlines.
+}
+
+DO NOT extract these (ignore entirely):
+- Page header / footer (page number, "Printed:" timestamp)
+- Club logo / club address line ("6221 E. Broadway, Columbia...")
+- "Club Contact:" line and the contact email/phone below it
+- "Primary Contact" table (name, address, email, phone, member #)
+- "Additional Contacts" table (role, billing contact, member #)
+
+RULES:
+- ALWAYS return a JSON ARRAY of event objects, even if there is only one event.
+- Use null for missing strings, 0 for missing guest_count, [] for missing arrays.
+- Parse dates strictly to YYYY-MM-DD. Convert "04/25/2026" → "2026-04-25".
+- Preserve original capitalization and punctuation in descriptions.
+- Do NOT wrap in markdown code fences. Return ONLY the JSON array.
+`;
 
     const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
       method: "POST",
@@ -103,47 +135,55 @@ Deno.serve(async (req) => {
 
     const geminiData = await geminiRes.json();
     const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    // Log the raw output for debugging
-    console.log(`Raw Gemini output: ${rawOutput}`);
+
+    console.log(`Raw Gemini output length: ${rawOutput?.length}`);
 
     if (!rawOutput) {
       throw new Error("Gemini returned empty output");
     }
 
     let parsed = JSON.parse(rawOutput);
-
-    // Normalize to always be an array
-    if (!Array.isArray(parsed)) {
-      parsed = [parsed];
-    }
+    if (!Array.isArray(parsed)) parsed = [parsed];
 
     console.log(`Parsed ${parsed.length} event(s) from BEO PDF`);
 
-    // 3. Save each event to Supabase
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const insertedIds: string[] = [];
 
     for (const event of parsed) {
       const eventName = event.event_name || null;
       const eventDate = event.event_date || null;
-      const guestCount = event.guest_count || 0;
 
-      // Log a warning if we're getting empty data
       if (!eventName || !eventDate) {
-        console.warn(`Warning: event missing data — name: ${eventName}, date: ${eventDate}, guests: ${guestCount}`);
+        console.warn(`Warning: event missing required fields — name: ${eventName}, date: ${eventDate}`);
       }
 
-      console.log(`Inserting BEO: "${eventName}" on ${eventDate} for ${guestCount} guests with ${(event.food_items || []).length} food items`);
+      // Build legacy food_items list from sections so older UI/queries still work
+      const foodItems: { item: string; quantity: string | number }[] = [];
+      for (const section of (event.sections || [])) {
+        for (const cat of (section.categories || [])) {
+          for (const it of (cat.items || [])) {
+            foodItems.push({
+              item: `${it.label ? it.label + ': ' : ''}${(it.description || '').split('\n')[0]}`.slice(0, 200),
+              quantity: it.qty || '',
+            });
+          }
+        }
+      }
 
       const { data: record, error } = await supabase
         .from("banquet_event_orders")
         .insert({
             event_name: eventName || "Unknown Event",
             event_date: eventDate || new Date().toISOString().split("T")[0],
+            event_end_date: event.event_end_date || null,
             start_time: event.start_time || "",
-            guest_count: guestCount,
-            food_items: event.food_items || [],
+            guest_count: event.guest_count || 0,
+            location: event.location || null,
+            timeline: event.timeline || [],
+            sections: event.sections || [],
+            notes_text: event.notes_text || null,
+            food_items: foodItems,
         })
         .select('id')
         .single();
