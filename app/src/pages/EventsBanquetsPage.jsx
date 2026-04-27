@@ -29,6 +29,11 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [editDraft, setEditDraft] = useState(null)
     const [savingEdit, setSavingEdit] = useState(false)
 
+    // Per-event crew notes state
+    const [notesOpen, setNotesOpen] = useState({})         // { [beoId]: boolean }
+    const [notesDraft, setNotesDraft] = useState({})       // { [beoId]: string }
+    const [savingNotes, setSavingNotes] = useState({})     // { [beoId]: boolean }
+
     const accent = '#60a5fa'
     const accentBg = 'rgba(96, 165, 250, 0.08)'
     const accentBorder = 'rgba(96, 165, 250, 0.2)'
@@ -269,6 +274,32 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         setEditDraft(null)
     }
 
+    // Toggle the per-event notes panel; seed draft from saved value the first time
+    function toggleNotes(b) {
+        setNotesDraft(prev => ({ ...prev, [b.id]: prev[b.id] !== undefined ? prev[b.id] : (b.crew_notes || '') }))
+        setNotesOpen(prev => ({ ...prev, [b.id]: !prev[b.id] }))
+        // Auto-expand the card so the panel is visible
+        if (!expandedBeos[b.id]) {
+            setExpandedBeos(prev => ({ ...prev, [b.id]: true }))
+        }
+    }
+
+    // Persist crew notes for a single event (kitchen + office both allowed)
+    async function saveCrewNotes(beoId) {
+        const text = (notesDraft[beoId] ?? '').trim() ? notesDraft[beoId] : null
+        setSavingNotes(prev => ({ ...prev, [beoId]: true }))
+        const { error } = await supabase
+            .from('banquet_event_orders')
+            .update({ crew_notes: text })
+            .eq('id', beoId)
+        setSavingNotes(prev => ({ ...prev, [beoId]: false }))
+        if (error) {
+            alert('Failed to save notes: ' + error.message)
+            return
+        }
+        setBeos(prev => prev.map(x => x.id === beoId ? { ...x, crew_notes: text } : x))
+    }
+
     async function saveEdit(beoId) {
         if (!editDraft) return
         setSavingEdit(true)
@@ -369,13 +400,29 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                             )}
                         </div>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    {!isFOH && !isEditing && (
+                        <button
+                            className="wb-act-btn"
+                            onClick={(e) => { e.stopPropagation(); toggleNotes(b) }}
+                            title="Crew notes for this event"
+                            style={{
+                                fontSize: '0.85rem',
+                                background: b.crew_notes ? 'rgba(250, 204, 21, 0.12)' : 'transparent',
+                                borderColor: b.crew_notes ? 'rgba(250, 204, 21, 0.4)' : undefined,
+                                color: b.crew_notes ? '#facc15' : undefined,
+                            }}
+                        >
+                            <i className="fa-regular fa-note-sticky" />
+                        </button>
+                    )}
                     {isOffice && !isEditing && (
                         <>
                             <button
                                 className="wb-act-btn"
                                 onClick={(e) => { e.stopPropagation(); startEdit(b); setExpandedBeos(prev => ({ ...prev, [b.id]: true })) }}
                                 title="Edit BEO"
-                                style={{ fontSize: '0.85rem', flexShrink: 0 }}
+                                style={{ fontSize: '0.85rem' }}
                             >
                                 <i className="fa-solid fa-pen" />
                             </button>
@@ -383,12 +430,13 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                 className="wb-act-btn wb-act-delete"
                                 onClick={(e) => { e.stopPropagation(); handleDeleteBEO(b.id) }}
                                 title="Delete this BEO"
-                                style={{ fontSize: '0.9rem', flexShrink: 0 }}
+                                style={{ fontSize: '0.9rem' }}
                             >
                                 <i className="fa-solid fa-xmark" />
                             </button>
                         </>
                     )}
+                    </div>
                 </button>
 
                 {/* Expanded Body — animated drop down */}
@@ -402,6 +450,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     <div style={{ overflow: 'hidden' }}>
                         <div style={{ padding: '0 var(--space-4) var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                             {isEditing ? renderBeoEditor(b) : renderBeoDetails(b)}
+                            {!isEditing && renderCrewNotesPanel(b)}
                             {!isEditing && renderBeoTasks(b.id)}
                         </div>
                     </div>
@@ -493,16 +542,93 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         )
     }
 
-    // Office editor — JSON-style form for header fields + free-form JSON for sections/timeline
+    // Office editor — structured form controls (no JSON editing required)
     function renderBeoEditor(b) {
         if (!editDraft) return null
         const inputStyle = { width: '100%', padding: '6px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }
         const labelStyle = { fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }
+        const sectionLabelStyle = { fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }
 
         const setDraft = (patch) => setEditDraft(prev => ({ ...prev, ...patch }))
 
+        // Timeline row helpers
+        function updateTimelineRow(idx, field, val) {
+            setDraft({ timeline: editDraft.timeline.map((row, i) => i === idx ? { ...row, [field]: val } : row) })
+        }
+        function addTimelineRow() {
+            setDraft({ timeline: [...editDraft.timeline, { date: '', time: '', item: '', description: '' }] })
+        }
+        function removeTimelineRow(idx) {
+            setDraft({ timeline: editDraft.timeline.filter((_, i) => i !== idx) })
+        }
+
+        // Section helpers
+        function updateSection(sIdx, field, val) {
+            setDraft({ sections: editDraft.sections.map((s, i) => i === sIdx ? { ...s, [field]: val } : s) })
+        }
+        function addSection() {
+            setDraft({ sections: [...editDraft.sections, { day_label: '', date: '', meal_type: '', time: '', location: '', categories: [] }] })
+        }
+        function removeSection(sIdx) {
+            setDraft({ sections: editDraft.sections.filter((_, i) => i !== sIdx) })
+        }
+
+        // Category helpers
+        function updateCategory(sIdx, cIdx, field, val) {
+            setDraft({
+                sections: editDraft.sections.map((s, i) => i !== sIdx ? s : {
+                    ...s, categories: s.categories.map((c, j) => j === cIdx ? { ...c, [field]: val } : c)
+                })
+            })
+        }
+        function addCategory(sIdx) {
+            setDraft({
+                sections: editDraft.sections.map((s, i) => i !== sIdx ? s : {
+                    ...s, categories: [...(s.categories || []), { name: '', items: [] }]
+                })
+            })
+        }
+        function removeCategory(sIdx, cIdx) {
+            setDraft({
+                sections: editDraft.sections.map((s, i) => i !== sIdx ? s : {
+                    ...s, categories: s.categories.filter((_, j) => j !== cIdx)
+                })
+            })
+        }
+
+        // Item helpers
+        function updateItem(sIdx, cIdx, iIdx, field, val) {
+            setDraft({
+                sections: editDraft.sections.map((s, si) => si !== sIdx ? s : {
+                    ...s, categories: s.categories.map((c, ci) => ci !== cIdx ? c : {
+                        ...c, items: c.items.map((item, ii) => ii !== iIdx ? item : { ...item, [field]: val })
+                    })
+                })
+            })
+        }
+        function addItem(sIdx, cIdx) {
+            setDraft({
+                sections: editDraft.sections.map((s, si) => si !== sIdx ? s : {
+                    ...s, categories: s.categories.map((c, ci) => ci !== cIdx ? c : {
+                        ...c, items: [...(c.items || []), { label: '', description: '', qty: '' }]
+                    })
+                })
+            })
+        }
+        function removeItem(sIdx, cIdx, iIdx) {
+            setDraft({
+                sections: editDraft.sections.map((s, si) => si !== sIdx ? s : {
+                    ...s, categories: s.categories.map((c, ci) => ci !== cIdx ? c : {
+                        ...c, items: c.items.filter((_, ii) => ii !== iIdx)
+                    })
+                })
+            })
+        }
+
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.9rem' }}>
+
+                {/* Basic event fields */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div style={{ gridColumn: '1 / -1' }}>
                         <label style={labelStyle}>Event Name</label>
@@ -518,7 +644,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     </div>
                     <div>
                         <label style={labelStyle}>Start Time</label>
-                        <input style={inputStyle} value={editDraft.start_time} onChange={e => setDraft({ start_time: e.target.value })} placeholder="7:00am" />
+                        <input style={inputStyle} value={editDraft.start_time} onChange={e => setDraft({ start_time: e.target.value })} placeholder="7:00 PM" />
                     </div>
                     <div>
                         <label style={labelStyle}>Headcount</label>
@@ -530,41 +656,194 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     </div>
                 </div>
 
+                {/* Notes */}
                 <div>
                     <label style={labelStyle}>Notes</label>
                     <textarea
-                        style={{ ...inputStyle, minHeight: '100px', fontFamily: 'inherit' }}
+                        style={{ ...inputStyle, minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
                         value={editDraft.notes_text}
                         onChange={e => setDraft({ notes_text: e.target.value })}
+                        placeholder="Any additional event notes..."
                     />
                 </div>
 
+                {/* Timeline editor */}
                 <div>
-                    <label style={labelStyle}>Timeline (JSON)</label>
-                    <textarea
-                        style={{ ...inputStyle, minHeight: '120px', fontFamily: 'monospace', fontSize: '0.8rem' }}
-                        value={JSON.stringify(editDraft.timeline, null, 2)}
-                        onChange={e => {
-                            try { setDraft({ timeline: JSON.parse(e.target.value) }) } catch { /* leave unchanged on parse error */ }
-                        }}
-                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ ...labelStyle, marginBottom: 0 }}>Event Timeline</label>
+                        <button className="btn btn-secondary btn-sm" onClick={addTimelineRow} style={{ fontSize: '0.75rem' }}>+ Add Row</button>
+                    </div>
+                    {editDraft.timeline.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: '8px 0' }}>No timeline entries. Click "+ Add Row" to add one.</div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '130px 90px 1fr 1.5fr 28px', gap: '6px' }}>
+                                <span style={sectionLabelStyle}>Start Date</span>
+                                <span style={sectionLabelStyle}>Start Time</span>
+                                <span style={sectionLabelStyle}>Item</span>
+                                <span style={sectionLabelStyle}>Description</span>
+                                <span />
+                            </div>
+                            {editDraft.timeline.map((row, idx) => (
+                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '130px 90px 1fr 1.5fr 28px', gap: '6px', alignItems: 'center' }}>
+                                    <input type="date" style={inputStyle} value={row.date || ''} onChange={e => updateTimelineRow(idx, 'date', e.target.value)} />
+                                    <input style={inputStyle} value={row.time || ''} onChange={e => updateTimelineRow(idx, 'time', e.target.value)} placeholder="7:00 PM" />
+                                    <input style={inputStyle} value={row.item || ''} onChange={e => updateTimelineRow(idx, 'item', e.target.value)} placeholder="Cocktail Hour" />
+                                    <input style={inputStyle} value={row.description || ''} onChange={e => updateTimelineRow(idx, 'description', e.target.value)} placeholder="Details..." />
+                                    <button className="wb-act-btn wb-act-delete" onClick={() => removeTimelineRow(idx)} title="Remove row" style={{ fontSize: '0.8rem', flexShrink: 0 }}>
+                                        <i className="fa-solid fa-xmark" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
+                {/* Sections editor */}
                 <div>
-                    <label style={labelStyle}>Sections (JSON)</label>
-                    <textarea
-                        style={{ ...inputStyle, minHeight: '240px', fontFamily: 'monospace', fontSize: '0.8rem' }}
-                        value={JSON.stringify(editDraft.sections, null, 2)}
-                        onChange={e => {
-                            try { setDraft({ sections: JSON.parse(e.target.value) }) } catch { /* leave unchanged on parse error */ }
-                        }}
-                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ ...labelStyle, marginBottom: 0 }}>Menu Sections</label>
+                        <button className="btn btn-secondary btn-sm" onClick={addSection} style={{ fontSize: '0.75rem' }}>+ Add Section</button>
+                    </div>
+                    {editDraft.sections.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: '8px 0' }}>No menu sections. Click "+ Add Section" to add one.</div>
+                    ) : (
+                        editDraft.sections.map((section, sIdx) => (
+                            <div key={sIdx} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', marginBottom: '10px', overflow: 'hidden' }}>
+
+                                {/* Section header fields */}
+                                <div style={{ background: 'rgba(59,130,246,0.08)', padding: '10px 12px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
+                                    <span style={{ ...sectionLabelStyle, minWidth: '52px' }}>Day Label</span>
+                                    <input style={{ ...inputStyle, maxWidth: '120px', flex: 1 }} value={section.day_label || ''} onChange={e => updateSection(sIdx, 'day_label', e.target.value)} placeholder="Friday" />
+                                    <span style={sectionLabelStyle}>Date</span>
+                                    <input type="date" style={{ ...inputStyle, maxWidth: '150px' }} value={section.date || ''} onChange={e => updateSection(sIdx, 'date', e.target.value)} />
+                                    <span style={sectionLabelStyle}>Meal</span>
+                                    <input style={{ ...inputStyle, maxWidth: '110px', flex: 1 }} value={section.meal_type || ''} onChange={e => updateSection(sIdx, 'meal_type', e.target.value)} placeholder="Dinner" />
+                                    <span style={sectionLabelStyle}>Time</span>
+                                    <input style={{ ...inputStyle, maxWidth: '90px' }} value={section.time || ''} onChange={e => updateSection(sIdx, 'time', e.target.value)} placeholder="6:00 PM" />
+                                    <span style={sectionLabelStyle}>Location</span>
+                                    <input style={{ ...inputStyle, maxWidth: '130px', flex: 1 }} value={section.location || ''} onChange={e => updateSection(sIdx, 'location', e.target.value)} placeholder="Ballroom" />
+                                    <button className="wb-act-btn wb-act-delete" onClick={() => removeSection(sIdx)} title="Remove section" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                                        <i className="fa-solid fa-xmark" />
+                                    </button>
+                                </div>
+
+                                {/* Categories */}
+                                <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {(section.categories || []).map((cat, cIdx) => (
+                                        <div key={cIdx} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+
+                                            {/* Category name */}
+                                            <div style={{ background: 'rgba(255,255,255,0.04)', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                                                <span style={{ ...sectionLabelStyle, flexShrink: 0 }}>Category</span>
+                                                <input style={{ ...inputStyle, flex: 1 }} value={cat.name || ''} onChange={e => updateCategory(sIdx, cIdx, 'name', e.target.value)} placeholder="Appetizers" />
+                                                <button className="wb-act-btn wb-act-delete" onClick={() => removeCategory(sIdx, cIdx)} title="Remove category" style={{ fontSize: '0.75rem', flexShrink: 0 }}>
+                                                    <i className="fa-solid fa-xmark" />
+                                                </button>
+                                            </div>
+
+                                            {/* Items */}
+                                            <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                {(cat.items || []).length > 0 && (
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr 56px 28px', gap: '6px' }}>
+                                                        <span style={sectionLabelStyle}>Label</span>
+                                                        <span style={sectionLabelStyle}>Description</span>
+                                                        <span style={sectionLabelStyle}>Qty</span>
+                                                        <span />
+                                                    </div>
+                                                )}
+                                                {(cat.items || []).map((item, iIdx) => (
+                                                    <div key={iIdx} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 56px 28px', gap: '6px', alignItems: 'center' }}>
+                                                        <input style={inputStyle} value={item.label || ''} onChange={e => updateItem(sIdx, cIdx, iIdx, 'label', e.target.value)} placeholder="Caesar Salad" />
+                                                        <input style={inputStyle} value={item.description || ''} onChange={e => updateItem(sIdx, cIdx, iIdx, 'description', e.target.value)} placeholder="With croutons" />
+                                                        <input style={inputStyle} value={item.qty || ''} onChange={e => updateItem(sIdx, cIdx, iIdx, 'qty', e.target.value)} placeholder="25" />
+                                                        <button className="wb-act-btn wb-act-delete" onClick={() => removeItem(sIdx, cIdx, iIdx)} title="Remove item" style={{ fontSize: '0.75rem' }}>
+                                                            <i className="fa-solid fa-xmark" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                <button className="btn btn-secondary btn-sm" onClick={() => addItem(sIdx, cIdx)} style={{ fontSize: '0.75rem', alignSelf: 'flex-start', marginTop: '2px' }}>+ Add Item</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <button className="btn btn-secondary btn-sm" onClick={() => addCategory(sIdx)} style={{ fontSize: '0.75rem', alignSelf: 'flex-start' }}>+ Add Category</button>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                     <button className="btn btn-secondary btn-sm" onClick={cancelEdit} disabled={savingEdit}>Cancel</button>
                     <button className="btn btn-primary btn-sm" style={{ background: '#3b82f6', borderColor: '#3b82f6' }} onClick={() => saveEdit(b.id)} disabled={savingEdit}>
                         {savingEdit ? 'Saving…' : 'Save Changes'}
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    // Per-event crew notes — read/write for both Kitchen and Office (hidden on FOH)
+    function renderCrewNotesPanel(b) {
+        if (isFOH) return null
+        const open = !!notesOpen[b.id]
+        if (!open) return null
+        const draft = notesDraft[b.id] ?? (b.crew_notes || '')
+        const dirty = (draft || '') !== (b.crew_notes || '')
+        const saving = !!savingNotes[b.id]
+        const noteAccent = '#facc15'
+
+        return (
+            <div
+                style={{
+                    border: '1px solid rgba(250, 204, 21, 0.35)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(250, 204, 21, 0.06)',
+                    overflow: 'hidden',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid rgba(250, 204, 21, 0.25)' }}>
+                    <span style={{ fontWeight: 700, color: noteAccent, fontSize: '0.9rem' }}>
+                        <i className="fa-regular fa-note-sticky" style={{ marginRight: '6px' }} />
+                        Crew Notes
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Visible on Kitchen + Office</span>
+                </div>
+                <textarea
+                    value={draft}
+                    onChange={e => setNotesDraft(prev => ({ ...prev, [b.id]: e.target.value }))}
+                    placeholder="Add prep reminders, allergies, last-minute changes..."
+                    style={{
+                        width: '100%',
+                        minHeight: '120px',
+                        padding: '10px 12px',
+                        background: 'var(--bg-input)',
+                        border: 'none',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'inherit',
+                        fontSize: '0.9rem',
+                        resize: 'vertical',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                    }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '8px 12px', borderTop: '1px solid rgba(250, 204, 21, 0.25)' }}>
+                    <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                            setNotesDraft(prev => ({ ...prev, [b.id]: b.crew_notes || '' }))
+                        }}
+                        disabled={saving || !dirty}
+                    >
+                        Reset
+                    </button>
+                    <button
+                        className="btn btn-primary btn-sm"
+                        style={{ background: noteAccent, borderColor: noteAccent, color: '#1f2937' }}
+                        onClick={() => saveCrewNotes(b.id)}
+                        disabled={saving || !dirty}
+                    >
+                        {saving ? 'Saving…' : 'Save Notes'}
                     </button>
                 </div>
             </div>
