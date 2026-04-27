@@ -343,101 +343,109 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 }}
             >
                 {/* Collapsed Header — always visible */}
-                <button
-                    type="button"
-                    onClick={() => toggleExpand(b.id)}
+                <div
                     style={{
-                        width: '100%',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
                         padding: 'var(--space-4)',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        color: 'inherit',
                     }}
-                    aria-expanded={expanded}
                 >
-                    <i
-                        className="fa-solid fa-chevron-right"
+                    {/* Expand/collapse click zone */}
+                    <div
+                        role="button"
+                        aria-expanded={expanded}
+                        onClick={() => toggleExpand(b.id)}
                         style={{
-                            color: accentBlue,
-                            fontSize: '0.85rem',
-                            transition: 'transform 0.25s ease',
-                            transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            flex: 1,
+                            minWidth: 0,
+                            cursor: 'pointer',
                         }}
-                    />
-                    {isOffice && (
-                        <input
-                            type="checkbox"
-                            className="beo-check"
-                            checked={!!b.completed}
-                            onChange={(e) => { e.stopPropagation(); toggleBEOComplete(b.id, b.completed) }}
-                            onClick={(e) => e.stopPropagation()}
-                            title={b.completed ? 'Mark incomplete' : 'Mark complete'}
-                            style={{ flexShrink: 0 }}
+                    >
+                        <i
+                            className="fa-solid fa-chevron-right"
+                            style={{
+                                color: accentBlue,
+                                fontSize: '0.85rem',
+                                transition: 'transform 0.25s ease',
+                                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                flexShrink: 0,
+                            }}
                         />
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em', textDecoration: b.completed ? 'line-through' : 'none' }}>
-                            {b.event_name}
-                        </div>
-                        <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px', flexWrap: 'wrap' }}>
-                            <span><i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: accentBlue }} />
-                                {formatEventDateRange(b)}
-                            </span>
-                            {b.start_time && (
-                                <span><i className="fa-regular fa-clock" style={{ marginRight: '5px', color: accentBlue }} />{b.start_time}</span>
-                            )}
-                            {b.guest_count > 0 && (
-                                <span><i className="fa-solid fa-users" style={{ marginRight: '5px', color: accentBlue }} />{b.guest_count} guests</span>
-                            )}
-                            {b.location && (
-                                <span><i className="fa-solid fa-location-dot" style={{ marginRight: '5px', color: accentBlue }} />{b.location}</span>
-                            )}
+                        {isOffice && (
+                            <input
+                                type="checkbox"
+                                className="beo-check"
+                                checked={!!b.completed}
+                                onChange={() => toggleBEOComplete(b.id, b.completed)}
+                                onClick={(e) => e.stopPropagation()}
+                                title={b.completed ? 'Mark incomplete' : 'Mark complete'}
+                                style={{ flexShrink: 0 }}
+                            />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.01em', textDecoration: b.completed ? 'line-through' : 'none' }}>
+                                {b.event_name}
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '4px', flexWrap: 'wrap' }}>
+                                <span><i className="fa-regular fa-calendar" style={{ marginRight: '5px', color: accentBlue }} />
+                                    {formatEventDateRange(b)}
+                                </span>
+                                {b.start_time && (
+                                    <span><i className="fa-regular fa-clock" style={{ marginRight: '5px', color: accentBlue }} />{b.start_time}</span>
+                                )}
+                                {b.guest_count > 0 && (
+                                    <span><i className="fa-solid fa-users" style={{ marginRight: '5px', color: accentBlue }} />{b.guest_count} guests</span>
+                                )}
+                                {b.location && (
+                                    <span><i className="fa-solid fa-location-dot" style={{ marginRight: '5px', color: accentBlue }} />{b.location}</span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    {!isFOH && !isEditing && (
-                        <button
-                            className="wb-act-btn"
-                            onClick={(e) => { e.stopPropagation(); toggleNotes(b) }}
-                            title="Crew notes for this event"
-                            style={{
-                                fontSize: '0.85rem',
-                                background: b.crew_notes ? 'rgba(250, 204, 21, 0.12)' : 'transparent',
-                                borderColor: b.crew_notes ? 'rgba(250, 204, 21, 0.4)' : undefined,
-                                color: b.crew_notes ? '#facc15' : undefined,
-                            }}
-                        >
-                            <i className="fa-regular fa-note-sticky" />
-                        </button>
-                    )}
-                    {isOffice && !isEditing && (
-                        <>
+
+                    {/* Action buttons — siblings of the expand zone, not nested inside it */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        {!isFOH && !isEditing && (
                             <button
                                 className="wb-act-btn"
-                                onClick={(e) => { e.stopPropagation(); startEdit(b); setExpandedBeos(prev => ({ ...prev, [b.id]: true })) }}
-                                title="Edit BEO"
-                                style={{ fontSize: '0.85rem' }}
+                                onClick={() => toggleNotes(b)}
+                                title="Crew notes for this event"
+                                style={{
+                                    fontSize: '0.85rem',
+                                    background: b.crew_notes ? 'rgba(250, 204, 21, 0.12)' : 'transparent',
+                                    borderColor: b.crew_notes ? 'rgba(250, 204, 21, 0.4)' : undefined,
+                                    color: b.crew_notes ? '#facc15' : undefined,
+                                }}
                             >
-                                <i className="fa-solid fa-pen" />
+                                <i className="fa-regular fa-note-sticky" />
                             </button>
-                            <button
-                                className="wb-act-btn wb-act-delete"
-                                onClick={(e) => { e.stopPropagation(); handleDeleteBEO(b.id) }}
-                                title="Delete this BEO"
-                                style={{ fontSize: '0.9rem' }}
-                            >
-                                <i className="fa-solid fa-xmark" />
-                            </button>
-                        </>
-                    )}
+                        )}
+                        {isOffice && !isEditing && (
+                            <>
+                                <button
+                                    className="wb-act-btn"
+                                    onClick={() => { startEdit(b); setExpandedBeos(prev => ({ ...prev, [b.id]: true })) }}
+                                    title="Edit BEO"
+                                    style={{ fontSize: '0.85rem' }}
+                                >
+                                    <i className="fa-solid fa-pen" />
+                                </button>
+                                <button
+                                    className="wb-act-btn wb-act-delete"
+                                    onClick={() => handleDeleteBEO(b.id)}
+                                    title="Delete this BEO"
+                                    style={{ fontSize: '0.9rem' }}
+                                >
+                                    <i className="fa-solid fa-xmark" />
+                                </button>
+                            </>
+                        )}
                     </div>
-                </button>
+                </div>
 
                 {/* Expanded Body — animated drop down */}
                 <div
