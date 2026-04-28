@@ -1,4 +1,6 @@
 import "jsr:@supabase/functions-js@^2.4.1/edge-runtime.d.ts";
+// fflate provides sync unzip for extracting docx (zip) archives in Deno
+import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +38,27 @@ Return ONLY a valid JSON array. No markdown, no explanation. Each object must ha
 ]
 `.trim();
 
+// Extract readable text from a docx file (which is a zip of XML files)
+function extractDocxText(base64: string): string {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const unzipped = unzipSync(bytes);
+
+  const xmlBytes = unzipped["word/document.xml"];
+  if (!xmlBytes) throw new Error("Invalid docx: word/document.xml not found");
+
+  const xmlText = new TextDecoder().decode(xmlBytes);
+
+  // Each </w:p> is a paragraph break; strip all other XML tags
+  const text = xmlText
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -56,19 +79,33 @@ Deno.serve(async (req) => {
       );
     }
 
+    const isDocx =
+      mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      mimeType === "application/msword";
+    const isPdf = mimeType === "application/pdf";
+
     let parts: unknown[];
 
     if (rawText) {
       // Pasted plain text — send directly
       parts = [{ text: `${PROMPT}\n\nDOCUMENT TEXT:\n${rawText}` }];
-    } else {
-      // File (docx or pdf) — send as inline data; Gemini 3 Flash supports both
-      const resolvedMimeType =
-        mimeType || "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    } else if (isDocx) {
+      // docx: extract text server-side, then send as plain text
+      const docxText = extractDocxText(fileBase64!);
+      console.log("Extracted docx text (first 500 chars):", docxText.slice(0, 500));
+      parts = [{ text: `${PROMPT}\n\nDOCUMENT TEXT:\n${docxText}` }];
+    } else if (isPdf) {
+      // PDF: Gemini supports this natively as inline data
       parts = [
         { text: PROMPT },
-        { inlineData: { mimeType: resolvedMimeType, data: fileBase64 } },
+        { inlineData: { mimeType: "application/pdf", data: fileBase64 } },
       ];
+    } else {
+      // Unknown file type — attempt plain text extraction from base64
+      const decoded = new TextDecoder("utf-8", { fatal: false }).decode(
+        Uint8Array.from(atob(fileBase64!), (c) => c.charCodeAt(0))
+      );
+      parts = [{ text: `${PROMPT}\n\nDOCUMENT TEXT:\n${decoded}` }];
     }
 
     const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
