@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import FeaturesUploadModal from './FeaturesUploadModal.jsx'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -25,6 +26,7 @@ export default function WeeklyFeatures({ readOnly = false }) {
     const [editing, setEditing] = useState(null)
     const [editValue, setEditValue] = useState('')
     const [saving, setSaving] = useState(false)
+    const [uploadOpen, setUploadOpen] = useState(false)
 
     const isCurrentWeek = weekStart === getWeekStart()
     const now = new Date()
@@ -161,6 +163,7 @@ export default function WeeklyFeatures({ readOnly = false }) {
     }
 
     return (
+        <>
         <section className={`office-v2-widget${readOnly ? ' kitchen-themed' : ''}`} style={{ padding: 0, paddingBottom: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <div className="office-v2-panel-header">
@@ -170,7 +173,16 @@ export default function WeeklyFeatures({ readOnly = false }) {
                         <button onClick={() => { setWeekStart(getWeekStart()); setMobileDay(todayIdx) }} style={{ background: 'rgba(230,107,53,0.1)', color: '#e66b35', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>TODAY</button>
                     )}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', color: '#9ca3af' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#9ca3af' }}>
+                    {!readOnly && (
+                        <button
+                            onClick={() => setUploadOpen(true)}
+                            title="Load features from .docx or .pdf"
+                            style={{ background: 'rgba(230,107,53,0.1)', color: '#e66b35', border: '1px solid rgba(230,107,53,0.3)', borderRadius: '6px', padding: '4px 10px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
+                        >
+                            <i className="fa-solid fa-file-arrow-up" /> Upload
+                        </button>
+                    )}
                     <button onClick={() => shiftWeek(-1)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><i className="fa-solid fa-chevron-left" style={{ fontSize: '0.75rem' }}></i></button>
                     <span style={{ margin: '0 0.5rem', fontSize: '0.875rem' }}>{monthLabel}</span>
                     <button onClick={() => shiftWeek(1)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><i className="fa-solid fa-chevron-right" style={{ fontSize: '0.75rem' }}></i></button>
@@ -240,5 +252,14 @@ export default function WeeklyFeatures({ readOnly = false }) {
                 </div>
             </div>
         </section>
+
+        {uploadOpen && (
+            <FeaturesUploadModal
+                weekStart={weekStart}
+                onClose={() => setUploadOpen(false)}
+                onLoaded={loadFeatures}
+            />
+        )}
+        </>
     )
 }
