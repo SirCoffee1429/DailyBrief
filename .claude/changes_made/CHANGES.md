@@ -2,6 +2,32 @@
 
 ---
 
+### 2026-04-30 — Event Order List with AI Ingredient Breakdown
+
+**File(s) Changed:**
+`supabase/migrations/20260430000000_event_order_items.sql` (new),
+`supabase/functions/generate-order-items/index.ts` (new),
+`app/src/pages/EventsBanquetsPage.jsx`
+**Type:** feature
+**Summary:** Added a per-event "Order List" panel inside each BEO card (office-only). Office can generate a food-only ingredient breakdown via Gemini, check off items as orders are placed, manually add custom items, and delete any item.
+
+**Details:**
+
+- New `event_order_items` table: `id, beo_id (FK cascade), item_name, source_dish, is_ordered, is_manual, sort_order, created_at`. RLS open policy (matches app pattern). Added to `supabase_realtime` publication.
+- New `generate-order-items` edge function: receives BEO sections, filters out beverage/bar/drink categories by keyword, collects unique food item labels, and sends them to `gemini-3-flash-preview` with a prompt instructing it to break each dish into purchasable kitchen ingredients (3–7 per dish, no ultra-basic pantry staples). Returns `{ items: [{ source_dish, ingredients[] }] }`. Strips markdown code fences from Gemini output and validates shape before returning.
+- Client handles delete-then-insert: "Regenerate" only clears `is_manual = false` rows, leaving any manually-added items intact.
+- UI panel (green accent) appears below Tasks in every expanded BEO card:
+  - "Generate from BEO" / "Regenerate" button with spinner
+  - AI items grouped under source dish labels (e.g., **MASHED POTATOES** → potatoes, butter, heavy cream...)
+  - Manual items shown under a "Custom" group header
+  - Checkbox per ingredient — checked items stay visible with strikethrough + muted color
+  - Delete (×) button per item
+  - "X/Y ordered" progress count in header
+  - Manual add input + Add button at bottom (Enter key supported)
+- Order items loaded alongside event tasks when BEOs load (office path only).
+
+---
+
 ### 2026-04-21 — Time Off Request Calendar
 
 **File(s) Changed:**

@@ -34,6 +34,11 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [notesDraft, setNotesDraft] = useState({})       // { [beoId]: string }
     const [savingNotes, setSavingNotes] = useState({})     // { [beoId]: boolean }
 
+    // Per-event order list state (office-only)
+    const [orderItemsByBeo, setOrderItemsByBeo] = useState({})  // { [beoId]: orderItem[] }
+    const [generatingOrderFor, setGeneratingOrderFor] = useState(null)
+    const [newOrderText, setNewOrderText] = useState({})        // { [beoId]: string }
+
     const accent = '#60a5fa'
     const accentBg = 'rgba(96, 165, 250, 0.08)'
     const accentBorder = 'rgba(96, 165, 250, 0.2)'
@@ -44,10 +49,11 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         loadBEOS()
     }, [])
 
-    // Load event tasks whenever BEOs change
+    // Load event tasks and order items whenever BEOs change
     useEffect(() => {
         if (beos.length > 0 && !isFOH) {
             loadAllEventTasks()
+            if (isOffice) loadOrderItems()
         }
     }, [beos])
 
@@ -141,6 +147,125 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             const updated = {}
             for (const [beoId, tasks] of Object.entries(prev)) {
                 updated[beoId] = tasks.filter(t => t.id !== taskId)
+            }
+            return updated
+        })
+    }
+
+    // Fetch all order items for loaded BEOs (office-only)
+    async function loadOrderItems() {
+        const beoIds = beos.map(b => b.id)
+        const { data } = await supabase
+            .from('event_order_items')
+            .select('*')
+            .in('beo_id', beoIds)
+            .order('sort_order')
+            .order('created_at')
+        const grouped = {}
+        ;(data || []).forEach(item => {
+            if (!grouped[item.beo_id]) grouped[item.beo_id] = []
+            grouped[item.beo_id].push(item)
+        })
+        setOrderItemsByBeo(grouped)
+    }
+
+    // Call Gemini to break BEO food items into purchasable ingredients, then persist them
+    async function generateOrderItems(beo) {
+        if (!beo.sections || beo.sections.length === 0) {
+            alert('This BEO has no menu sections to generate from.')
+            return
+        }
+        setGeneratingOrderFor(beo.id)
+        try {
+            const { data, error } = await supabase.functions.invoke('generate-order-items', {
+                body: { sections: beo.sections },
+            })
+            if (error) throw error
+
+            const dishes = data?.items || []
+            if (dishes.length === 0) {
+                alert('No food items found in this BEO to generate from.')
+                return
+            }
+
+            // Clear old AI-generated items, leave manual ones untouched
+            await supabase
+                .from('event_order_items')
+                .delete()
+                .eq('beo_id', beo.id)
+                .eq('is_manual', false)
+
+            // Flatten dish → ingredients into insert rows, preserving dish grouping via sort_order
+            const rows = []
+            dishes.forEach((dish, dishIdx) => {
+                ;(dish.ingredients || []).forEach((ingredient, ingIdx) => {
+                    rows.push({
+                        beo_id: beo.id,
+                        item_name: ingredient,
+                        source_dish: dish.source_dish,
+                        is_ordered: false,
+                        is_manual: false,
+                        sort_order: dishIdx * 100 + ingIdx,
+                    })
+                })
+            })
+
+            if (rows.length > 0) {
+                await supabase.from('event_order_items').insert(rows)
+            }
+
+            await loadOrderItems()
+        } catch (err) {
+            console.error('Error generating order items:', err)
+            alert('Failed to generate order list. Check console for details.')
+        } finally {
+            setGeneratingOrderFor(null)
+        }
+    }
+
+    // Toggle ordered status on a single order item
+    async function toggleOrderItem(itemId, isOrdered) {
+        await supabase
+            .from('event_order_items')
+            .update({ is_ordered: !isOrdered })
+            .eq('id', itemId)
+        setOrderItemsByBeo(prev => {
+            const updated = {}
+            for (const [beoId, items] of Object.entries(prev)) {
+                updated[beoId] = items.map(i =>
+                    i.id === itemId ? { ...i, is_ordered: !isOrdered } : i
+                )
+            }
+            return updated
+        })
+    }
+
+    // Manually add a custom order item to a BEO
+    async function addOrderItem(beoId) {
+        const text = (newOrderText[beoId] || '').trim()
+        if (!text) return
+        const currentItems = orderItemsByBeo[beoId] || []
+        const { error } = await supabase.from('event_order_items').insert({
+            beo_id: beoId,
+            item_name: text,
+            source_dish: null,
+            is_ordered: false,
+            is_manual: true,
+            sort_order: currentItems.length * 100,
+        })
+        if (!error) {
+            setNewOrderText(prev => ({ ...prev, [beoId]: '' }))
+            await loadOrderItems()
+        }
+    }
+
+    // Delete a single order item
+    async function deleteOrderItem(itemId) {
+        await supabase.from('event_order_items').delete().eq('id', itemId)
+        setOrderItemsByBeo(prev => {
+            const updated = {}
+            for (const [beoId, items] of Object.entries(prev)) {
+                updated[beoId] = items.filter(i => i.id !== itemId)
             }
             return updated
         })
@@ -460,6 +585,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                             {isEditing ? renderBeoEditor(b) : renderBeoDetails(b)}
                             {!isEditing && renderCrewNotesPanel(b)}
                             {!isEditing && renderBeoTasks(b.id)}
+                            {!isEditing && renderOrderItems(b)}
                         </div>
                     </div>
                 </div>
@@ -929,6 +1055,167 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 {tasks.length === 0 && !isOffice && (
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0' }}>No tasks assigned</div>
                 )}
+            </div>
+        )
+    }
+
+    // Single order item row — checkbox, name, delete button
+    function renderOrderItemRow(item) {
+        const orderAccent = '#34d399'
+        return (
+            <label
+                key={item.id}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 2px', cursor: 'pointer' }}
+            >
+                <input
+                    type="checkbox"
+                    className="task-box"
+                    checked={item.is_ordered}
+                    onChange={() => toggleOrderItem(item.id, item.is_ordered)}
+                />
+                <span style={{
+                    flex: 1,
+                    fontSize: '0.88rem',
+                    color: item.is_ordered ? 'var(--text-muted)' : 'var(--text-primary)',
+                    textDecoration: item.is_ordered ? 'line-through' : 'none',
+                    transition: 'color 0.2s, text-decoration 0.2s',
+                }}>
+                    {item.item_name}
+                </span>
+                <button
+                    className="wb-act-btn wb-act-delete"
+                    onClick={e => { e.preventDefault(); deleteOrderItem(item.id) }}
+                    title="Remove item"
+                    style={{ fontSize: '0.75rem', flexShrink: 0 }}
+                >
+                    <i className="fa-solid fa-xmark" />
+                </button>
+            </label>
+        )
+    }
+
+    // Order list panel — office-only, rendered inside each expanded BEO card
+    function renderOrderItems(beo) {
+        if (!isOffice) return null
+        const items = orderItemsByBeo[beo.id] || []
+        const orderedCount = items.filter(i => i.is_ordered).length
+        const isGenerating = generatingOrderFor === beo.id
+        const orderAccent = '#34d399'
+        const borderColor = 'rgba(52, 211, 153, 0.25)'
+        const dividerColor = 'rgba(52, 211, 153, 0.18)'
+
+        // Split AI-generated (grouped by source dish) from manual items
+        const autoItems = items.filter(i => !i.is_manual)
+        const manualItems = items.filter(i => i.is_manual)
+
+        // Unique source dishes in insertion order
+        const dishes = []
+        const seenDishes = new Set()
+        autoItems.forEach(item => {
+            if (item.source_dish && !seenDishes.has(item.source_dish)) {
+                seenDishes.add(item.source_dish)
+                dishes.push(item.source_dish)
+            }
+        })
+
+        const dishLabelStyle = {
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: '3px',
+            paddingLeft: '2px',
+        }
+
+        return (
+            <div style={{
+                border: `1px solid ${borderColor}`,
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(52, 211, 153, 0.04)',
+                overflow: 'hidden',
+            }}>
+                {/* Section header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: `1px solid ${dividerColor}` }}>
+                    <span style={{ fontWeight: 700, color: orderAccent, fontSize: '0.9rem' }}>
+                        <i className="fa-solid fa-cart-shopping" style={{ marginRight: '6px' }} />
+                        Order List
+                        {items.length > 0 && (
+                            <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                                {orderedCount}/{items.length} ordered
+                            </span>
+                        )}
+                    </span>
+                    <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => generateOrderItems(beo)}
+                        disabled={isGenerating}
+                        style={{ fontSize: '0.75rem' }}
+                    >
+                        {isGenerating ? (
+                            <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '4px' }} />Generating...</>
+                        ) : autoItems.length > 0 ? (
+                            <><i className="fa-solid fa-arrows-rotate" style={{ marginRight: '4px' }} />Regenerate</>
+                        ) : (
+                            <><i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: '4px' }} />Generate from BEO</>
+                        )}
+                    </button>
+                </div>
+
+                {/* Item list */}
+                {items.length > 0 && (
+                    <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {/* AI-generated items grouped by source dish */}
+                        {dishes.map(dish => (
+                            <div key={dish} style={{ marginBottom: '6px' }}>
+                                <div style={dishLabelStyle}>{dish}</div>
+                                {autoItems.filter(i => i.source_dish === dish).map(item => renderOrderItemRow(item))}
+                            </div>
+                        ))}
+
+                        {/* Manual items */}
+                        {manualItems.length > 0 && (
+                            <div style={{ marginBottom: '4px' }}>
+                                {dishes.length > 0 && (
+                                    <div style={{ ...dishLabelStyle, marginTop: '4px' }}>Custom</div>
+                                )}
+                                {manualItems.map(item => renderOrderItemRow(item))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {items.length === 0 && !isGenerating && (
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '10px 12px' }}>
+                        No order items yet. Click "Generate from BEO" or add items manually below.
+                    </div>
+                )}
+
+                {/* Manual add input */}
+                <div style={{
+                    display: 'flex',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    borderTop: items.length > 0 ? `1px solid ${dividerColor}` : 'none',
+                }}>
+                    <input
+                        className="input"
+                        type="text"
+                        placeholder="Add item to order..."
+                        value={newOrderText[beo.id] || ''}
+                        onChange={e => setNewOrderText(prev => ({ ...prev, [beo.id]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOrderItem(beo.id) } }}
+                        style={{ fontSize: '0.85rem' }}
+                    />
+                    <button
+                        className="btn btn-sm"
+                        style={{ background: orderAccent, color: '#111', borderColor: orderAccent, flexShrink: 0 }}
+                        onClick={() => addOrderItem(beo.id)}
+                        disabled={!(newOrderText[beo.id] || '').trim()}
+                    >
+                        Add
+                    </button>
+                </div>
             </div>
         )
     }
