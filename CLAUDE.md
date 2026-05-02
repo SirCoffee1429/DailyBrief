@@ -37,6 +37,7 @@ The app is live at: https://brief-club.vercel.app
 - `/kitchen/*` — Crew-facing: briefing, tasks, recipes, sales, AI assistant
 - `/office/*` — Manager-facing (password: chef21): all kitchen features +
   briefing editor, workbook upload, category management, history
+- `/foh/*` — Front of house-facing: briefing, tasks, recipes, AI assistant
 
 ### Key Pages
 
@@ -57,6 +58,8 @@ The app is live at: https://brief-club.vercel.app
 - `ManagementBoardPage.jsx` — Dedicated management whiteboard for coordination
 - `EventsBanquetsPage.jsx` — Banquets & special events dashboard with BEO
   parsing
+- `FohDashboard.jsx` — Front of house dashboard (briefing, tasks, recipes,
+  weather)
 
 ### Key Components
 
@@ -84,20 +87,23 @@ The app is live at: https://brief-club.vercel.app
 | `upcoming_banquets`    | Parsed upcoming event summaries scraped from ReserveCloud links     |
 | `banquet_event_orders` | Structured BEOs detailing event date, food items, and quantities    |
 | `weekly_features`      | Scheduled lunch and dinner features displayed on whiteboard         |
+| `event_order_items`    | Parsed event food data for order itemization and purchasing.        |
+| `time_off_requests`    | Time off requests from staff for managers to approve/deny.          |
 
----
+## |
 
 ## Edge Functions
 
-| Function             | Purpose                                                                 |
-| -------------------- | ----------------------------------------------------------------------- |
-| `kitchen-assistant`  | RAG-powered recipe Q&A using vector similarity search                   |
-| `categorize-recipe`  | Classifies uploaded recipe into up to 3 categories                      |
-| `embed-chunks`       | Generates vector embeddings for recipe chunks via Gemini                |
-| `get-weather`        | Proxies Google Weather API for 5-day forecast                           |
-| `process-sales-data` | Postmark webhook — parses sales PDF via Gemini, inserts into sales_data |
-| `process-banquets`   | Postmark webhook — scrapes ReserveCloud PDFs and logs upcoming banquets |
-| `process-beo`        | Parses BEO PDFs via dashboard upload and dynamically extracts food data |
+| Function               | Purpose                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `kitchen-assistant`    | RAG-powered recipe Q&A using vector similarity search                   |
+| `categorize-recipe`    | Classifies uploaded recipe into up to 3 categories                      |
+| `embed-chunks`         | Generates vector embeddings for recipe chunks via Gemini                |
+| `get-weather`          | Proxies Google Weather API for 5-day forecast                           |
+| `process-sales-data`   | Postmark webhook — parses sales PDF via Gemini, inserts into sales_data |
+| `process-banquets`     | Postmark webhook — scrapes ReserveCloud PDFs and logs upcoming banquets |
+| `process-beo`          | Parses BEO PDFs via dashboard upload and dynamically extracts food data |
+| `generate-order-items` | Parses event order items from BEOs and generates order list for chefs   |
 
 ---
 
@@ -168,17 +174,31 @@ If either file does not exist, flag it immediately before proceeding.
    me happy.
 2. Ask me clarifying questions to get a better understanding of my request
    before you start working on it.
-3. Offer suggestions if you think of a better idea or that something might work
+3. Dont start building or working on a new feature until you are 95% confident
+   that you understand my request and that you have a good plan for how to
+   implement it.
+4. Offer suggestions if you think of a better idea or that something might work
    better based on the project and goals.
-4. Always use the tools and functions available to you to get the most accurate
+5. Always use the tools and functions available to you to get the most accurate
    information possible. Do not rely on assumptions.
-5. Double check your work and make sure it is correct before you present it to
+6. Double check your work and make sure it is correct before you present it to
    me.
-6. Refactor code when needed to make it more efficient or readable.
-7. delete dead code when you see it.
-8. Think outside the box and come up with creative solutions to problems.
-9. Always put explanations for your code using // above each function or block
-   of code.
-10. Never cut corners just for the sake of saving time, tokens, or to get
+7. Refactor code when needed to make it more efficient or readable.
+8. delete dead code when you see it.
+9. Think outside the box and come up with creative solutions to problems.
+10. Always put explanations for your code using // above each function or block
+    of code.
+11. Never cut corners just for the sake of saving time, tokens, or to get
     something "working" just for the sake of pleasing me.
-11. Never store JWT locally
+12. Never store JWT locally.
+
+## Session End
+
+Ill trigger the end of the session by saying "Session Complete" or "Close
+Session", or "End Session". At that point you will :
+
+1. Update "CHANGES.md" with a summary of what we worked on and the progress we
+   made. Make sure to save the changes and exit the session.
+2. Update this file with any changes or new information that we learned and is
+   relevant to the project. Make sure to conslidate this file so that it never
+   exceeds 200 lines
