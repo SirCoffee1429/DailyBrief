@@ -87,10 +87,11 @@ The app is live at: https://brief-club.vercel.app
 | `upcoming_banquets`    | Parsed upcoming event summaries scraped from ReserveCloud links     |
 | `banquet_event_orders` | Structured BEOs detailing event date, food items, and quantities    |
 | `weekly_features`      | Scheduled lunch and dinner features displayed on whiteboard         |
-| `event_order_items`    | Parsed event food data for order itemization and purchasing.        |
-| `time_off_requests`    | Time off requests from staff for managers to approve/deny.          |
+| `event_tasks`          | Tasks per BEO event with completion tracking and sort order         |
+| `event_order_items`    | Per-event food ingredient order list; AI-generated + manual, with ordered checkoff |
+| `time_off_requests`    | Staff time off requests with date range, time type, and crew name   |
 
-## |
+---
 
 ## Edge Functions
 

@@ -8,13 +8,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Category names that indicate beverages — skip these when building the ingredient list
+// Category names that indicate beverages — skip entire category when building the menu text
 const BEVERAGE_KEYWORDS = [
   "beverage", "beverages", "bar", "drink", "drinks",
   "cocktail", "cocktails", "wine", "beer", "spirits",
   "alcohol", "juice", "coffee", "tea", "soda",
-  "lemonade", "iced tea", "water", "sparkling water", "club soda", "tonic water", "Bartending", "Open Bar", "Consumption Tab", "Regular", "Decaf", "Sugars/Sweeteners",
-  "Beverage Cart", "NA Beverages", "Standard Beverage Station", "Mimosa Bar", 
+  "lemonade", "iced tea", "water", "sparkling water", "club soda", "tonic water",
+  "bartending", "open bar", "consumption tab", "regular", "decaf", "sugars/sweeteners",
+  "beverage cart", "na beverages", "standard beverage station", "mimosa bar",
 ];
 
 function isBeverageCategory(name: string): boolean {
@@ -22,10 +23,37 @@ function isBeverageCategory(name: string): boolean {
   return BEVERAGE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-interface BeoItem  { label?: string; description?: string; qty?: string }
+interface BeoItem     { label?: string; description?: string; qty?: string }
 interface BeoCategory { name?: string; items?: BeoItem[] }
-interface BeoSection  { categories?: BeoCategory[] }
+interface BeoSection  { date?: string; time?: string; meal_type?: string; location?: string; categories?: BeoCategory[] }
 interface DishBreakdown { source_dish: string; ingredients: string[] }
+
+// Build a human-readable text block from BEO sections so Gemini can parse actual dish names
+// from descriptions, rather than relying on generic item labels like "Buffet" or "Displayed"
+function buildMenuText(sections: BeoSection[]): string {
+  const lines: string[] = [];
+
+  for (const section of sections) {
+    const header = [section.meal_type, section.date, section.time, section.location]
+      .filter(Boolean)
+      .join(" | ");
+    if (header) lines.push(`\n## ${header}`);
+
+    for (const category of (section.categories || [])) {
+      if (isBeverageCategory(category.name || "")) continue;
+      if (category.name) lines.push(`  Category: ${category.name}`);
+
+      for (const item of (category.items || [])) {
+        const label = (item.label || "").trim();
+        const desc  = (item.description || "").trim();
+        if (label) lines.push(`    - ${label}`);
+        if (desc)  lines.push(`      ${desc.split("\n").join("\n      ")}`);
+      }
+    }
+  }
+
+  return lines.join("\n").trim();
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -42,24 +70,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Collect unique food item labels, skipping beverage categories
-    const seen = new Set<string>();
-    const foodItems: string[] = [];
+    const menuText = buildMenuText(sections);
 
-    for (const section of sections) {
-      for (const category of (section.categories || [])) {
-        if (isBeverageCategory(category.name || "")) continue;
-        for (const item of (category.items || [])) {
-          const label = (item.label || "").trim();
-          if (label && !seen.has(label.toLowerCase())) {
-            seen.add(label.toLowerCase());
-            foodItems.push(label);
-          }
-        }
-      }
-    }
-
-    if (foodItems.length === 0) {
+    if (!menuText) {
       return new Response(
         JSON.stringify({ items: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -67,21 +80,24 @@ Deno.serve(async (req: Request) => {
     }
 
     const prompt = `You are a professional chef and kitchen purchasing manager for a country club.
-For each menu item listed below, break it down into the core ingredients a commercial kitchen would need to ORDER or PURCHASE.
 
-Rules:
+Below is the raw menu content from a Banquet Event Order (BEO). Your job is to:
+1. Identify every distinct food dish or menu item described in the text (ignore beverages, serving size notes like "Serves 20" or "20 pieces", and generic labels like "Displayed" or "A La Carte Ordering" unless they have a real dish described alongside them)
+2. For each dish, list the core ingredients a commercial kitchen would need to ORDER or PURCHASE
+
+Rules for ingredient lists:
 - Focus on proteins, produce, dairy, specialty items, and notable components
-- Omit ultra-basic pantry staples (water, generic salt, generic pepper) UNLESS they are a significant purchase item for this dish
-- If an item is already a single purchasable ingredient (e.g. "Dinner Rolls", "Steamed Broccoli"), list it as-is
+- Omit ultra-basic pantry staples (water, generic salt, generic pepper) UNLESS they are a significant purchase item
+- If an item is already a single purchasable ingredient (e.g. "Dinner Rolls", "Steamed Broccoli"), list it as-is with no further breakdown needed
 - Use plain lowercase ingredient names (e.g. "russet potatoes", not "Russet Potatoes")
 - Aim for 3–7 ingredients per dish; do not over-list
 
-Menu Items:
-${foodItems.map((item) => `- ${item}`).join("\n")}
+BEO Menu Content:
+${menuText}
 
-Return ONLY a valid JSON array. No markdown, no code fences, no explanation. Format:
+Return ONLY a valid JSON array where each element represents one dish. Format:
 [
-  { "source_dish": "Exact Menu Item Name", "ingredients": ["ingredient1", "ingredient2"] }
+  { "source_dish": "Exact dish name as written in the BEO", "ingredients": ["ingredient1", "ingredient2"] }
 ]`;
 
     const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
@@ -89,7 +105,11 @@ Return ONLY a valid JSON array. No markdown, no code fences, no explanation. For
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 4096,
+          responseMimeType: "application/json",
+        },
       }),
     });
 
@@ -113,7 +133,7 @@ Return ONLY a valid JSON array. No markdown, no code fences, no explanation. For
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse Gemini response as JSON:", cleaned);
+      console.error("Raw Gemini output (unparseable):", raw);
       throw new Error("Gemini returned non-JSON output");
     }
 

@@ -12,7 +12,8 @@
       "mcp__claude_ai_Supabase__get_cost",
       "mcp__claude_ai_Supabase__get_project",
       "mcp__claude_ai_Supabase__list_projects",
-      "mcp__claude_ai_Supabase__apply_migration"
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__get_logs"
     ]
   }
 }
