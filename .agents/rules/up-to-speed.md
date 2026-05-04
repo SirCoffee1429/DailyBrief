@@ -9,8 +9,7 @@ perform the following steps before doing anything else:
 
 ### Step 1 — Read the Change Log
 
-Read the full contents of:
-`C:\Old Hawthorne Projects\DailyBrief\.claude\changes_made\CHANGES.md`
+Read 3 most recent entries of: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
 
 ### Step 2 — Read the Project Brief
 
@@ -20,8 +19,6 @@ Read the full contents of: `C:\Old Hawthorne Projects\DailyBrief\CLAUDE.md`
 
 After reading both files, summarize the following before proceeding with any
 task:
-
-**Project:** Brief description of what DailyBrief is and its current state.
 
 **Last 3 Tasks Completed:** Pull the 3 most recent entries from CHANGES.md and
 summarize what was done.

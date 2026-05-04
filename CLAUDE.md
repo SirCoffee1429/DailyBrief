@@ -74,22 +74,22 @@ The app is live at: https://brief-club.vercel.app
 
 ## Supabase Tables
 
-| Table                  | Purpose                                                             |
-| ---------------------- | ------------------------------------------------------------------- |
-| `workbooks`            | Uploaded Excel recipe files, category as text[]                     |
-| `workbook_sheets`      | Parsed sheet rows stored as JSON arrays                             |
-| `workbook_chunks`      | Text chunks with vector embeddings for RAG                          |
-| `recipe_categories`    | User-managed category list                                          |
-| `briefings`            | Daily shift notes (title, body, date)                               |
-| `briefing_tasks`       | Tasks attached to briefings with completion + sort order            |
-| `sales_data`           | Parsed nightly sales (item_name, units_sold, category, report_date) |
-| `management_notes`     | Internal management communications and event coordination           |
-| `upcoming_banquets`    | Parsed upcoming event summaries scraped from ReserveCloud links     |
-| `banquet_event_orders` | Structured BEOs detailing event date, food items, and quantities    |
-| `weekly_features`      | Scheduled lunch and dinner features displayed on whiteboard         |
-| `event_tasks`          | Tasks per BEO event with completion tracking and sort order         |
+| Table                  | Purpose                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `workbooks`            | Uploaded Excel recipe files, category as text[]                                    |
+| `workbook_sheets`      | Parsed sheet rows stored as JSON arrays                                            |
+| `workbook_chunks`      | Text chunks with vector embeddings for RAG                                         |
+| `recipe_categories`    | User-managed category list                                                         |
+| `briefings`            | Daily shift notes (title, body, date)                                              |
+| `briefing_tasks`       | Tasks attached to briefings with completion + sort order                           |
+| `sales_data`           | Parsed nightly sales (item_name, units_sold, category, report_date)                |
+| `management_notes`     | Internal management communications and event coordination                          |
+| `upcoming_banquets`    | Parsed upcoming event summaries scraped from ReserveCloud links                    |
+| `banquet_event_orders` | Structured BEOs detailing event date, food items, and quantities                   |
+| `weekly_features`      | Scheduled lunch and dinner features displayed on whiteboard                        |
+| `event_tasks`          | Tasks per BEO event with completion tracking and sort order                        |
 | `event_order_items`    | Per-event food ingredient order list; AI-generated + manual, with ordered checkoff |
-| `time_off_requests`    | Staff time off requests with date range, time type, and crew name   |
+| `time_off_requests`    | Staff time off requests with date range, time type, and crew name                  |
 
 ---
 
@@ -153,20 +153,13 @@ ivfflat on `workbook_chunks.embedding`
 
 ## Change Tracking
 
-All changes are logged at:
-`C:\Old Hawthorne Projects\DailyBrief\.claude\changes_made\CHANGES.md`
+All changes are logged at: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
 
 ## Session Initialization
 
 At the start of every new session, or whenever a new model is loaded, you MUST:
 
-1. Read `CHANGES.md` for project history
-2. Read this file for project context
-3. Summarize the last 3 tasks completed and current status
-4. Output: "Context loaded. Ready to continue from [LAST TASK TITLE]." before
-   doing any work
-
-If either file does not exist, flag it immediately before proceeding.
+1. Read all files in C:\Old Hawthorne Projects\DailyBrief\.agents\rules
 
 ## Your Behavior
 

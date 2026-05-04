@@ -5,7 +5,7 @@ trigger: always_on
 ## Change Tracking
 
 After every code change, update, or new feature addition, you MUST append a new
-entry to: `C:\Old Hawthorne Projects\DailyBrief\.claude\changes_made\CHANGES.md`
+entry to: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
 
 Each entry must follow this format:
 
