@@ -2,6 +2,22 @@
 
 ---
 
+### 2026-05-04 — BEO Card Two-Column Layout (Kitchen + Office)
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feature`
+**Summary:** Redesigned the expanded BEO card layout on both Kitchen and Office Events & Catering pages. Tasks and Crew Notes now appear in a fixed-width right panel alongside the BEO details instead of stacking below, making them immediately visible without scrolling.
+
+**Details:**
+
+- Kitchen view: expanded BEO body now uses a flex-row layout — BEO details (`flex: 1`) on the left, 300px right column containing Tasks (top) and Crew Notes (bottom)
+- Office view: same two-column layout with a 320px right column (slightly wider to accommodate add-task input and save/reset buttons); Order List panel remains full-width below both columns since it can expand significantly with ingredient groups
+- `renderCrewNotesPanel` gained a `forceOpen = false` parameter — when `true`, bypasses the toggle check so notes always render when a card is expanded (used in both kitchen and office right panels)
+- Removed the sticky-note toggle button from the BEO card header entirely; notes are now always visible in the right panel for both views, making the toggle redundant
+- Collapsing a card still hides the entire expanded body (including the right panel) via the existing `grid-template-rows: 0fr` animation
+
+---
+
 ### 2026-04-30 — Event Order List with AI Ingredient Breakdown
 
 **File(s) Changed:**
