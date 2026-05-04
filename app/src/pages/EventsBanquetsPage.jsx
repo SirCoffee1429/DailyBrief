@@ -534,21 +534,6 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
                     {/* Action buttons — siblings of the expand zone, not nested inside it */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                        {!isFOH && !isEditing && (
-                            <button
-                                className="wb-act-btn"
-                                onClick={() => toggleNotes(b)}
-                                title="Crew notes for this event"
-                                style={{
-                                    fontSize: '0.85rem',
-                                    background: b.crew_notes ? 'rgba(250, 204, 21, 0.12)' : 'transparent',
-                                    borderColor: b.crew_notes ? 'rgba(250, 204, 21, 0.4)' : undefined,
-                                    color: b.crew_notes ? '#facc15' : undefined,
-                                }}
-                            >
-                                <i className="fa-regular fa-note-sticky" />
-                            </button>
-                        )}
                         {isOffice && !isEditing && (
                             <>
                                 <button
@@ -581,11 +566,35 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     }}
                 >
                     <div style={{ overflow: 'hidden' }}>
-                        <div style={{ padding: '0 var(--space-4) var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                            {isEditing ? renderBeoEditor(b) : renderBeoDetails(b)}
-                            {!isEditing && renderCrewNotesPanel(b)}
-                            {!isEditing && renderBeoTasks(b.id)}
-                            {!isEditing && renderOrderItems(b)}
+                        <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+                            {isEditing ? (
+                                renderBeoEditor(b)
+                            ) : isKitchen ? (
+                                // Kitchen: two-column layout — BEO details left, tasks + notes right
+                                <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        {renderBeoDetails(b)}
+                                    </div>
+                                    <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                        {renderBeoTasks(b.id)}
+                                        {renderCrewNotesPanel(b, true)}
+                                    </div>
+                                </div>
+                            ) : (
+                                // Office: two-column layout — BEO details left, tasks + notes right; order list below
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                    <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            {renderBeoDetails(b)}
+                                        </div>
+                                        <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                            {renderBeoTasks(b.id)}
+                                            {renderCrewNotesPanel(b, true)}
+                                        </div>
+                                    </div>
+                                    {renderOrderItems(b)}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -918,9 +927,10 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     }
 
     // Per-event crew notes — read/write for both Kitchen and Office (hidden on FOH)
-    function renderCrewNotesPanel(b) {
+    // forceOpen bypasses the toggle so notes always render (used in kitchen side panel)
+    function renderCrewNotesPanel(b, forceOpen = false) {
         if (isFOH) return null
-        const open = !!notesOpen[b.id]
+        const open = forceOpen || !!notesOpen[b.id]
         if (!open) return null
         const draft = notesDraft[b.id] ?? (b.crew_notes || '')
         const dirty = (draft || '') !== (b.crew_notes || '')
