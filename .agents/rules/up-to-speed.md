@@ -7,18 +7,15 @@ trigger: always_on
 At the start of every new session, or whenever a new model is loaded, you MUST
 perform the following steps before doing anything else:
 
+### Step 1 —
+
 ### Step 1 — Read the Change Log
 
 Read 3 most recent entries of: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
 
-### Step 2 — Read the Project Brief
+### Step 2 — Build Your Context
 
-Read the full contents of: `C:\Old Hawthorne Projects\DailyBrief\CLAUDE.md`
-
-### Step 3 — Build Your Context
-
-After reading both files, summarize the following before proceeding with any
-task:
+After reading the file, summarize the following before proceeding with any task:
 
 **Last 3 Tasks Completed:** Pull the 3 most recent entries from CHANGES.md and
 summarize what was done.

@@ -2,6 +2,23 @@
 
 ---
 
+### 2026-05-05 — Mobile Sidebar Toggle for Office Dashboard
+
+**File(s) Changed:** `app/src/components/OfficeLayout.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Summary:** Fixed the office sidebar being unusable on mobile by making it slide off-screen by default and adding a hamburger button in the topbar to show/hide it.
+
+**Details:**
+
+- Added `sidebarOpen` state (default `false`), `toggleSidebar`, and `closeSidebar` callbacks to `OfficeLayout`
+- Sidebar now receives `sidebar-open` class conditionally; on mobile (`≤768px`) it uses `position: fixed; transform: translateX(-100%)` by default and slides to `translateX(0)` when open
+- Added a dark overlay (`office-v2-sidebar-overlay`, z-index 40) that renders when sidebar is open — tapping it closes the sidebar
+- Added `office-v2-hamburger-mobile` button in the topbar: hidden via `display: none` on desktop, shown on mobile with `margin-right: auto` to push the user button to the right
+- Wired the existing sidebar header hamburger button to `toggleSidebar` (works on desktop to collapse too)
+- Added `onClick={closeSidebar}` to all 8 NavLinks and the Lock Office button so navigation auto-closes the sidebar on mobile
+
+---
+
 ### 2026-05-04 — BEO Card Two-Column Layout (Kitchen + Office)
 
 **File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`

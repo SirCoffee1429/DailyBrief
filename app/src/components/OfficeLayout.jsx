@@ -7,8 +7,12 @@ export default function OfficeLayout({ children }) {
     const [assistantOpen, setAssistantOpen] = useState(false)
     const [voiceMode, setVoiceMode] = useState(false)
     const [longPressActive, setLongPressActive] = useState(false)
+    const [sidebarOpen, setSidebarOpen] = useState(false)
     const longPressTimer = useRef(null)
     const didTriggerVoice = useRef(false)
+
+    const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+    const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), [])
 
     const handlePointerDown = useCallback(() => {
         didTriggerVoice.current = false
@@ -44,45 +48,45 @@ export default function OfficeLayout({ children }) {
 
     return (
         <div className="office-v2-container">
-            {/* Desktop Sidebar */}
-            <aside className="office-v2-sidebar">
+            {/* Sidebar */}
+            <aside className={`office-v2-sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
                 <div className="office-v2-sidebar-header">
-                    <button className="office-v2-nav-link" style={{ padding: '0', marginRight: '1rem', border: 'none' }}>
+                    <button className="office-v2-nav-link" onClick={toggleSidebar} style={{ padding: '0', marginRight: '1rem', border: 'none' }}>
                         <i className="fa-solid fa-bars" />
                     </button>
                     <h1 className="office-v2-sidebar-title">Office Dashboard</h1>
                 </div>
                 
                 <nav className="office-v2-nav custom-scrollbar">
-                    <NavLink to="/office" end className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office" end onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-grip office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem', fontWeight: 500 }}>Dashboard</span>
                     </NavLink>
-                    <NavLink to="/office/sales" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/sales" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-dollar-sign office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Sales</span>
                     </NavLink>
-                    <NavLink to="/office/workbooks" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/workbooks" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-book-open office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Recipes</span>
                     </NavLink>
-                    <NavLink to="/office/history" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/history" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-check-square office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Tasks</span>
                     </NavLink>
-                    <NavLink to="/office/briefings" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/briefings" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-clipboard-list office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Briefings</span>
                     </NavLink>
-                    <NavLink to="/office/events" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/events" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-calendar-alt office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Events</span>
                     </NavLink>
-                    <NavLink to="/office/time-off" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/time-off" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-regular fa-calendar office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Time Off</span>
                     </NavLink>
-                    <NavLink to="/office/chat" className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/chat" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-comments office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Communication</span>
                     </NavLink>
@@ -110,20 +114,29 @@ export default function OfficeLayout({ children }) {
                 </nav>
 
                 <div style={{ padding: '1rem', borderTop: '1px solid #333' }}>
-                    <button className="office-v2-nav-link" onClick={handleLogout} style={{ width: '100%', border: 'none', justifyContent: 'flex-start' }}>
+                    <button className="office-v2-nav-link" onClick={() => { closeSidebar(); handleLogout() }} style={{ width: '100%', border: 'none', justifyContent: 'flex-start' }}>
                         <i className="fa-solid fa-lock office-v2-nav-icon" style={{ color: '#e66b35' }} />
                         <span style={{ marginLeft: '0.75rem' }}>Lock Office</span>
                     </button>
                 </div>
             </aside>
 
+            {/* Overlay — closes sidebar when tapped on mobile */}
+            {sidebarOpen && (
+                <div className="office-v2-sidebar-overlay" onClick={closeSidebar} />
+            )}
+
             {/* Main Wrapper */}
             <main className="office-v2-main">
                 <header className="office-v2-topbar">
-                    <button 
-                        style={{ 
-                            color: '#e66b35', 
-                            border: '1px solid #e66b35', 
+                    {/* Mobile-only hamburger to open sidebar */}
+                    <button className="office-v2-hamburger-mobile" onClick={toggleSidebar}>
+                        <i className="fa-solid fa-bars" />
+                    </button>
+                    <button
+                        style={{
+                            color: '#e66b35',
+                            border: '1px solid #e66b35',
                             borderRadius: '999px',
                             width: '2rem', height: '2rem',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
