@@ -13,7 +13,8 @@ export default function Dashboard() {
     const [todaysBriefings, setTodaysBriefings] = useState([])
     const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
-    const [beoCount, setBeoCount] = useState(0)
+    const [todaysEvents, setTodaysEvents] = useState([])
+    const [nextEvent, setNextEvent] = useState(null)
 
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
@@ -51,9 +52,28 @@ export default function Dashboard() {
                 setTodaysBriefings(dayBriefings || [])
                 setActiveIndex(0)
             }
+
+            // Fetch today's BEOs for the events widget
+            const todayStr = new Date().toISOString().split('T')[0]
+            const { data: todayData } = await supabase
+                .from('banquet_event_orders')
+                .select('id, event_name, start_time, guest_count, location')
+                .eq('event_date', todayStr)
+                .order('start_time', { ascending: true })
+            setTodaysEvents(todayData || [])
+            // If no events today, fetch the next upcoming event as a fallback
+            if (!todayData || todayData.length === 0) {
+                const { data: nextData } = await supabase
+                    .from('banquet_event_orders')
+                    .select('id, event_name, start_time, guest_count, event_date')
+                    .gt('event_date', todayStr)
+                    .order('event_date', { ascending: true })
+                    .limit(1)
+                    .maybeSingle()
+                setNextEvent(nextData || null)
+            }
         }
         load()
-        supabase.from('banquet_event_orders').select('id', { count: 'exact', head: true }).then(({ count }) => setBeoCount(count || 0))
     }, [])
 
     // Load tasks whenever the active briefing changes
@@ -206,8 +226,33 @@ export default function Dashboard() {
                         <div className="recipes-icon-box" style={{ background: '#1e3a5f' }}><i className="fa-solid fa-champagne-glasses" /></div>
                         <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>
                     </div>
-                    <div className="recipes-number">{beoCount}</div>
-                    <div className="recipes-subtitle">Upcoming Events</div>
+                    <div className="events-card-label">Today's Events</div>
+                    {todaysEvents.length > 0 ? (
+                        <ul className="events-card-list">
+                            {todaysEvents.map(ev => (
+                                <li key={ev.id} className="events-card-item">
+                                    <span className="events-card-name">{ev.event_name}</span>
+                                    <span className="events-card-meta">
+                                        {ev.start_time && <span>{ev.start_time}</span>}
+                                        {ev.guest_count && <span>{ev.guest_count} guests</span>}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : nextEvent ? (
+                        <div className="events-card-next">
+                            <div className="events-card-next-label">
+                                Next: {new Date(nextEvent.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </div>
+                            <div className="events-card-name">{nextEvent.event_name}</div>
+                            <div className="events-card-meta">
+                                {nextEvent.start_time && <span>{nextEvent.start_time}</span>}
+                                {nextEvent.guest_count && <span>{nextEvent.guest_count} guests</span>}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="events-card-empty">No upcoming events</div>
+                    )}
                 </Link>
 
                 <Link to="/kitchen/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>

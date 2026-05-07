@@ -13,7 +13,10 @@
       "mcp__claude_ai_Supabase__get_project",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__apply_migration",
-      "mcp__claude_ai_Supabase__get_logs"
+      "mcp__claude_ai_Supabase__get_logs",
+      "Bash(Get-ChildItem -Path \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName)",
+      "Bash(xargs grep *)"
     ]
   }
 }

@@ -679,6 +679,53 @@ a:hover {
   min-height: 160px;
 }
 
+.events-card-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+}
+.events-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+}
+.events-card-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.events-card-name {
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.events-card-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.events-card-next-label {
+  font-size: var(--font-size-xs);
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+.events-card-empty {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 /* Sales Briefing (previous night's sales) — full-width bottom row */
 .sales-briefing-card {
   grid-area: sales;
