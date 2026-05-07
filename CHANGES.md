@@ -2,6 +2,56 @@
 
 ---
 
+### 2026-05-07 — BEO Details Responsive Table Reflow
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`, `app/src/index.css`
+**Type:** `fix`
+**Summary:** Replaced fixed-pixel grid columns in BEO detail tables with responsive CSS classes so all content is readable on mobile without horizontal scrolling.
+
+**Details:**
+
+- Removed `overflowX: auto` / `minWidth` from animation container and table blocks (no more swiping)
+- Extracted all inline `gridTemplateColumns` from `renderBeoDetails` into named CSS classes: `beo-summary-grid`, `beo-timeline-header-row`, `beo-timeline-data-row`, `beo-section-header-row`, `beo-item-row`
+- Desktop layout unchanged: summary `180px 1fr`, timeline `120px 100px 1fr 1.5fr`, section header `140px 1fr 60px`, items `160px 1fr 70px`
+- Mobile (`≤768px`) overrides:
+  - Summary: `auto 1fr` so label column self-sizes
+  - Timeline: header row hidden; data rows go `flex-wrap` — date+time as small secondary text, item bold full-width, description muted below
+  - Section header: day column hidden, meal info fills width, qty col stays
+  - Item rows: `flex-wrap` — label + qty on one line, description full-width below in muted text
+
+---
+
+### 2026-05-06 — Events Page BEO Table Horizontal Scroll Fix
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `fix`
+**Summary:** Fixed BEO cards being cut off in the middle on mobile. Fixed-column CSS grids inside expanded BEO cards were overflowing and being hard-clipped by ancestor `overflow: hidden` containers.
+
+**Details:**
+
+- Changed animation container (expanded body inner div) from `overflow: 'hidden'` to `overflowX: 'auto', overflowY: 'hidden'` — preserves collapse animation while allowing horizontal scroll
+- Changed summary+timeline block wrapper from `overflow: 'hidden'` to `overflowX: 'auto'`; added `minWidth` to grids so they scroll rather than squash (`320px` for summary, `440px` for timeline)
+- Changed each section block wrapper from `overflow: 'hidden'` to `overflowX: 'auto'`; added `minWidth: '320px'` to section header and item rows
+- Removed broken `<div style={{ overflowX: 'auto' }}>` wrapper inserted in previous session that created unbalanced div nesting
+
+---
+
+### 2026-05-05 — Events Page Mobile Layout Fix
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`, `app/src/index.css`
+**Type:** `fix`
+**Summary:** Fixed the Events & Catering page being unusable on mobile — the coordination notes sidebar and BEO card right panels consumed most of the screen width, hiding the actual event content.
+
+**Details:**
+
+- Added three CSS classes: `events-page-grid`, `beo-two-col`, `beo-right-panel`, `beo-right-panel-kitchen` to control responsive layout declaratively
+- `events-page-grid` replaces the inline `minmax(0,1fr) 300px` grid on the page wrapper — collapses to single column on `≤768px` so the coordination notes panel stacks below BEOs instead of beside them
+- `beo-two-col` replaces the inline `display:flex` row on BEO card expanded bodies — collapses to column on mobile
+- `beo-right-panel` (320px) and `beo-right-panel-kitchen` (300px) replace the inline fixed-width containers for tasks+notes — become `width: 100%` on mobile
+- All three layout classes resolve to their original desktop widths above 768px — no desktop regression
+
+---
+
 ### 2026-05-05 — Mobile Sidebar Toggle for Office Dashboard
 
 **File(s) Changed:** `app/src/components/OfficeLayout.jsx`, `app/src/index.css`

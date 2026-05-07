@@ -571,11 +571,11 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                 renderBeoEditor(b)
                             ) : isKitchen ? (
                                 // Kitchen: two-column layout — BEO details left, tasks + notes right
-                                <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+                                <div className="beo-two-col">
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         {renderBeoDetails(b)}
                                     </div>
-                                    <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                    <div className="beo-right-panel-kitchen">
                                         {renderBeoTasks(b.id)}
                                         {renderCrewNotesPanel(b, true)}
                                     </div>
@@ -583,11 +583,11 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                             ) : (
                                 // Office: two-column layout — BEO details left, tasks + notes right; order list below
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                                    <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+                                    <div className="beo-two-col">
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             {renderBeoDetails(b)}
                                         </div>
-                                        <div style={{ width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                                        <div className="beo-right-panel">
                                             {renderBeoTasks(b.id)}
                                             {renderCrewNotesPanel(b, true)}
                                         </div>
@@ -613,33 +613,33 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', fontSize: '0.92rem' }}>
                 {/* Event summary table — mirrors top of PDF */}
                 <div style={{ border: cellBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr' }}>
-                        <div style={{ padding: '8px 12px', background: headerBg, fontWeight: 700, borderBottom: cellBorder, borderRight: cellBorder }}>Event Headcount</div>
-                        <div style={{ padding: '8px 12px', borderBottom: cellBorder, textAlign: 'right' }}>{b.guest_count || '—'}</div>
-                        <div style={{ padding: '8px 12px', background: headerBg, fontWeight: 700, borderBottom: cellBorder, borderRight: cellBorder }}>Event Date(s)</div>
-                        <div style={{ padding: '8px 12px', borderBottom: cellBorder, textAlign: 'right' }}>
+                    <div className="beo-summary-grid">
+                        <div className="beo-cell-label" style={{ borderBottom: cellBorder, borderRight: cellBorder }}>Event Headcount</div>
+                        <div className="beo-cell-value" style={{ borderBottom: cellBorder }}>{b.guest_count || '—'}</div>
+                        <div className="beo-cell-label" style={{ borderBottom: cellBorder, borderRight: cellBorder }}>Event Date(s)</div>
+                        <div className="beo-cell-value" style={{ borderBottom: cellBorder }}>
                             {b.event_date ? new Date(b.event_date + 'T12:00:00').toLocaleDateString('en-US') : '—'}
                             {b.event_end_date && b.event_end_date !== b.event_date && ` – ${new Date(b.event_end_date + 'T12:00:00').toLocaleDateString('en-US')}`}
                         </div>
-                        <div style={{ padding: '8px 12px', background: headerBg, fontWeight: 700, borderRight: cellBorder }}>Event Location(s)</div>
-                        <div style={{ padding: '8px 12px', textAlign: 'right' }}>{b.location || '—'}</div>
+                        <div className="beo-cell-label" style={{ borderRight: cellBorder }}>Event Location(s)</div>
+                        <div className="beo-cell-value">{b.location || '—'}</div>
                     </div>
 
                     {/* Timeline table */}
                     {(b.timeline || []).length > 0 && (
                         <div style={{ borderTop: cellBorder }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 1.5fr', background: headerBg, fontWeight: 700 }}>
-                                <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>Start Date</div>
-                                <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>Start Time</div>
-                                <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>Timeline Item</div>
-                                <div style={{ padding: '8px 12px', textAlign: 'center' }}>Description</div>
+                            <div className="beo-timeline-header-row" style={{ background: headerBg, fontWeight: 700 }}>
+                                <div className="beo-tl-date" style={{ borderRight: cellBorder }}>Start Date</div>
+                                <div className="beo-tl-time" style={{ borderRight: cellBorder }}>Start Time</div>
+                                <div className="beo-tl-item" style={{ borderRight: cellBorder }}>Timeline Item</div>
+                                <div className="beo-tl-desc">Description</div>
                             </div>
                             {(b.timeline || []).map((row, idx) => (
-                                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 1.5fr', borderTop: cellBorder }}>
-                                    <div style={{ padding: '6px 12px', borderRight: cellBorder }}>{row.date ? new Date(row.date + 'T12:00:00').toLocaleDateString('en-US') : ''}</div>
-                                    <div style={{ padding: '6px 12px', borderRight: cellBorder }}>{row.time || ''}</div>
-                                    <div style={{ padding: '6px 12px', borderRight: cellBorder }}>{row.item || ''}</div>
-                                    <div style={{ padding: '6px 12px' }}>{row.description || ''}</div>
+                                <div key={idx} className="beo-timeline-data-row" style={{ borderTop: cellBorder }}>
+                                    <div className="beo-tl-date" style={{ borderRight: cellBorder }}>{row.date ? new Date(row.date + 'T12:00:00').toLocaleDateString('en-US') : ''}</div>
+                                    <div className="beo-tl-time" style={{ borderRight: cellBorder }}>{row.time || ''}</div>
+                                    <div className="beo-tl-item" style={{ borderRight: cellBorder }}>{row.item || ''}</div>
+                                    <div className="beo-tl-desc">{row.description || ''}</div>
                                 </div>
                             ))}
                         </div>
@@ -650,12 +650,12 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 {(b.sections || []).map((section, sIdx) => (
                     <div key={sIdx} style={{ border: cellBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                         {/* Section header row */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 80px', background: headerBg, fontWeight: 700 }}>
-                            <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>{section.day_label || section.date}</div>
-                            <div style={{ padding: '8px 12px', borderRight: cellBorder, textAlign: 'center' }}>
-                                {[section.meal_type, section.time, section.location].filter(Boolean).join(' - ')}
+                        <div className="beo-section-header-row" style={{ background: headerBg, fontWeight: 700 }}>
+                            <div className="beo-section-day" style={{ borderRight: cellBorder }}>{section.day_label || section.date}</div>
+                            <div className="beo-section-meal" style={{ borderRight: cellBorder }}>
+                                {[section.meal_type, section.time, section.location].filter(Boolean).join(' · ')}
                             </div>
-                            <div style={{ padding: '8px 12px', textAlign: 'center' }}>Qty</div>
+                            <div className="beo-section-qty-hdr">Qty</div>
                         </div>
                         {(section.categories || []).map((cat, cIdx) => (
                             <div key={cIdx} style={{ borderTop: cellBorder }}>
@@ -663,10 +663,10 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                     {cat.name}
                                 </div>
                                 {(cat.items || []).map((item, iIdx) => (
-                                    <div key={iIdx} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 80px', borderTop: cellBorder }}>
-                                        <div style={{ padding: '8px 12px', borderRight: cellBorder, fontWeight: 600 }}>{item.label || ''}</div>
-                                        <div style={{ padding: '8px 12px', borderRight: cellBorder, whiteSpace: 'pre-wrap', textAlign: 'center' }}>{item.description || ''}</div>
-                                        <div style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: accentBlue }}>{item.qty || ''}</div>
+                                    <div key={iIdx} className="beo-item-row" style={{ borderTop: cellBorder }}>
+                                        <div className="beo-item-label" style={{ borderRight: cellBorder }}>{item.label || ''}</div>
+                                        <div className="beo-item-description" style={{ borderRight: cellBorder }}>{item.description || ''}</div>
+                                        <div className="beo-item-qty" style={{ color: accentBlue }}>{item.qty || ''}</div>
                                     </div>
                                 ))}
                             </div>
@@ -1249,7 +1249,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isOffice ? 'minmax(0, 1fr) 300px' : '1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
+            <div className={isOffice ? 'events-page-grid' : ''} style={isOffice ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
 
                 {/* Left Panel: Parsed upcoming banquets & BEOs */}
                 <div className="card-column" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>

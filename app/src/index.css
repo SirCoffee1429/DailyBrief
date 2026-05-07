@@ -4116,6 +4116,234 @@ tr.beo-completed td .beo-check {
   }
 }
 
+/* ── Events Page Responsive Layout ───────────────────── */
+
+/* Office page-level grid: BEOs left, coordination notes right */
+.events-page-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* BEO card expanded two-column layout (BEO details left, tasks+notes right) */
+.beo-two-col {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+/* Fixed-width right panel inside expanded BEO cards */
+.beo-right-panel {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.beo-right-panel-kitchen {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  /* Stack coordination notes below BEO list on mobile */
+  .events-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack BEO card inner columns vertically */
+  .beo-two-col {
+    flex-direction: column;
+  }
+
+  /* Let right panel fill full width when stacked */
+  .beo-right-panel,
+  .beo-right-panel-kitchen {
+    width: 100%;
+  }
+}
+
+/* ── BEO Details Table Classes ────────────────────────── */
+
+/* Summary table: label col fixed, value col fills */
+.beo-summary-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+}
+
+.beo-cell-label {
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.10);
+  font-weight: 700;
+}
+
+.beo-cell-value {
+  padding: 8px 12px;
+  text-align: right;
+}
+
+/* Timeline: desktop 4-column grid */
+.beo-timeline-header-row,
+.beo-timeline-data-row {
+  display: grid;
+  grid-template-columns: 120px 100px 1fr 1.5fr;
+}
+
+.beo-tl-date,
+.beo-tl-time,
+.beo-tl-item,
+.beo-tl-desc {
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.beo-timeline-data-row .beo-tl-date,
+.beo-timeline-data-row .beo-tl-time,
+.beo-timeline-data-row .beo-tl-item,
+.beo-timeline-data-row .beo-tl-desc {
+  padding: 6px 12px;
+}
+
+/* Section header: day | meal info | qty */
+.beo-section-header-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 60px;
+}
+
+.beo-section-day,
+.beo-section-meal,
+.beo-section-qty-hdr {
+  padding: 8px 12px;
+  text-align: center;
+}
+
+/* Item rows: label | description | qty */
+.beo-item-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 70px;
+}
+
+.beo-item-label {
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+.beo-item-description {
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  text-align: center;
+}
+
+.beo-item-qty {
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  /* Summary: auto-size the label column so it wraps naturally */
+  .beo-summary-grid {
+    grid-template-columns: auto 1fr;
+  }
+
+  .beo-cell-label {
+    font-size: 0.82rem;
+  }
+
+  .beo-cell-value {
+    font-size: 0.85rem;
+  }
+
+  /* Timeline: hide desktop header row; stack each row as a mini card */
+  .beo-timeline-header-row {
+    display: none;
+  }
+
+  .beo-timeline-data-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding: 8px 12px;
+  }
+
+  .beo-timeline-data-row .beo-tl-date,
+  .beo-timeline-data-row .beo-tl-time {
+    padding: 0;
+    text-align: left;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-right: none !important;
+  }
+
+  .beo-timeline-data-row .beo-tl-item {
+    width: 100%;
+    padding: 2px 0 0;
+    text-align: left;
+    font-weight: 600;
+    border-right: none !important;
+  }
+
+  .beo-timeline-data-row .beo-tl-desc {
+    width: 100%;
+    padding: 0 0 2px;
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  /* Section header: hide day column, meal info fills width */
+  .beo-section-header-row {
+    grid-template-columns: 1fr 50px;
+  }
+
+  .beo-section-day {
+    display: none;
+  }
+
+  .beo-section-meal {
+    border-right: none !important;
+  }
+
+  /* Item rows: label + qty on one line, description below */
+  .beo-item-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 8px;
+  }
+
+  .beo-item-label {
+    flex: 1;
+    min-width: 0;
+    border-right: none !important;
+    padding-bottom: 2px;
+  }
+
+  .beo-item-qty {
+    flex-shrink: 0;
+    padding-left: 4px;
+    padding-bottom: 2px;
+  }
+
+  .beo-item-description {
+    width: 100%;
+    border-right: none !important;
+    text-align: left;
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    padding-top: 0;
+    padding-bottom: 8px;
+    white-space: normal;
+  }
+}
+
 /* ── Sales Trend Chart ────────────────────────────────── */
 
 .trend-chart-card {
