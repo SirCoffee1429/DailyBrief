@@ -1,4 +1,5 @@
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+// gemini-3.1-pro-preview used intentionally — better multi-step reasoning for complex prep task inference
 const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent";
 
@@ -136,11 +137,12 @@ Return ONLY valid JSON in this exact shape — no markdown, no explanation:
     const geminiData = await geminiRes.json();
 
     if (!geminiRes.ok) {
+      console.error("Gemini API error:", JSON.stringify(geminiData));
       throw new Error(`Gemini API error: ${geminiRes.status}`);
     }
 
     const raw: string =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "{}";
+      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "{}"; // "{}" not "[]" — expected shape is { tasks: [] }
 
     // Strip markdown fences if Gemini includes them despite responseMimeType
     const cleaned = raw
@@ -152,6 +154,7 @@ Return ONLY valid JSON in this exact shape — no markdown, no explanation:
     try {
       parsed = JSON.parse(cleaned);
     } catch {
+      console.error("Raw Gemini output (unparseable):", raw);
       throw new Error("Gemini returned non-JSON output");
     }
 
@@ -164,6 +167,7 @@ Return ONLY valid JSON in this exact shape — no markdown, no explanation:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error("generate-prep-tasks error:", err);
     return new Response(
       JSON.stringify({ error: "Internal server error", details: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
