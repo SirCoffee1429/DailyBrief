@@ -16,7 +16,11 @@
       "mcp__claude_ai_Supabase__get_logs",
       "Bash(Get-ChildItem -Path \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\" -Recurse -Depth 2)",
       "Bash(Select-Object FullName)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npm install *)",
+      "Bash(npx supabase *)"
     ]
   }
 }
