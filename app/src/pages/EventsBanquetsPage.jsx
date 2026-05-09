@@ -39,6 +39,12 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [generatingOrderFor, setGeneratingOrderFor] = useState(null)
     const [newOrderText, setNewOrderText] = useState({})        // { [beoId]: string }
 
+    // Per-event prep list + subtask state
+    const [generatingPrepFor, setGeneratingPrepFor] = useState(null)       // UUID | null — which BEO is generating prep
+    const [expandedTasks, setExpandedTasks] = useState({})                  // { [taskId]: boolean } — subtask collapse state (default expanded)
+    const [newSubtaskText, setNewSubtaskText] = useState({})                // { [taskId]: string } — subtask input value
+    const [showSubtaskInputFor, setShowSubtaskInputFor] = useState({})      // { [taskId]: boolean } — show add-subtask input
+
     const accent = '#60a5fa'
     const accentBg = 'rgba(96, 165, 250, 0.08)'
     const accentBorder = 'rgba(96, 165, 250, 0.2)'
@@ -121,6 +127,23 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             setNewTaskText(prev => ({ ...prev, [beoId]: '' }))
             await loadAllEventTasks()
         }
+    }
+
+    // Add a manual subtask to an existing task (office only)
+    async function addSubtask(parentId, beoId) {
+        const text = (newSubtaskText[parentId] || '').trim()
+        if (!text) return
+        const siblings = (tasksByBeo[beoId] || []).filter(t => t.parent_id === parentId)
+        await supabase.from('event_tasks').insert({
+            beo_id: beoId,
+            parent_id: parentId,
+            description: text,
+            is_generated: false,
+            sort_order: siblings.length,
+        })
+        setNewSubtaskText(prev => ({ ...prev, [parentId]: '' }))
+        setShowSubtaskInputFor(prev => ({ ...prev, [parentId]: false }))
+        await loadAllEventTasks()
     }
 
     // Toggle task completion (kitchen + office)
@@ -220,6 +243,75 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             alert('Failed to generate order list. Check console for details.')
         } finally {
             setGeneratingOrderFor(null)
+        }
+    }
+
+    // Call Gemini to generate kitchen prep tasks from BEO food items, insert into event_tasks
+    async function generatePrepTasks(beo) {
+        if (!beo.sections || beo.sections.length === 0) {
+            alert('This BEO has no menu sections to generate from.')
+            return
+        }
+        setGeneratingPrepFor(beo.id)
+        try {
+            const meal_types = [...new Set(
+                (beo.sections || []).map(s => s.meal_type).filter(Boolean)
+            )]
+            const { data, error } = await supabase.functions.invoke('generate-prep-tasks', {
+                body: { sections: beo.sections, event_name: beo.event_name || '', meal_types },
+            })
+            if (error) throw error
+
+            const tasks = data?.tasks || []
+            if (tasks.length === 0) {
+                alert('No prep tasks could be generated from this BEO.')
+                return
+            }
+
+            // Delete AI-generated root tasks only — ON DELETE CASCADE handles their subtasks automatically
+            await supabase
+                .from('event_tasks')
+                .delete()
+                .eq('beo_id', beo.id)
+                .eq('is_generated', true)
+                .is('parent_id', null)
+
+            // Insert each parent task then its subtasks (sequential — need parent ID before inserting children)
+            for (let i = 0; i < tasks.length; i++) {
+                const { task: description, subtasks } = tasks[i]
+
+                const { data: parentRow, error: insertErr } = await supabase
+                    .from('event_tasks')
+                    .insert({
+                        beo_id: beo.id,
+                        description,
+                        is_generated: true,
+                        sort_order: i * 100,
+                        parent_id: null,
+                    })
+                    .select()
+                    .single()
+
+                if (insertErr || !parentRow) continue
+
+                if (subtasks && subtasks.length > 0) {
+                    const subtaskRows = subtasks.map((s, j) => ({
+                        beo_id: beo.id,
+                        parent_id: parentRow.id,
+                        description: s,
+                        is_generated: true,
+                        sort_order: i * 100 + j + 1,
+                    }))
+                    await supabase.from('event_tasks').insert(subtaskRows)
+                }
+            }
+
+            await loadAllEventTasks()
+        } catch (err) {
+            console.error('Error generating prep tasks:', err)
+            alert('Failed to generate prep list. Please try again.')
+        } finally {
+            setGeneratingPrepFor(null)
         }
     }
 
