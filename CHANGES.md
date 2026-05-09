@@ -1222,3 +1222,25 @@ under the wrong business day.
 - Configured `[functions.process-sales-data]` in `supabase/config.toml`
 - Set `verify_jwt = false` so Postmark can trigger the inbound webhook without Supabase auth headers
 - Redeployed the edge function using the CLI to apply the configuration change
+
+---
+
+### 2026-05-08 — Prep List Generator + Subtask System
+
+**File(s) Changed:**
+`supabase/migrations/20260508000000_add_subtasks_to_event_tasks.sql` (new),
+`supabase/functions/generate-prep-tasks/index.ts` (new),
+`app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feature`
+**Summary:** Added AI-powered prep list generator to the Events page (office-only) and upgraded the task system to support subtasks on all tasks.
+
+**Details:**
+
+- New `generate-prep-tasks` Supabase edge function using `gemini-3.1-pro-preview` — reads BEO food sections, returns structured `{ tasks: [{ task, subtasks[] }] }` with six few-shot examples for kitchen-accurate prep steps
+- Migration adds `parent_id uuid` (self-referential FK, ON DELETE CASCADE) and `is_generated boolean` to `event_tasks` — fully backward compatible
+- "Prep List" button (wand icon, office-only) in task panel header; generates and inserts AI prep tasks with subtasks directly into the task list
+- Regeneration clears only `is_generated=true, parent_id=null` tasks (cascade handles subtasks); manual tasks preserved
+- All tasks (AI or manual) support subtasks via per-task "+" button (office-only); subtask input opens inline below the parent
+- Parent tasks with subtasks show a chevron — clicking label expands/collapses; parent and subtasks each have independent checkboxes
+- `deleteEventTask` updated to also remove orphaned subtasks from local state on parent deletion
+- `renderBeoTasks` signature changed from `(beoId)` to `(beo)` — both call sites updated
