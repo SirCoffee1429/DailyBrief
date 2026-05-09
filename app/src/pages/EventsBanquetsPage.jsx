@@ -134,13 +134,18 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         const text = (newSubtaskText[parentId] || '').trim()
         if (!text) return
         const siblings = (tasksByBeo[beoId] || []).filter(t => t.parent_id === parentId)
-        await supabase.from('event_tasks').insert({
+        const { error } = await supabase.from('event_tasks').insert({
             beo_id: beoId,
             parent_id: parentId,
             description: text,
             is_generated: false,
             sort_order: siblings.length,
         })
+        if (error) {
+            console.error('Failed to add subtask:', error)
+            alert('Failed to save subtask. Please try again.')
+            return
+        }
         setNewSubtaskText(prev => ({ ...prev, [parentId]: '' }))
         setShowSubtaskInputFor(prev => ({ ...prev, [parentId]: false }))
         await loadAllEventTasks()
@@ -169,7 +174,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         setTasksByBeo(prev => {
             const updated = {}
             for (const [beoId, tasks] of Object.entries(prev)) {
-                updated[beoId] = tasks.filter(t => t.id !== taskId)
+                updated[beoId] = tasks.filter(t => t.id !== taskId && t.parent_id !== taskId)
             }
             return updated
         })
@@ -302,7 +307,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                         is_generated: true,
                         sort_order: i * 100 + j + 1,
                     }))
-                    await supabase.from('event_tasks').insert(subtaskRows)
+                    const { error: subErr } = await supabase.from('event_tasks').insert(subtaskRows)
+                    if (subErr) console.error('Failed to insert subtasks for task:', parentRow.id, subErr)
                 }
             }
 
