@@ -2,6 +2,21 @@
 
 ---
 
+### 2026-05-12 — Collapsible BEO Task Panel
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feat`
+**Summary:** Added a chevron toggle to the task panel header inside each BEO card so crew can collapse/expand the task list to reduce visual clutter.
+
+**Details:**
+
+- Added `collapsedTaskPanels` state keyed by `beoId` (falsy = expanded, `true` = collapsed) — no per-BEO initialization needed
+- Appended a chevron button (`fa-chevron-up` / `fa-chevron-down`) at the far right of `event-tasks-header`, after the Prep List button
+- Task count badge and Prep List button remain visible and functional when collapsed
+- Wrapped task list, add-task input, and "No tasks assigned" message in `{!isCollapsed && (...)}` — each BEO card collapses independently
+
+---
+
 ### 2026-05-07 — BEO Details Responsive Table Reflow
 
 **File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`, `app/src/index.css`
