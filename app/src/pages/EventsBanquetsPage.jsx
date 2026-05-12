@@ -42,6 +42,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     // Per-event prep list + subtask state
     const [generatingPrepFor, setGeneratingPrepFor] = useState(null)       // UUID | null — which BEO is generating prep
     const [expandedTasks, setExpandedTasks] = useState({})                  // { [taskId]: boolean } — subtask collapse state (default expanded)
+    const [collapsedTaskPanels, setCollapsedTaskPanels] = useState({})      // { [beoId]: boolean } — true = collapsed, falsy/absent = expanded
     const [newSubtaskText, setNewSubtaskText] = useState({})                // { [taskId]: string } — subtask input value
     const [showSubtaskInputFor, setShowSubtaskInputFor] = useState({})      // { [taskId]: boolean } — show add-subtask input
 
@@ -1108,6 +1109,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
         const completedCount = allTasks.filter(t => t.is_completed).length
         const isGenerating = generatingPrepFor === beoId
+        const isCollapsed = collapsedTaskPanels[beoId] === true
 
         return (
             <div className="event-tasks-section">
@@ -1134,148 +1136,160 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                 }
                             </button>
                         )}
+                        <button
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, padding: '2px 4px', flexShrink: 0 }}
+                            onClick={() => setCollapsedTaskPanels(prev => ({ ...prev, [beoId]: !isCollapsed }))}
+                            title={isCollapsed ? 'Expand tasks' : 'Collapse tasks'}
+                            aria-label={isCollapsed ? 'Expand tasks' : 'Collapse tasks'}
+                        >
+                            <i className={`fa-solid fa-chevron-${isCollapsed ? 'down' : 'up'}`} />
+                        </button>
                     </div>
                 </div>
 
-                {rootTasks.length > 0 && (
-                    <div className="event-tasks-list">
-                        {rootTasks.map(task => {
-                            const subs = subtasksByParent[task.id] || []
-                            // undefined means not yet toggled — default to expanded
-                            const isExpanded = expandedTasks[task.id] !== false
-                            const showInput = showSubtaskInputFor[task.id]
+                {!isCollapsed && (
+                    <>
+                        {rootTasks.length > 0 && (
+                            <div className="event-tasks-list">
+                                {rootTasks.map(task => {
+                                    const subs = subtasksByParent[task.id] || []
+                                    // undefined means not yet toggled — default to expanded
+                                    const isExpanded = expandedTasks[task.id] !== false
+                                    const showInput = showSubtaskInputFor[task.id]
 
-                            return (
-                                <div key={task.id}>
-                                    <label className="event-task-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <input
-                                            type="checkbox"
-                                            className="task-box"
-                                            checked={task.is_completed}
-                                            onChange={() => toggleEventTask(task.id, task.is_completed)}
-                                        />
-                                        <span
-                                            className={`task-label ${task.is_completed ? 'completed' : ''}`}
-                                            style={{ flex: 1, cursor: subs.length > 0 ? 'pointer' : 'default' }}
-                                            onClick={subs.length > 0 ? (e) => {
-                                                e.preventDefault()
-                                                setExpandedTasks(prev => ({ ...prev, [task.id]: !isExpanded }))
-                                            } : undefined}
-                                        >
-                                            {subs.length > 0 && (
-                                                <i
-                                                    className={`fa-solid fa-chevron-${isExpanded ? 'down' : 'right'}`}
-                                                    style={{ fontSize: '0.6rem', marginRight: '5px', color: 'var(--text-muted)' }}
+                                    return (
+                                        <div key={task.id}>
+                                            <label className="event-task-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="task-box"
+                                                    checked={task.is_completed}
+                                                    onChange={() => toggleEventTask(task.id, task.is_completed)}
                                                 />
-                                            )}
-                                            {task.description}
-                                        </span>
-                                        {isOffice && (
-                                            <>
-                                                <button
-                                                    className="wb-act-btn"
-                                                    onClick={(e) => {
+                                                <span
+                                                    className={`task-label ${task.is_completed ? 'completed' : ''}`}
+                                                    style={{ flex: 1, cursor: subs.length > 0 ? 'pointer' : 'default' }}
+                                                    onClick={subs.length > 0 ? (e) => {
                                                         e.preventDefault()
-                                                        setShowSubtaskInputFor(prev => ({ ...prev, [task.id]: !showInput }))
-                                                        if (!showInput) setExpandedTasks(prev => ({ ...prev, [task.id]: true }))
-                                                    }}
-                                                    title="Add subtask"
-                                                    style={{ fontSize: '0.7rem', color: accent, flexShrink: 0 }}
+                                                        setExpandedTasks(prev => ({ ...prev, [task.id]: !isExpanded }))
+                                                    } : undefined}
                                                 >
-                                                    <i className="fa-solid fa-plus" />
-                                                </button>
-                                                <button
-                                                    className="wb-act-btn wb-act-delete"
-                                                    onClick={(e) => { e.preventDefault(); deleteEventTask(task.id) }}
-                                                    title="Delete task"
-                                                    style={{ marginLeft: 0, fontSize: '0.75rem', flexShrink: 0 }}
-                                                >
-                                                    <i className="fa-solid fa-xmark" />
-                                                </button>
-                                            </>
-                                        )}
-                                    </label>
-
-                                    {subs.length > 0 && isExpanded && (
-                                        <div style={{ paddingLeft: '22px' }}>
-                                            {subs.map(sub => (
-                                                <label key={sub.id} className="event-task-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        className="task-box"
-                                                        checked={sub.is_completed}
-                                                        onChange={() => toggleEventTask(sub.id, sub.is_completed)}
-                                                    />
-                                                    <span className={`task-label ${sub.is_completed ? 'completed' : ''}`} style={{ flex: 1 }}>
-                                                        {sub.description}
-                                                    </span>
-                                                    {isOffice && (
+                                                    {subs.length > 0 && (
+                                                        <i
+                                                            className={`fa-solid fa-chevron-${isExpanded ? 'down' : 'right'}`}
+                                                            style={{ fontSize: '0.6rem', marginRight: '5px', color: 'var(--text-muted)' }}
+                                                        />
+                                                    )}
+                                                    {task.description}
+                                                </span>
+                                                {isOffice && (
+                                                    <>
+                                                        <button
+                                                            className="wb-act-btn"
+                                                            onClick={(e) => {
+                                                                e.preventDefault()
+                                                                setShowSubtaskInputFor(prev => ({ ...prev, [task.id]: !showInput }))
+                                                                if (!showInput) setExpandedTasks(prev => ({ ...prev, [task.id]: true }))
+                                                            }}
+                                                            title="Add subtask"
+                                                            style={{ fontSize: '0.7rem', color: accent, flexShrink: 0 }}
+                                                        >
+                                                            <i className="fa-solid fa-plus" />
+                                                        </button>
                                                         <button
                                                             className="wb-act-btn wb-act-delete"
-                                                            onClick={(e) => { e.preventDefault(); deleteEventTask(sub.id) }}
-                                                            title="Delete subtask"
+                                                            onClick={(e) => { e.preventDefault(); deleteEventTask(task.id) }}
+                                                            title="Delete task"
                                                             style={{ marginLeft: 0, fontSize: '0.75rem', flexShrink: 0 }}
                                                         >
                                                             <i className="fa-solid fa-xmark" />
                                                         </button>
-                                                    )}
-                                                </label>
-                                            ))}
+                                                    </>
+                                                )}
+                                            </label>
+
+                                            {subs.length > 0 && isExpanded && (
+                                                <div style={{ paddingLeft: '22px' }}>
+                                                    {subs.map(sub => (
+                                                        <label key={sub.id} className="event-task-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                className="task-box"
+                                                                checked={sub.is_completed}
+                                                                onChange={() => toggleEventTask(sub.id, sub.is_completed)}
+                                                            />
+                                                            <span className={`task-label ${sub.is_completed ? 'completed' : ''}`} style={{ flex: 1 }}>
+                                                                {sub.description}
+                                                            </span>
+                                                            {isOffice && (
+                                                                <button
+                                                                    className="wb-act-btn wb-act-delete"
+                                                                    onClick={(e) => { e.preventDefault(); deleteEventTask(sub.id) }}
+                                                                    title="Delete subtask"
+                                                                    style={{ marginLeft: 0, fontSize: '0.75rem', flexShrink: 0 }}
+                                                                >
+                                                                    <i className="fa-solid fa-xmark" />
+                                                                </button>
+                                                            )}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {isOffice && showInput && (
+                                                <div style={{ paddingLeft: '22px', display: 'flex', gap: '6px', marginTop: '4px', marginBottom: '2px' }}>
+                                                    <input
+                                                        className="input"
+                                                        type="text"
+                                                        placeholder="Add a subtask..."
+                                                        value={newSubtaskText[task.id] || ''}
+                                                        onChange={e => setNewSubtaskText(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask(task.id, beoId) } }}
+                                                        style={{ fontSize: '0.82rem' }}
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        className="btn btn-sm"
+                                                        style={{ background: accent, color: '#fff', borderColor: accent, flexShrink: 0 }}
+                                                        onClick={() => addSubtask(task.id, beoId)}
+                                                        disabled={!(newSubtaskText[task.id] || '').trim()}
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                    )
+                                })}
+                            </div>
+                        )}
 
-                                    {isOffice && showInput && (
-                                        <div style={{ paddingLeft: '22px', display: 'flex', gap: '6px', marginTop: '4px', marginBottom: '2px' }}>
-                                            <input
-                                                className="input"
-                                                type="text"
-                                                placeholder="Add a subtask..."
-                                                value={newSubtaskText[task.id] || ''}
-                                                onChange={e => setNewSubtaskText(prev => ({ ...prev, [task.id]: e.target.value }))}
-                                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask(task.id, beoId) } }}
-                                                style={{ fontSize: '0.82rem' }}
-                                                autoFocus
-                                            />
-                                            <button
-                                                className="btn btn-sm"
-                                                style={{ background: accent, color: '#fff', borderColor: accent, flexShrink: 0 }}
-                                                onClick={() => addSubtask(task.id, beoId)}
-                                                disabled={!(newSubtaskText[task.id] || '').trim()}
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
+                        {isOffice && (
+                            <div className="event-task-add">
+                                <input
+                                    className="input"
+                                    type="text"
+                                    placeholder="Add a task..."
+                                    value={newTaskText[beoId] || ''}
+                                    onChange={e => setNewTaskText(prev => ({ ...prev, [beoId]: e.target.value }))}
+                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEventTask(beoId) } }}
+                                    style={{ fontSize: '0.85rem' }}
+                                />
+                                <button
+                                    className="btn btn-sm"
+                                    style={{ background: accent, color: '#fff', borderColor: accent, flexShrink: 0 }}
+                                    onClick={() => addEventTask(beoId)}
+                                    disabled={!(newTaskText[beoId] || '').trim()}
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        )}
 
-                {isOffice && (
-                    <div className="event-task-add">
-                        <input
-                            className="input"
-                            type="text"
-                            placeholder="Add a task..."
-                            value={newTaskText[beoId] || ''}
-                            onChange={e => setNewTaskText(prev => ({ ...prev, [beoId]: e.target.value }))}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEventTask(beoId) } }}
-                            style={{ fontSize: '0.85rem' }}
-                        />
-                        <button
-                            className="btn btn-sm"
-                            style={{ background: accent, color: '#fff', borderColor: accent, flexShrink: 0 }}
-                            onClick={() => addEventTask(beoId)}
-                            disabled={!(newTaskText[beoId] || '').trim()}
-                        >
-                            Add
-                        </button>
-                    </div>
-                )}
-
-                {rootTasks.length === 0 && !isOffice && (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0' }}>No tasks assigned</div>
+                        {rootTasks.length === 0 && !isOffice && (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0' }}>No tasks assigned</div>
+                        )}
+                    </>
                 )}
             </div>
         )
