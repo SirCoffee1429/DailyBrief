@@ -196,3 +196,5 @@ Session", or "End Session". At that point you will :
 2. Update this file with any changes or new information that we learned and is
    relevant to the project. Make sure to conslidate this file so that it never
    exceeds 200 lines
+3. Update memory with what you have learned or discovered during the session.
+4. Exit
