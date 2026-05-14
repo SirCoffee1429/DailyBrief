@@ -12,38 +12,199 @@ const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+interface BeoEvent {
+  event_name: string | null;
+  event_date: string | null;
+  event_end_date?: string | null;
+  start_time?: string | null;
+  guest_count?: number;
+  location?: string | null;
+  timeline?: object[];
+  sections?: object[];
+  notes_text?: string | null;
+}
+
+interface ConflictRecord {
+  existing: { id: string; event_name: string; event_date: string };
+  incoming: { event_name: string; event_date: string };
+}
+
+// Build the legacy food_items array from structured sections data
+function buildFoodItems(event: BeoEvent): { item: string; quantity: string | number }[] {
+  const foodItems: { item: string; quantity: string | number }[] = [];
+  for (const section of ((event.sections as any[]) || [])) {
+    for (const cat of (section.categories || [])) {
+      for (const it of (cat.items || [])) {
+        foodItems.push({
+          item: `${it.label ? it.label + ': ' : ''}${(it.description || '').split('\n')[0]}`.slice(0, 200),
+          quantity: it.qty || '',
+        });
+      }
+    }
+  }
+  return foodItems;
+}
+
+// Check which parsed events conflict with existing banquet_event_orders rows
+async function findConflicts(
+  db: ReturnType<typeof createClient>,
+  parsedEvents: BeoEvent[]
+): Promise<ConflictRecord[]> {
+  const conflicts: ConflictRecord[] = [];
+
+  for (const event of parsedEvents) {
+    if (!event.event_name || !event.event_date) continue;
+
+    const { data: existing } = await db
+      .from("banquet_event_orders")
+      .select("id, event_name, event_date")
+      .eq("event_name", event.event_name)
+      .eq("event_date", event.event_date)
+      .maybeSingle();
+
+    if (existing) {
+      conflicts.push({
+        existing: { id: existing.id, event_name: existing.event_name, event_date: existing.event_date },
+        incoming: { event_name: event.event_name, event_date: event.event_date },
+      });
+    }
+  }
+
+  return conflicts;
+}
+
+// Build the parsed-field payload shared by insert and update
+function buildEventPayload(event: BeoEvent): object {
+  return {
+    event_name: event.event_name || "Unknown Event",
+    event_date: event.event_date || new Date().toISOString().split("T")[0],
+    event_end_date: event.event_end_date || null,
+    start_time: event.start_time || "",
+    guest_count: event.guest_count || 0,
+    location: event.location || null,
+    timeline: event.timeline || [],
+    sections: event.sections || [],
+    notes_text: event.notes_text || null,
+    food_items: buildFoodItems(event),
+  };
+}
+
+// Update an existing BEO row with fresh PDF data, preserving crew_notes and completed
+async function updateEvent(
+  db: ReturnType<typeof createClient>,
+  existingId: string,
+  event: BeoEvent
+): Promise<void> {
+  const { error } = await db
+    .from("banquet_event_orders")
+    .update(buildEventPayload(event))
+    .eq("id", existingId);
+
+  if (error) {
+    console.error(`Error updating event id "${existingId}":`, error);
+    throw error;
+  }
+}
+
+// Insert a new BEO row and return its ID
+async function insertEvent(
+  db: ReturnType<typeof createClient>,
+  event: BeoEvent
+): Promise<string> {
+  const eventName = event.event_name || null;
+  const eventDate = event.event_date || null;
+
+  if (!eventName || !eventDate) {
+    console.warn(`Warning: event missing required fields — name: ${eventName}, date: ${eventDate}`);
+  }
+
+  const { data: record, error } = await db
+    .from("banquet_event_orders")
+    .insert(buildEventPayload(event))
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error(`Error inserting event "${eventName}":`, error);
+    throw error;
+  }
+
+  return record.id;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    const payload = await req.json();
+
+    const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // --- Mode B: pre-parsed events with overwrite confirmed ---
+    // Updates existing rows in place so event_tasks, event_order_items, and crew_notes are preserved.
+    if (payload.parsedEvents && payload.overwrite === true) {
+      const parsedEvents: BeoEvent[] = payload.parsedEvents;
+
+      // Re-check conflicts to get current IDs (row may have changed while dialog was open)
+      const conflicts = await findConflicts(db, parsedEvents);
+      const conflictMap = new Map(conflicts.map((c) => [
+        `${c.existing.event_name}||${c.existing.event_date}`,
+        c.existing.id,
+      ]));
+
+      let updatedCount = 0;
+      let insertedCount = 0;
+
+      for (const event of parsedEvents) {
+        const key = `${event.event_name}||${event.event_date}`;
+        const existingId = conflictMap.get(key);
+
+        if (existingId) {
+          await updateEvent(db, existingId, event);
+          updatedCount++;
+        } else {
+          await insertEvent(db, event);
+          insertedCount++;
+        }
+      }
+
+      console.log(`Updated ${updatedCount} BEO(s), inserted ${insertedCount} new BEO(s)`);
+
+      return new Response(
+        JSON.stringify({ success: true, updated: updatedCount, inserted: insertedCount }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --- Mode A: PDF upload — parse via Gemini then check conflicts ---
     let pdfBase64 = "";
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("application/json")) {
-        const payload = await req.json();
-        pdfBase64 = payload.pdfBase64;
+      pdfBase64 = payload.pdfBase64 || "";
     } else {
-        const formData = await req.formData();
-        const file = formData.get("file") as File;
-        if (file) {
-           const arrayBuffer = await file.arrayBuffer();
-           const bytes = new Uint8Array(arrayBuffer);
-           let binary = "";
-           const chunkSize = 8192;
-           for (let i = 0; i < bytes.length; i += chunkSize) {
-             const chunk = bytes.subarray(i, i + chunkSize);
-             binary += String.fromCharCode(...chunk);
-           }
-           pdfBase64 = btoa(binary);
+      // formData path (legacy support)
+      const formData = await req.formData();
+      const file = formData.get("file") as File;
+      if (file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = "";
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode(...chunk);
         }
+        pdfBase64 = btoa(binary);
+      }
     }
 
     if (!pdfBase64) {
       return new Response(JSON.stringify({ error: "No PDF content found" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -142,66 +303,34 @@ RULES:
       throw new Error("Gemini returned empty output");
     }
 
-    let parsed = JSON.parse(rawOutput);
-    if (!Array.isArray(parsed)) parsed = [parsed];
+    let parsedEvents: BeoEvent[] = JSON.parse(rawOutput);
+    if (!Array.isArray(parsedEvents)) parsedEvents = [parsedEvents];
 
-    console.log(`Parsed ${parsed.length} event(s) from BEO PDF`);
+    console.log(`Parsed ${parsedEvents.length} event(s) from BEO PDF`);
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Check for conflicts before inserting
+    const conflicts = await findConflicts(db, parsedEvents);
+
+    if (conflicts.length > 0) {
+      console.log(`Found ${conflicts.length} conflict(s) — returning for confirmation`);
+      return new Response(
+        JSON.stringify({ needsConfirmation: true, conflicts, parsedEvents }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // No conflicts — insert directly
     const insertedIds: string[] = [];
-
-    for (const event of parsed) {
-      const eventName = event.event_name || null;
-      const eventDate = event.event_date || null;
-
-      if (!eventName || !eventDate) {
-        console.warn(`Warning: event missing required fields — name: ${eventName}, date: ${eventDate}`);
-      }
-
-      // Build legacy food_items list from sections so older UI/queries still work
-      const foodItems: { item: string; quantity: string | number }[] = [];
-      for (const section of (event.sections || [])) {
-        for (const cat of (section.categories || [])) {
-          for (const it of (cat.items || [])) {
-            foodItems.push({
-              item: `${it.label ? it.label + ': ' : ''}${(it.description || '').split('\n')[0]}`.slice(0, 200),
-              quantity: it.qty || '',
-            });
-          }
-        }
-      }
-
-      const { data: record, error } = await supabase
-        .from("banquet_event_orders")
-        .insert({
-            event_name: eventName || "Unknown Event",
-            event_date: eventDate || new Date().toISOString().split("T")[0],
-            event_end_date: event.event_end_date || null,
-            start_time: event.start_time || "",
-            guest_count: event.guest_count || 0,
-            location: event.location || null,
-            timeline: event.timeline || [],
-            sections: event.sections || [],
-            notes_text: event.notes_text || null,
-            food_items: foodItems,
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error(`Error inserting event "${eventName}":`, error);
-        throw error;
-      }
-
-      insertedIds.push(record.id);
+    for (const event of parsedEvents) {
+      insertedIds.push(await insertEvent(db, event));
     }
 
     console.log(`Successfully inserted ${insertedIds.length} BEO(s)`);
 
-    return new Response(JSON.stringify({ success: true, count: insertedIds.length, ids: insertedIds }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: true, count: insertedIds.length, ids: insertedIds }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
 
   } catch (err) {
     console.error("Error processing BEO:", err);

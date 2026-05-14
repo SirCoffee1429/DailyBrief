@@ -46,6 +46,10 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [newSubtaskText, setNewSubtaskText] = useState({})                // { [taskId]: string } — subtask input value
     const [showSubtaskInputFor, setShowSubtaskInputFor] = useState({})      // { [taskId]: boolean } — show add-subtask input
 
+    // Duplicate BEO confirmation state
+    const [beoConflicts, setBeoConflicts] = useState([])       // [{ existing, incoming }]
+    const [pendingBeoEvents, setPendingBeoEvents] = useState(null) // parsed events waiting for overwrite confirm
+
     const accent = '#60a5fa'
     const accentBg = 'rgba(96, 165, 250, 0.08)'
     const accentBorder = 'rgba(96, 165, 250, 0.2)'
@@ -394,6 +398,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     async function handleBEOUpload(e) {
         const file = e.target.files?.[0];
         if (!file) return;
+        // Reset the input so the same file can be re-selected after a cancel
+        e.target.value = '';
 
         setUploadingBEO(true);
         try {
@@ -404,11 +410,19 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 reader.readAsDataURL(file);
             });
 
-            const { error } = await supabase.functions.invoke('process-beo', {
+            const { data, error } = await supabase.functions.invoke('process-beo', {
                 body: { pdfBase64: base64 }
             });
 
             if (error) throw error;
+
+            // Duplicate detected — hold parsed events and show confirmation UI
+            if (data?.needsConfirmation) {
+                setBeoConflicts(data.conflicts || []);
+                setPendingBeoEvents(data.parsedEvents || []);
+                return;
+            }
+
             await loadBEOS();
             alert("BEO Parsed Successfully!");
         } catch (err) {
@@ -417,6 +431,39 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         } finally {
             setUploadingBEO(false);
         }
+    }
+
+    // Called when user confirms overwriting the conflicting BEOs
+    async function handleBeoOverwriteConfirm() {
+        if (!pendingBeoEvents) return;
+        setUploadingBEO(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('process-beo', {
+                body: { parsedEvents: pendingBeoEvents, overwrite: true }
+            });
+
+            if (error) throw error;
+
+            setBeoConflicts([]);
+            setPendingBeoEvents(null);
+            await loadBEOS();
+            const updated = data?.updated ?? 0;
+            const inserted = data?.inserted ?? 0;
+            const parts = [];
+            if (updated > 0) parts.push(`${updated} BEO${updated > 1 ? 's' : ''} updated`);
+            if (inserted > 0) parts.push(`${inserted} new BEO${inserted > 1 ? 's' : ''} added`);
+            alert(`${parts.join(', ')}. Tasks, notes, and order items preserved.`);
+        } catch (err) {
+            console.error("Error overwriting BEO:", err);
+            alert("Failed to overwrite BEO. Check console for details.");
+        } finally {
+            setUploadingBEO(false);
+        }
+    }
+
+    function handleBeoOverwriteCancel() {
+        setBeoConflicts([]);
+        setPendingBeoEvents(null);
     }
 
     async function togglePin(id, currentPinned) {
@@ -1474,6 +1521,57 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     <Link to={isOffice ? '/office' : isFOH ? '/foh' : '/kitchen'} className="btn btn-secondary btn-sm"><i className="fa-solid fa-arrow-left" /> Back</Link>
                 </div>
             </header>
+
+            {/* Duplicate BEO confirmation banner */}
+            {beoConflicts.length > 0 && (
+                <div style={{
+                    margin: '0 0 var(--space-4)',
+                    padding: 'var(--space-4) var(--space-5)',
+                    background: 'rgba(251, 191, 36, 0.08)',
+                    border: '1px solid rgba(251, 191, 36, 0.35)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-3)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
+                        <i className="fa-solid fa-triangle-exclamation" style={{ color: '#fbbf24', marginTop: '2px', flexShrink: 0 }} />
+                        <div>
+                            <p style={{ margin: 0, fontWeight: 600, color: '#fbbf24', fontSize: 'var(--font-size-sm)' }}>
+                                Duplicate BEO{beoConflicts.length > 1 ? 's' : ''} Detected
+                            </p>
+                            <p style={{ margin: '4px 0 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                                The following event{beoConflicts.length > 1 ? 's' : ''} already exist. The BEO data will be updated with the new PDF, but your tasks, order items, and crew notes will be preserved.
+                            </p>
+                            <ul style={{ margin: '6px 0 0', paddingLeft: '16px', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                                {beoConflicts.map((c, i) => (
+                                    <li key={i}>
+                                        <strong>{c.existing.event_name}</strong> — {c.existing.event_date}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                        <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={handleBeoOverwriteCancel}
+                            disabled={uploadingBEO}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn btn-primary btn-sm"
+                            style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                            onClick={handleBeoOverwriteConfirm}
+                            disabled={uploadingBEO}
+                        >
+                            <i className={`fa-solid ${uploadingBEO ? 'fa-spinner fa-spin' : 'fa-rotate'}`} />
+                            {uploadingBEO ? 'Replacing...' : 'Replace Existing'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className={isOffice ? 'events-page-grid' : ''} style={isOffice ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
 

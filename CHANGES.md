@@ -2,6 +2,28 @@
 
 ---
 
+### 2026-05-13 — BEO Duplicate Update: Preserve Tasks, Notes & Order Items
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts`, `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feature`
+**Summary:** When uploading a BEO PDF, the system now detects if any parsed events already exist (matched by `event_name + event_date`) and shows an inline confirmation banner before overwriting. Old BEO data including tasks and order items are fully replaced on confirm.
+
+**Details:**
+
+- Edge function refactored into helpers: `buildFoodItems`, `buildEventPayload`, `findConflicts`, `updateEvent`, `insertEvent`
+- Two-mode dispatch: Mode A (PDF upload) parses via Gemini then checks conflicts; Mode B (`{ parsedEvents, overwrite: true }`) skips Gemini and updates/inserts — no double API call
+- On duplicate confirm, edge function calls `UPDATE` on the existing row (not DELETE+INSERT), preserving the same `id` so all `event_tasks`, `event_order_items`, and `crew_notes` survive untouched
+- `buildEventPayload` only includes AI-parsed columns; `crew_notes` and `completed` are never in the update payload
+- If conflicts found, edge function returns `{ needsConfirmation: true, conflicts, parsedEvents }` without writing anything
+- Frontend `handleBEOUpload` stores pending events and conflict list in state when `needsConfirmation` is received
+- Added `handleBeoOverwriteConfirm` and `handleBeoOverwriteCancel` handlers
+- Confirmation banner text updated to reassure user that tasks, notes, and order items will be preserved
+- Success alert shows updated vs. inserted counts: e.g. "1 BEO updated, 1 new BEO added. Tasks, notes, and order items preserved."
+- File input value reset on upload start so the same file can be re-selected after a cancel
+- Edge function deployed as version 9
+
+---
+
 ### 2026-05-12 — Collapsible BEO Task Panel
 
 **File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
