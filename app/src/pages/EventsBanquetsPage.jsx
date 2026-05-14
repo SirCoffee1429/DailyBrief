@@ -1100,19 +1100,31 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Visible on Kitchen + Office</span>
                 </div>
                 <textarea
+                    ref={el => {
+                        if (el) {
+                            el.style.height = 'auto'
+                            el.style.height = el.scrollHeight + 'px'
+                        }
+                    }}
                     value={draft}
-                    onChange={e => setNotesDraft(prev => ({ ...prev, [b.id]: e.target.value }))}
+                    onChange={e => {
+                        setNotesDraft(prev => ({ ...prev, [b.id]: e.target.value }))
+                        e.target.style.height = 'auto'
+                        e.target.style.height = e.target.scrollHeight + 'px'
+                    }}
                     placeholder="Add prep reminders, allergies, last-minute changes..."
                     style={{
                         width: '100%',
-                        minHeight: '120px',
+                        minHeight: '80px',
                         padding: '10px 12px',
                         background: 'var(--bg-input)',
                         border: 'none',
                         color: 'var(--text-primary)',
                         fontFamily: 'inherit',
-                        fontSize: '0.9rem',
-                        resize: 'vertical',
+                        fontSize: '0.95rem',
+                        lineHeight: '1.6',
+                        resize: 'none',
+                        overflow: 'hidden',
                         outline: 'none',
                         boxSizing: 'border-box',
                     }}
