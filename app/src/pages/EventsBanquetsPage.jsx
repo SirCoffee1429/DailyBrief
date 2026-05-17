@@ -38,6 +38,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [orderItemsByBeo, setOrderItemsByBeo] = useState({})  // { [beoId]: orderItem[] }
     const [generatingOrderFor, setGeneratingOrderFor] = useState(null)
     const [newOrderText, setNewOrderText] = useState({})        // { [beoId]: string }
+    const [activeNoteId, setActiveNoteId] = useState(null)      // itemId currently in note-edit mode
+    const [orderNoteDrafts, setOrderNoteDrafts] = useState({})  // { [itemId]: string }
 
     // Per-event prep list + subtask state
     const [generatingPrepFor, setGeneratingPrepFor] = useState(null)       // UUID | null — which BEO is generating prep
@@ -369,6 +371,26 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             const updated = {}
             for (const [beoId, items] of Object.entries(prev)) {
                 updated[beoId] = items.filter(i => i.id !== itemId)
+            }
+            return updated
+        })
+    }
+
+    // Save an inline note on a single order item; no-op if value unchanged
+    async function saveOrderItemNote(itemId, note) {
+        setActiveNoteId(null)
+        const trimmed = note.trim() || null
+        let currentNote = null
+        for (const items of Object.values(orderItemsByBeo)) {
+            const found = items.find(i => i.id === itemId)
+            if (found) { currentNote = found.note || null; break }
+        }
+        if (trimmed === currentNote) return
+        await supabase.from('event_order_items').update({ note: trimmed }).eq('id', itemId)
+        setOrderItemsByBeo(prev => {
+            const updated = {}
+            for (const [beoId, items] of Object.entries(prev)) {
+                updated[beoId] = items.map(i => i.id === itemId ? { ...i, note: trimmed } : i)
             }
             return updated
         })
@@ -1354,19 +1376,22 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         )
     }
 
-    // Single order item row — checkbox, name, delete button
+    // Single order item row — checkbox, name, inline note, delete button
     function renderOrderItemRow(item) {
-        const orderAccent = '#34d399'
+        const isEditingNote = activeNoteId === item.id
+        const noteDraft = orderNoteDrafts[item.id] ?? (item.note || '')
+
         return (
-            <label
+            <div
                 key={item.id}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 2px', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 2px' }}
             >
                 <input
                     type="checkbox"
                     className="task-box"
                     checked={item.is_ordered}
                     onChange={() => toggleOrderItem(item.id, item.is_ordered)}
+                    style={{ flexShrink: 0 }}
                 />
                 <span style={{
                     flex: 1,
@@ -1377,6 +1402,53 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 }}>
                     {item.item_name}
                 </span>
+
+                {/* Inline note — click to edit, auto-saves on blur */}
+                {isEditingNote ? (
+                    <input
+                        autoFocus
+                        type="text"
+                        value={noteDraft}
+                        onChange={e => setOrderNoteDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        onBlur={() => saveOrderItemNote(item.id, noteDraft)}
+                        onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        placeholder="Add a note..."
+                        style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            width: '140px',
+                            flexShrink: 0,
+                            outline: 'none',
+                        }}
+                    />
+                ) : (
+                    <span
+                        onClick={() => {
+                            setActiveNoteId(item.id)
+                            setOrderNoteDrafts(prev => ({ ...prev, [item.id]: item.note || '' }))
+                        }}
+                        title={item.note ? 'Click to edit note' : 'Click to add a note'}
+                        style={{
+                            fontSize: '0.75rem',
+                            fontStyle: item.note ? 'normal' : 'italic',
+                            color: 'var(--text-muted)',
+                            opacity: item.note ? 0.75 : 0.45,
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            maxWidth: '140px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {item.note || 'Add note...'}
+                    </span>
+                )}
+
                 <button
                     className="wb-act-btn wb-act-delete"
                     onClick={e => { e.preventDefault(); deleteOrderItem(item.id) }}
@@ -1385,7 +1457,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 >
                     <i className="fa-solid fa-xmark" />
                 </button>
-            </label>
+            </div>
         )
     }
 
