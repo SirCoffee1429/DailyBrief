@@ -7,6 +7,22 @@ import SalesBriefing from '../components/SalesBriefing.jsx'
 import EightySixFeed from '../components/EightySixFeed.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
 
+// Witty messages shown when no briefing exists for today — rotates by calendar day
+const NO_BRIEFING_MESSAGES = [
+    "No briefings today. Lucky you. Don't get used to it.",
+    "Just because there's no new briefing doesn't mean you have the day off. Back to work.",
+    "Silence from management today. Don't celebrate there is still work to do.",
+    "No notes from the top today. The chef must be in a good mood. Or asleep. Either way, stay busy.",
+    "Today's briefing: there is no briefing. You didn't hear it from me.",
+]
+
+// Pick a message that stays consistent throughout the day but rotates each new calendar day
+function getDailyNoBriefingMessage() {
+    const now = new Date()
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
+    return NO_BRIEFING_MESSAGES[dayOfYear % NO_BRIEFING_MESSAGES.length]
+}
+
 export default function Dashboard() {
     const navigate = useNavigate()
     const [stats, setStats] = useState({ workbooks: 0, briefings: 0 })
@@ -41,11 +57,13 @@ export default function Dashboard() {
                 workbooks: wbRes.count || 0,
                 briefings: brRes.count || 0,
             })
-            if (latestDateRes.data) {
+            // Only load a briefing if it is dated today — stale entries should not display
+            const todayStr = new Date().toISOString().split('T')[0]
+            if (latestDateRes.data && latestDateRes.data.date === todayStr) {
                 const { data: dayBriefings } = await supabase
                     .from('briefings')
                     .select('*')
-                    .eq('date', latestDateRes.data.date)
+                    .eq('date', todayStr)
                     .in('destination', ['boh', 'both'])
                     .order('created_at', { ascending: true })
 
@@ -54,7 +72,6 @@ export default function Dashboard() {
             }
 
             // Fetch today's BEOs for the events widget
-            const todayStr = new Date().toISOString().split('T')[0]
             const { data: todayData } = await supabase
                 .from('banquet_event_orders')
                 .select('id, event_name, start_time, guest_count, location')
@@ -182,10 +199,9 @@ export default function Dashboard() {
                             <Link to={`/office/briefings/${latestBriefing.id}/edit`} className="btn btn-primary btn-orange mt-auto inline-flex">Edit Notes</Link>
                         </>
                     ) : (
-                        <>
-                            <div className="notes-list empty">Nothing posted for the crew</div>
-                            <Link to="/office/briefings/new" className="btn btn-primary btn-orange mt-auto inline-flex">Create Briefing</Link>
-                        </>
+                        <div className="notes-list empty" style={{ fontStyle: 'italic', opacity: 0.75 }}>
+                            {getDailyNoBriefingMessage()}
+                        </div>
                     )}
                 </div>
 

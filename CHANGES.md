@@ -2,6 +2,41 @@
 
 ---
 
+### 2026-05-17 — Rotating "No Briefing Today" Message on Kitchen Dashboard
+
+**File(s) Changed:** `app/src/pages/Dashboard.jsx`
+**Type:** `feature`
+**Summary:** Kitchen dashboard no longer shows stale briefings from prior days. When there is no briefing dated today, a witty rotating message is displayed instead.
+
+**Details:**
+
+- Added `NO_BRIEFING_MESSAGES` array with 5 humorous messages in the same voice as the request
+- Added `getDailyNoBriefingMessage()` — picks a message deterministically by day-of-year so it stays consistent all day but changes each new calendar day
+- `load()` now compares the latest briefing's date to today before populating `todaysBriefings`; stale entries no longer set state
+- Removed duplicate `const todayStr` declaration (was declared twice after the refactor)
+- Replaced the static "Nothing posted for the crew" empty state with the rotating message, displayed in italic at 75% opacity
+- Removed the "Create Briefing" button from the kitchen dashboard empty state (was pointing to an office route)
+
+---
+
+### 2026-05-17 — Inline Notes on Event Order List Items
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`, `supabase/migrations/20260517000000_add_note_to_event_order_items.sql`
+**Type:** `feat`
+**Summary:** Added the ability to attach a small side note to each item in the BEO order list.
+
+**Details:**
+
+- Migration adds nullable `note text` column to `event_order_items` table (applied to Supabase)
+- Each order item row now shows dim "Add note..." placeholder text after the item name
+- Clicking the note area opens an inline `<input>` field
+- Pressing Enter or clicking away auto-saves the note to Supabase (no-op if unchanged)
+- Non-empty notes display in muted text at 75% opacity; empty state shows italic placeholder at 45%
+- Added `activeNoteId` and `orderNoteDrafts` state, and `saveOrderItemNote()` function
+- Office-only (order list panel is already gated to `isOffice`)
+
+---
+
 ### 2026-05-13 — BEO Duplicate Update: Preserve Tasks, Notes & Order Items
 
 **File(s) Changed:** `supabase/functions/process-beo/index.ts`, `app/src/pages/EventsBanquetsPage.jsx`
