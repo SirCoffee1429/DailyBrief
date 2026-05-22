@@ -6,6 +6,8 @@ import WeatherWidget from '../components/WeatherWidget.jsx'
 import SalesBriefing from '../components/SalesBriefing.jsx'
 import EightySixFeed from '../components/EightySixFeed.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
+import ScheduleWidget from '../components/ScheduleWidget.jsx'
+
 
 // Witty messages shown when no briefing exists for today — rotates by calendar day
 const NO_BRIEFING_MESSAGES = [
@@ -271,7 +273,10 @@ export default function Dashboard() {
                     )}
                 </Link>
 
+                <ScheduleWidget />
+
                 <Link to="/kitchen/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+
                     <div className="recipes-top-row">
                         <div className="recipes-icon-box"><i className="fa-solid fa-book-open" /></div>
                         <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>

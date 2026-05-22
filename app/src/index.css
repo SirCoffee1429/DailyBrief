@@ -421,6 +421,7 @@ a:hover {
     "notes     notes     tasks"
     "notes     notes     eightysix"
     "events    events    recipes"
+    "schedule  schedule  recipes"
     "sales     sales     sales";
 }
 
@@ -433,10 +434,12 @@ a:hover {
       "tasks"
       "eightysix"
       "events"
+      "schedule"
       "sales"
       "recipes";
   }
 }
+
 
 .dash-card {
   background: var(--bg-card);
@@ -678,6 +681,128 @@ a:hover {
   flex-direction: column;
   min-height: 160px;
 }
+
+/* Schedule Card Widget */
+.schedule-card {
+  grid-area: schedule;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.schedule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.schedule-card-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.schedule-card-indicator {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--orange);
+  background: var(--orange-bg);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.schedule-card-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  list-style: none;
+  padding: 0;
+}
+
+.schedule-card-chip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 130px;
+}
+
+.schedule-card-chip-time {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--orange);
+}
+
+.schedule-card-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: var(--space-4) 0;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+}
+
+/* Schedule Page Styling */
+.schedule-container {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.schedule-row-hover:hover {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.upload-dropzone-label:hover {
+  border-color: var(--orange) !important;
+  background: rgba(249, 115, 22, 0.03);
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+@media (max-width: 768px) {
+  .schedule-desktop-grid {
+    display: none !important;
+  }
+  .schedule-mobile-grid {
+    display: block !important;
+  }
+}
+
 
 .events-card-label {
   font-size: var(--font-size-sm);
@@ -4948,3 +5073,40 @@ tr.beo-completed td .beo-check {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Fully Booked Days */
+.time-off-day.fully-booked {
+  border-color: rgba(248, 113, 113, 0.3) !important;
+  background: #110e10 !important;
+}
+
+.time-off-day.fully-booked:hover {
+  border-color: rgba(248, 113, 113, 0.6) !important;
+  background: #161012 !important;
+}
+
+.time-off-day.fully-booked .time-off-day-number {
+  color: #f87171 !important;
+}
+
+.time-off-fully-booked-badge {
+  align-self: flex-start;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.time-off-day.fully-booked.today {
+  border-color: #f87171 !important;
+  box-shadow: inset 0 0 0 1px #f87171 !important;
+}
+

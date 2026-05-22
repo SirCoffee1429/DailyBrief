@@ -86,10 +86,15 @@ export default function OfficeLayout({ children }) {
                         <i className="fa-regular fa-calendar office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Time Off</span>
                     </NavLink>
+                    <NavLink to="/office/schedule" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                        <i className="fa-solid fa-calendar-days office-v2-nav-icon" />
+                        <span style={{ marginLeft: '0.75rem' }}>Schedule</span>
+                    </NavLink>
                     <NavLink to="/office/chat" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-comments office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Communication</span>
                     </NavLink>
+
                     
                     <div style={{ marginTop: 'auto', marginBottom: '0.5rem', padding: '0 0.5rem' }}>
                         <button 

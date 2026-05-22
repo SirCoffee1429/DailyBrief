@@ -76,7 +76,16 @@ export default function OfficeDashboard() {
                     </div>
                     <i className="fa-regular fa-calendar-check office-v2-stat-icon"></i>
                 </Link>
+
+                <Link to="/office/schedule" className="office-v2-widget office-v2-stat-card" style={{ textDecoration: 'none' }}>
+                    <div>
+                        <div className="office-v2-stat-value">View</div>
+                        <div className="office-v2-stat-label">Weekly Schedule</div>
+                    </div>
+                    <i className="fa-solid fa-calendar-days office-v2-stat-icon"></i>
+                </Link>
             </section>
+
 
             {/* Calendar Section (WeeklyFeatures natively renders the V2 block now) */}
             <WeeklyFeatures />

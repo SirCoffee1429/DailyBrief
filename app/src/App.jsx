@@ -21,6 +21,7 @@ import EventsBanquetsPage from './pages/EventsBanquetsPage.jsx'
 import RecipeCreator from './pages/RecipeCreator.jsx'
 import Communication from './pages/Communication.jsx'
 import TimeOff from './pages/TimeOff.jsx'
+import SchedulePage from './pages/SchedulePage.jsx'
 
 export default function App() {
     return (
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/kitchen/sales/:date" element={<KitchenLayout><SalesReportDetail /></KitchenLayout>} />
             <Route path="/kitchen/events" element={<KitchenLayout><EventsBanquetsPage /></KitchenLayout>} />
             <Route path="/kitchen/time-off" element={<KitchenLayout><TimeOff /></KitchenLayout>} />
+            <Route path="/kitchen/schedule" element={<KitchenLayout><SchedulePage /></KitchenLayout>} />
 
             {/* Front of House routes */}
             <Route path="/foh" element={<FOHLayout><FOHDashboard /></FOHLayout>} />
@@ -60,6 +62,7 @@ export default function App() {
             <Route path="/office/sales" element={<OfficeGate><OfficeLayout><SalesReports /></OfficeLayout></OfficeGate>} />
             <Route path="/office/sales/:date" element={<OfficeGate><OfficeLayout><SalesReportDetail /></OfficeLayout></OfficeGate>} />
             <Route path="/office/time-off" element={<OfficeGate><OfficeLayout><TimeOff officeMode /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/schedule" element={<OfficeGate><OfficeLayout><SchedulePage officeMode /></OfficeLayout></OfficeGate>} />
         </Routes>
     )
-}
+}
