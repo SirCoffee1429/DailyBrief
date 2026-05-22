@@ -24,3 +24,7 @@ verify_jwt = false
 [functions.process-features]
 enabled = true
 verify_jwt = false
+
+[functions.process-schedule]
+enabled = true
+verify_jwt = false

@@ -2,6 +2,20 @@
 
 ---
 
+### 2026-05-22 — Capacity Limits on Daily Time Off Requests
+
+**File(s) Changed:** `app/src/pages/TimeOff.jsx`, `app/src/index.css` **Type:** `feature`
+**Summary:** Added a first-come, first-served 2-person daily limit on time off requests. When a day reaches 2 requests, it is visually locked and further requests for that day are blocked in both the frontend calendar and submit validation.
+
+**Details:**
+
+- Added client-side click-interception in `openFormForDay()` to show an alert and block opening the modal if a crew member clicks a day that already has 2 or more requests.
+- Added visual indicator `isFullyBooked` in `TimeOff.jsx` rendering logic that applies a `.fully-booked` class and renders a custom `<div className="time-off-fully-booked-badge">` showing a lock icon and "Full" label.
+- Styled fully booked calendar days in `app/src/index.css` with subtle red/muted borders, custom linear background `rgba(248, 113, 113, 0.12)`, and custom today overrides for consistency.
+- Refactored `handleSubmit()` inside `RequestFormModal` to query the database immediately before saving. Finds all overlapping records via a standard range check (`gte/lte`), expands date ranges, and returns a clear, user-friendly error listing all specific blocked dates if the requested range includes any date that is already fully booked.
+
+---
+
 ### 2026-05-17 — Rotating "No Briefing Today" Message on Kitchen Dashboard
 
 **File(s) Changed:** `app/src/pages/Dashboard.jsx`
@@ -1316,3 +1330,104 @@ under the wrong business day.
 - Parent tasks with subtasks show a chevron — clicking label expands/collapses; parent and subtasks each have independent checkboxes
 - `deleteEventTask` updated to also remove orphaned subtasks from local state on parent deletion
 - `renderBeoTasks` signature changed from `(beoId)` to `(beo)` — both call sites updated
+
+---
+
+### 2026-05-21 — BOH Weekly Schedule Viewer & Multimodal OCR Parser
+
+**File(s) Changed:**
+`app/src/App.jsx`, `app/src/pages/OfficeDashboard.jsx`, `app/src/components/OfficeLayout.jsx`, `app/src/pages/Dashboard.jsx`, `app/src/components/ScheduleWidget.jsx` [NEW], `app/src/pages/SchedulePage.jsx` [NEW], `app/src/index.css`, `supabase/functions/process-schedule/index.ts` [NEW], `supabase/migrations/20260521000000_create_schedule_views.sql` [NEW]  
+**Type:** `feature`  
+**Summary:** Designed and implemented a complete BOH (Back of House) Weekly Schedule Viewer system that enables managers to upload a schedule image, document, or PDF, uses a Gemini-powered multimodal edge function to parse shift data, and displays it in real-time on both the office and kitchen dashboards.
+
+**Details:**
+
+- **Database & Storage Setup:**
+  - Created migration file `20260521000000_create_schedule_views.sql` to define the `schedules` table with JSONB structure for robust schema flexibility.
+  - Enabled Row Level Security (RLS) with full public select, insert, and delete permissions to fit the local/development setup.
+  - Added the table to Supabase real-time replication stream (`supabase_realtime` publication).
+  - Created a public storage bucket `schedules` with select, insert, and delete bucket access policies to allow document uploads.
+- **AI Multimodal Edge Function (`process-schedule`):**
+  - Created and deployed a Deno-based Supabase edge function `process-schedule` utilizing `gemini-3-flash-preview` for high-accuracy OCR processing of files, sheets, and images.
+  - Implemented high-fidelity prompts to parse back-of-house crew shifts, aligning employee names, days of week, start times, end times, and kitchen roles.
+  - Instructed the model to dynamically compute calendar dates for all days of the week starting from the specified Sunday.
+- **Interactive Routing & Navigation:**
+  - Integrated `/kitchen/schedule` and `/office/schedule` route paths in `App.jsx` pointing to the single multi-role `SchedulePage` component.
+  - Mounted a "Schedule" sidebar link with calendar icon inside `OfficeLayout.jsx`.
+  - Added a glossy, premium "Weekly Schedule" tile in `OfficeDashboard.jsx` highlighting the current weekly state.
+- **Office / Kitchen Interactive Schedule Page (`SchedulePage.jsx`):**
+  - Crafted an upload zone with drag-and-drop support, drag-over micro-animations, and strict file constraints (supporting JPG, JPEG, PNG, PDF up to 10MB).
+  - Built a modal-driven AI verification workflow allowing managers to choose the schedule's week start date and optionally append weekly announcements before finalizing database insertion.
+  - Engineered a fully responsive, double-viewport layout:
+    - **Desktop view:** A high-end grid timeline spanning Sunday to Saturday, displaying shifts, employees, roles, and action menus.
+    - **Mobile view:** A collapsible day-by-day accordion list optimized for hand-held tablets and phones.
+  - Developed a full-resolution media lightbox overlay (`"View Original File"`) supporting both high-resolution zoomable images and full PDF doc embeds.
+  - Added swift row deletions allowing managers to clean or wipe schedules as required.
+- **Roster Sync Dashboard Widget (`ScheduleWidget.jsx`):**
+  - Crafted a new dashboard widget placed in the core Kitchen Dashboard (`Dashboard.jsx`) to display the real-time active daily BOH roster ("Who's Working Today").
+  - Dynamically calculates the current week state and filters shifts active for the current calendar date.
+  - Synchronizes roster edits in real-time across the kitchen floor using Supabase Postgres CDC subscriptions.
+- **Premium CSS Aesthetics & Grid Layouts:**
+  - Upgraded the `.dashboard-grid` template areas, responsive queries, and viewport margins in `index.css`.
+  - Stretched the adjacent active recipes card vertically to span two rows, maintaining clean visual symmetry.
+  - Integrated custom HSL glow borders, card chip animations, custom scrollbars, and fluid media queries to create a high-end application experience.
+
+---
+
+### 2026-05-22 — Shifted Weekly Schedule to Monday Start
+
+**File(s) Changed:** `supabase/functions/process-schedule/index.ts`, `app/src/pages/SchedulePage.jsx`, `app/src/components/ScheduleWidget.jsx` **Type:** `feature`
+**Summary:** Updated the BOH Weekly Schedule system to start the week on Monday instead of Sunday.
+
+**Details:**
+
+- **Edge Function Prompt Update:** Modified `process-schedule` Deno edge function prompt to explicitly request Monday as the start of the week (`week_start` date field must correspond to a Monday).
+- **Shift Re-alignment Optimization:** Replaced the day-of-week index-based shifts re-alignment logic in `SchedulePage.jsx` with a mathematically robust date difference calculation that accurately handles any chosen week start offset.
+- **Roster Fallback Offsets:** Adjusted the daily roster widget (`ScheduleWidget.jsx`) fallback offset calculation to calculate the offset relative to Monday (Monday = 0, Tuesday = 1, ..., Sunday = 6).
+- **UI Labels & Comments:** Updated page comments, text labels, and verification modal instructions from "Sunday" to "Monday" to prevent manager confusion.
+- **Verification:** Ran a full production build to ensure clean TypeScript/JavaScript compiles and no frontend regressions.
+
+---
+
+### 2026-05-22 — Custom Humorous Schedule Parsing Messages
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `feature`
+**Summary:** Removed all technical and AI references (e.g. "Gemini 3.5 AI") from the schedule upload and parsing screens, replacing them with witty, kitchen-themed status messages in the same tone as the rotating BOH daily briefings.
+
+**Details:**
+
+- **Added parsing messages pool:** Added a constant array `PARSING_MESSAGES` containing 8 funny BOH-themed status lines (e.g., "Decoding management's chicken scratch...", "Calculating how many line cooks are going to call in sick this weekend...", "Checking coffee stain levels...").
+- **Randomized status loading:** Updated the upload file sequence in `SchedulePage.jsx` to dynamically select and render a random status message during OCR processing, keeping the experience lighthearted and highly customized.
+- **Removed tech references:** Swapped references to "Gemini 3.5 AI" and generic parsing statuses with the fun BOH-themed options.
+- **Removed loader subtitle & header references:** Swapped the loader secondary subtitle `"Multimodal Gemini is analyzing visual grid columns..."` with a kitchen-themed *"Cross-referencing the shift matrix against BOH sanity limits..."* sentence, updated header subtitles from `"Gemini AI parser"` to `"automatically transcribe shifts"`, and updated modal labels from `"Gemini estimated Monday"` to `"Detected Monday"`.
+
+---
+
+### 2026-05-22 — Visual Schedule Lightbox Syntax Cleanup
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `fix`
+**Summary:** Resolved syntax issues in the schedule lightbox overlay component, simplifying inline JSX statements to compile successfully and cleanly.
+
+**Details:**
+
+- **Top-level variable declarations:** Declared computed `urls`, `names`, `activeUrl`, and `activeName` variables at the top of the component render rather than inside a nested IIFE.
+- **JSX clean up:** Replaced the complex inline IIFE block inside the visual schedule lightbox with clean, direct JSX conditionals.
+- **Fixed compilation errors:** Added missing closing braces for conditional modal rendering to enable clean frontend production builds.
+
+---
+
+### 2026-05-22 — Single-File Schedule Merge Support
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `feature`
+**Summary:** Implemented automatic merging for secondary uploaded schedule files. If a schedule is already displayed on the dashboard or currently in the parsing preview modal, uploading a new file automatically blends its extracted shifts, announcements, and file attachments without overwriting existing data.
+
+**Details:**
+
+- **Deduplicating shift merge:** Engineered `handleFileUpload` to inspect `pendingData` (if preview modal is open) or `activeSchedule` (if saved schedule is displayed), automatically parsing the incoming file and merging shifts while avoiding duplicate records.
+- **Date shift re-alignment:** Embedded automatic shift date adjustments when merging a file parsed from a different week range to align with the active/target Monday week start.
+- **Combined announcements and files:** Blended newly parsed weekly announcements into the existing list (preventing text duplicates) and appended uploaded file names and public URLs so all pages appear in the native lightbox.
+- **In-Modal Upload Trigger:** Positioned an intuitive, styled `+ Add Another Page/File` button in the verification modal footer, triggering the hidden file selector to support seamless sequential uploads.
+
+---
+
+

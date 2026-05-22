@@ -7,8 +7,6 @@ trigger: always_on
 At the start of every new session, or whenever a new model is loaded, you MUST
 perform the following steps before doing anything else:
 
-### Step 1 —
-
 ### Step 1 — Read the Change Log
 
 Read 3 most recent entries of: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
