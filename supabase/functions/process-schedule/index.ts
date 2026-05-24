@@ -52,7 +52,8 @@ You must return a single, unified JSON object with this exact schema:
       "date": "YYYY-MM-DD",      // The exact calendar date of this shift (calculated from the day-of-week it belongs to relative to the starting Monday).
       "start_time": "string",    // Start time of the shift (e.g. '8:00 AM', '4:00 PM', '10:00 AM'). If the day is a day-off or empty, do not add a shift object for that employee on that date!
       "end_time": "string",      // End time of the shift (e.g. '4:00 PM', '11:00 PM', 'Close'). If close is mentioned, write 'Close'.
-      "note": "string"           // Shift-specific note (e.g., 'Closer', 'Delivery', 'AM Shift' or null if none)
+      "note": "string",          // Shift-specific note (e.g., 'Closer', 'Delivery', 'AM Shift' or null if none)
+      "color": "string"          // Highlight color for this employee or shift (values: 'green', 'blue', 'pink', 'yellow', or null)
     }
   ],
   "announcements": [
@@ -63,7 +64,13 @@ You must return a single, unified JSON object with this exact schema:
 RULES:
 1. MERGE PAGES: If multiple files/pages are provided, they represent different parts or pages of the exact same week's schedule. Merge all extracted shifts and announcements into a single schema. Avoid duplicating shifts if the same shift appears on multiple pages.
 2. BOH ONLY: Only extract Back of House staff (Prep Cooks, Line Cooks, Dishwashers, Chefs). Ignore Front of House (Servers, Hosts, Bartenders, Managers) unless BOH staff are mixed together on the sheet.
-3. CALCULATE DATES: Use the starting Monday date ("week_start") to compute the exact YYYY-MM-DD date for each day of the week:
+3. DETECT HIGHLIGHTS & INFER COLOR CODING: Check the uploaded schedule sheets for color highlighting or markings on employees or shifts. Also infer from roles/sections and shift times. Always set the "color" field using the following rules:
+   - Green Highlights OR roles containing "Dish" or "Dishwasher" or "Wash" -> "green"
+   - Blue Highlights OR roles/shifts containing "Pool" or "Cabana" or "Pavilion" -> "blue"
+   - Pink Highlights OR roles/shifts containing "Banquet" or "BEO" or "Event" -> "pink"
+   - Yellow/Highlighter Yellow Highlights OR shift notes containing "AM" or shifts starting in the morning (e.g., start_time between 5:00 AM and 11:30 AM) -> "yellow"
+   - If none of these match, set color to null.
+4. CALCULATE DATES: Use the starting Monday date ("week_start") to compute the exact YYYY-MM-DD date for each day of the week:
    - Monday shifts: same date as "week_start"
    - Tuesday shifts: "week_start" + 1 day
    - Wednesday shifts: "week_start" + 2 days
@@ -71,7 +78,7 @@ RULES:
    - Friday shifts: "week_start" + 4 days
    - Saturday shifts: "week_start" + 5 days
    - Sunday shifts: "week_start" + 6 days
-4. STRICT FORMATTING: Do NOT wrap the JSON in markdown code blocks or code fences. Return ONLY the raw JSON string.
+5. STRICT FORMATTING: Do NOT wrap the JSON in markdown code blocks or code fences. Return ONLY the raw JSON string.
 `;
 
     // Map each file to the Gemini part format

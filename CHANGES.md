@@ -2,6 +2,52 @@
 
 ---
 
+### 2026-05-23 — Shift-Level Custom Color Overrides in Verify Preview
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `fix`
+**Summary:** Refactored the parsed schedule verification preview modal color picker to update only the specific selected shift instead of overriding all shifts for that employee. Updated the live desktop calendar grid and mobile accordion views to render highlights at the individual shift level.
+
+**Details:**
+
+- Updated the `onChange` color dropdown handler in the Verify Parsed Schedule preview modal table to modify the `color` property only for the targeted shift index `idx` in `pendingData.shifts`.
+- Defined a new global utility helper `getShiftColor(shift, employeeRowColor, employeeRole)` to resolve shift highlights dynamically: prioritizing explicit shift-level color, falling back to employee-level paintbrush color, and automatically inferring color categorizations at the single shift level.
+- Refactored the Desktop schedule calendar grid cells to compute `shiftColorMeta` per shift and apply custom translucent background glows, borders, and text accents.
+- Refactored the Mobile day accordion list cards to compute `shiftColorMeta` per shift, enabling full visual parity across device viewports.
+- Verified successful production bundling using `npm run build` with zero errors.
+
+---
+
+### 2026-05-23 — Color Coding on BOH Weekly Schedule Roster
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `feature`
+**Summary:** Implemented dynamic color-coding on BOH schedules to highlight employee rows and shifts based on role-based categories (Dish = Green, Pool = Blue, Banquet = Pink, AM shifts = Highlighter Yellow) with real-time manager overrides.
+
+**Details:**
+
+- Defined high-end dark-mode translucent colors, hover highlights, and border gradients inside `SchedulePage.jsx` for: Dish (Green), Pool (Blue), Banquet (Pink), and AM Morning (Yellow).
+- Enhanced `getEmployeeRows` logic to dynamically parse and default shift highlight colors. Automatically infers categories for "AM", "Dish", "Pool", and "Banquet" roles/times if color coding is not already assigned.
+- Implemented interactive manager popover color selector paintbrush dropdowns on the Desktop table grid next to employee names (officeMode only).
+- Added pre-save color selector overrides inside the Verify Parsed Schedule preview modal, allowing manual assignments prior to DB save.
+- Created `handleSetEmployeeColor` to persist color mappings into the weekly schedule shifts array and update Supabase in real-time.
+- Custom-tailored the Mobile Accordion view to display gorgeous matching background tints and solid left-accent color borders for colored row items.
+
+---
+
+### 2026-05-22 — Upcoming Week Schedule Uploads
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `feature`
+**Summary:** Implemented the ability to cleanly upload shift schedules for the upcoming week (or any new week) without corrupting currently viewed rosters. Added a premium segmented control mode toggle (New Week vs. Append to Current) and smart database lookups to automatically pre-populate shifts if the week start date already exists.
+
+**Details:**
+
+- Added `uploadMode` state hook in `SchedulePage.jsx` supporting `'new'` (default) and `'merge'` modes.
+- Designed and rendered a sleek segmented control button toggle inside the manager dropzone card to toggle upload mode.
+- Refactored `handleFileUpload` parsing to ignore active viewing week context when in `'new'` mode, preventing accidental date alignment shifts and shift duplication across different weeks.
+- Implemented smart pre-population database scanning when uploading in `'new'` mode. If the parsed Monday week start date matches an existing week, it automatically retrieves existing shifts/announcements/files to allow appending/replacing; otherwise, it starts completely fresh.
+- Enhanced the fallback select prioritization in `loadScheduleWeeks` to check if a schedule starts this calendar week first, then search past weeks, then closest future weeks, enabling correct auto-selection when a future/upcoming roster is uploaded.
+
+---
+
 ### 2026-05-22 — Capacity Limits on Daily Time Off Requests
 
 **File(s) Changed:** `app/src/pages/TimeOff.jsx`, `app/src/index.css` **Type:** `feature`
