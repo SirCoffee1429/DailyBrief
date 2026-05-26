@@ -2,6 +2,22 @@
 
 ---
 
+### 2026-05-26 — Cascading Checkbox Toggles for BEO Prep Lists and Order Lists
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx` **Type:** `feature`
+**Summary:** Implemented hierarchical check/uncheck status synchronization for the Banquets & Catering prep list (tasks) and order list (ingredients). Checking/unchecking a group-level parent task or dish header automatically updates all corresponding children, and child states conditionally propagate back to update the parent status.
+
+**Details:**
+
+- Refactored `toggleEventTask` inside `EventsBanquetsPage.jsx` to trace task hierarchies. Clicking a parent prep task cascades its checked/unchecked status down to all child subtasks in both Supabase and the React state.
+- Enhanced subtask toggling to auto-toggle parent status: checking the last unchecked subtask automatically completes the parent, and unchecking any subtask of a completed parent automatically uncompleting the parent.
+- Defined bulk-update helpers `toggleAllOrderItemsForDish` and `toggleAllOrderItemsForCustom` to update ordering status for all ingredients under a specific dish or all items in the Custom group in both Supabase and state.
+- Refactored `renderOrderItems` to compute overall group completeness and render a styled checkbox next to each source dish header name and the Custom items header.
+- Custom-styled the checkboxes inside the Order List to visually differentiate hierarchy: parent header checkboxes are rendered large (18px by 18px) and child/ingredient checkboxes are rendered small (12px by 12px) with cursor-pointers.
+- Verified successful production build compilation using Vite with zero errors.
+
+---
+
 ### 2026-05-23 — Shift-Level Custom Color Overrides in Verify Preview
 
 **File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `fix`

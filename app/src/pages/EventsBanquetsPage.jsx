@@ -158,18 +158,93 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         await loadAllEventTasks()
     }
 
-    // Toggle task completion (kitchen + office)
+    // Toggle task completion (kitchen + office) with hierarchical syncing
     async function toggleEventTask(taskId, isCompleted) {
-        await supabase
-            .from('event_tasks')
-            .update({ is_completed: !isCompleted })
-            .eq('id', taskId)
+        const newCompleted = !isCompleted
+
+        // Find if this task is a parent task or a subtask
+        let subtaskIds = []
+        let parentTask = null
+        let siblingTasks = []
+        let parentId = null
+
+        for (const tasks of Object.values(tasksByBeo)) {
+            const task = tasks.find(t => t.id === taskId)
+            if (task) {
+                parentId = task.parent_id
+                if (!parentId) {
+                    // This is a parent task. Find its children.
+                    subtaskIds = tasks.filter(t => t.parent_id === taskId).map(t => t.id)
+                } else {
+                    // This is a subtask. Find its parent and sibling subtasks.
+                    parentTask = tasks.find(t => t.id === parentId)
+                    siblingTasks = tasks.filter(t => t.parent_id === parentId)
+                }
+                break
+            }
+        }
+
+        const promises = []
+        // 1. Update the clicked task itself in Supabase
+        promises.push(
+            supabase
+                .from('event_tasks')
+                .update({ is_completed: newCompleted })
+                .eq('id', taskId)
+        )
+
+        // 2. If it's a parent task, update all of its subtasks to the same status in Supabase
+        if (subtaskIds.length > 0) {
+            promises.push(
+                supabase
+                    .from('event_tasks')
+                    .update({ is_completed: newCompleted })
+                    .in('id', subtaskIds)
+            )
+        }
+
+        // 3. If it's a subtask, check if we need to auto-update the parent's status in Supabase
+        let autoParentCompleted = null
+        if (parentId && parentTask) {
+            const updatedSiblings = siblingTasks.map(t =>
+                t.id === taskId ? { ...t, is_completed: newCompleted } : t
+            )
+            const allSiblingsCompleted = updatedSiblings.every(t => t.is_completed)
+
+            if (allSiblingsCompleted && !parentTask.is_completed) {
+                autoParentCompleted = true
+            } else if (!newCompleted && parentTask.is_completed) {
+                autoParentCompleted = false
+            }
+
+            if (autoParentCompleted !== null) {
+                promises.push(
+                    supabase
+                        .from('event_tasks')
+                        .update({ is_completed: autoParentCompleted })
+                        .eq('id', parentId)
+                )
+            }
+        }
+
+        await Promise.all(promises)
+
+        // 4. Update the local React state
         setTasksByBeo(prev => {
             const updated = {}
             for (const [beoId, tasks] of Object.entries(prev)) {
-                updated[beoId] = tasks.map(t =>
-                    t.id === taskId ? { ...t, is_completed: !isCompleted } : t
-                )
+                updated[beoId] = tasks.map(t => {
+                    if (t.id === taskId) {
+                        return { ...t, is_completed: newCompleted }
+                    }
+                    if (subtaskIds.includes(t.id)) {
+                        return { ...t, is_completed: newCompleted }
+                    }
+                    if (autoParentCompleted !== null && t.id === parentId) {
+                        return { ...t, is_completed: autoParentCompleted }
+                    }
+                    return t
+                })
             }
             return updated
         })
@@ -340,6 +415,55 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 updated[beoId] = items.map(i =>
                     i.id === itemId ? { ...i, is_ordered: !isOrdered } : i
                 )
+            }
+            return updated
+        })
+    }
+
+    // Toggle ordered status for all ingredients under a specific source dish group
+    async function toggleAllOrderItemsForDish(beoId, dishName, currentAllChecked) {
+        const newVal = !currentAllChecked
+        await supabase
+            .from('event_order_items')
+            .update({ is_ordered: newVal })
+            .eq('beo_id', beoId)
+            .eq('source_dish', dishName)
+            .eq('is_manual', false)
+
+        setOrderItemsByBeo(prev => {
+            const updated = {}
+            for (const [id, items] of Object.entries(prev)) {
+                if (id === beoId) {
+                    updated[id] = items.map(i =>
+                        (i.source_dish === dishName && !i.is_manual) ? { ...i, is_ordered: newVal } : i
+                    )
+                } else {
+                    updated[id] = items
+                }
+            }
+            return updated
+        })
+    }
+
+    // Toggle ordered status for all custom (manual) order items
+    async function toggleAllOrderItemsForCustom(beoId, currentAllChecked) {
+        const newVal = !currentAllChecked
+        await supabase
+            .from('event_order_items')
+            .update({ is_ordered: newVal })
+            .eq('beo_id', beoId)
+            .eq('is_manual', true)
+
+        setOrderItemsByBeo(prev => {
+            const updated = {}
+            for (const [id, items] of Object.entries(prev)) {
+                if (id === beoId) {
+                    updated[id] = items.map(i =>
+                        i.is_manual ? { ...i, is_ordered: newVal } : i
+                    )
+                } else {
+                    updated[id] = items
+                }
             }
             return updated
         })
@@ -1391,7 +1515,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     className="task-box"
                     checked={item.is_ordered}
                     onChange={() => toggleOrderItem(item.id, item.is_ordered)}
-                    style={{ flexShrink: 0 }}
+                    style={{ flexShrink: 0, width: '12px', height: '12px', cursor: 'pointer' }}
                 />
                 <span style={{
                     flex: 1,
@@ -1533,19 +1657,40 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 {items.length > 0 && (
                     <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {/* AI-generated items grouped by source dish */}
-                        {dishes.map(dish => (
-                            <div key={dish} style={{ marginBottom: '6px' }}>
-                                <div style={dishLabelStyle}>{dish}</div>
-                                {autoItems.filter(i => i.source_dish === dish).map(item => renderOrderItemRow(item))}
-                            </div>
-                        ))}
+                        {dishes.map(dish => {
+                            const dishItems = autoItems.filter(i => i.source_dish === dish)
+                            const areAllOrdered = dishItems.length > 0 && dishItems.every(i => i.is_ordered)
+
+                            return (
+                                <div key={dish} style={{ marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                                        <input
+                                            type="checkbox"
+                                            className="task-box"
+                                            checked={areAllOrdered}
+                                            onChange={() => toggleAllOrderItemsForDish(beo.id, dish, areAllOrdered)}
+                                            style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer', flexShrink: 0 }}
+                                        />
+                                        <span style={{ ...dishLabelStyle, marginBottom: 0 }}>{dish}</span>
+                                    </div>
+                                    {dishItems.map(item => renderOrderItemRow(item))}
+                                </div>
+                            )
+                        })}
 
                         {/* Manual items */}
                         {manualItems.length > 0 && (
                             <div style={{ marginBottom: '4px' }}>
-                                {dishes.length > 0 && (
-                                    <div style={{ ...dishLabelStyle, marginTop: '4px' }}>Custom</div>
-                                )}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: dishes.length > 0 ? '4px' : '0px', marginBottom: '3px' }}>
+                                    <input
+                                        type="checkbox"
+                                        className="task-box"
+                                        checked={manualItems.every(i => i.is_ordered)}
+                                        onChange={() => toggleAllOrderItemsForCustom(beo.id, manualItems.every(i => i.is_ordered))}
+                                        style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer', flexShrink: 0 }}
+                                    />
+                                    <span style={{ ...dishLabelStyle, marginBottom: 0 }}>Custom</span>
+                                </div>
                                 {manualItems.map(item => renderOrderItemRow(item))}
                             </div>
                         )}
