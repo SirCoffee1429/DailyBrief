@@ -2,6 +2,24 @@
 
 ---
 
+### 2026-05-26 — Refined Weekly BOH Schedule Color-Coding and Color-Leak Prevention
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx`, `supabase/functions/process-schedule/index.ts` **Type:** `fix`
+**Summary:** Refined shift schedule color-coding to prevent false positive highlights (e.g. matching "team" as an AM shift) and color-leakage (e.g. propagating individual AM shift yellow highlights to other shifts or the entire employee roster name cell).
+
+**Details:**
+
+- Replaced substring checks `noteLower.includes('am')` inside `getShiftColor` with strict word-boundary regex matching `/\b(am|a\.m\.)\b/i` to avoid false positives on common words (e.g. "team", "game", "exam", "came", "family").
+- Refactored `getShiftColor` in `SchedulePage.jsx` to execute shift-specific role and timing inferences before falling back to employee row colors, enabling individual shift overrides to take precedence.
+- Added start-time timing validation to `getShiftColor` to ensure `yellow` (AM) overrides are only applied to valid morning shifts, preventing color leakage onto PM/evening shifts.
+- Refactored `getEmployeeRows` in `SchedulePage.jsx` to establish a dominant consensus color determination (requiring a color to be present on >= 50% of an employee's shifts before highlighting their name cell), and explicitly excluded `yellow` unless uniform across all shifts.
+- Removed automated "Yellow / AM" employee row level auto-inference inside `getEmployeeRows` since AM is a timing property rather than a permanent role.
+- Updated the `process-schedule` Supabase Edge Function prompt in `index.ts` to implement strict AM boundaries and prevent incorrect yellow shift highlight parsing on PM shifts.
+- Deployed version 5 of the `process-schedule` Edge Function to production using Supabase.
+- Successfully built and compiled the application with Vite with zero errors.
+
+---
+
 ### 2026-05-26 — Cascading Checkbox Toggles for BEO Prep Lists and Order Lists
 
 **File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx` **Type:** `feature`
@@ -1489,6 +1507,47 @@ under the wrong business day.
 - **Date shift re-alignment:** Embedded automatic shift date adjustments when merging a file parsed from a different week range to align with the active/target Monday week start.
 - **Combined announcements and files:** Blended newly parsed weekly announcements into the existing list (preventing text duplicates) and appended uploaded file names and public URLs so all pages appear in the native lightbox.
 - **In-Modal Upload Trigger:** Positioned an intuitive, styled `+ Add Another Page/File` button in the verification modal footer, triggering the hidden file selector to support seamless sequential uploads.
+
+---
+
+### 2026-05-29 — Resolved BEO PDF Parser Gateway Timeout (504)
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts`, `supabase/config.toml`, `app/src/pages/EventsBanquetsPage.jsx` **Type:** `fix`
+**Summary:** Resolved the BEO PDF parsing 504 gateway timeout by upgrading the Gemini endpoint to a fast GA model, implementing request timeout limits in Deno, and refining frontend error notifications.
+
+**Details:**
+
+- Upgraded `GEMINI_ENDPOINT` model identifier in `process-beo/index.ts` from `gemini-3-flash-preview` to the stable and fast `gemini-2.5-flash` model, bypassing reasoning latencies and capacity congestion of the preview tier.
+- Implemented an `AbortController` in `process-beo/index.ts` to automatically abort the fetch call to Gemini if it exceeds 50 seconds, preventing indefinite hangs and avoiding the platform's hard 150-second idle gateway limit.
+- Normalised line endings in `supabase/config.toml` to uniform CRLF to fix Go-based TOML parser complaints on Windows, unblocking Supabase CLI deployments.
+- Refactored `handleBEOUpload` and `handleBeoOverwriteConfirm` inside `EventsBanquetsPage.jsx` to catch `504` or `timeout` errors specifically and present rich, informative user alerts.
+- Successfully deployed version 10 of `process-beo` to production and verified that the React application builds without warning or errors.
+
+---
+
+### 2026-05-29 — Optimized BEO Parser Model and Timeout Margins
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts` **Type:** `fix`
+**Summary:** Optimized the BEO parsing pipeline by switching from gemini-2.5-flash to the ultra-fast gemini-1.5-flash, and increasing the internal timeout from 50 to 130 seconds to support multi-page documents without timing out.
+
+**Details:**
+
+- Replaced `gemini-2.5-flash` with the raw cost-efficient extraction model `gemini-1.5-flash` in `process-beo/index.ts` to benefit from minimal latency overhead and direct speed optimization without thinking/reasoning latency.
+- Increased the internal `AbortController` request timeout in `process-beo/index.ts` from `50 seconds` to `130 seconds`. This accommodates the extraction time of large, multi-page PDFs while keeping it strictly below the 150-second API gateway limit.
+- Successfully deployed version 11 of the `process-beo` Edge Function to production.
+
+---
+
+### 2026-05-30 — Reverted Model to gemini-2.5-flash with Extended Timeouts
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts` **Type:** `fix`
+**Summary:** Resolved API model retirement issues by reverting the endpoint back to the active gemini-2.5-flash production model, while maintaining the relaxed 130-second abort controller margins.
+
+**Details:**
+
+- Restored `GEMINI_ENDPOINT` model parameter in `process-beo/index.ts` to `gemini-2.5-flash` after discovering that Google deprecated and retired the `gemini-1.5-flash` model endpoint.
+- Retained the extended `130-second` Deno AbortController timeout threshold to give the model ample processing time for dense, multi-page BEO PDFs without hitting the 150-second API gateway ceiling.
+- Re-deployed version 12 of the `process-beo` Edge Function to production using Supabase CLI.
 
 ---
 

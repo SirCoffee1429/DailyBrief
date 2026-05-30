@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -265,28 +265,47 @@ RULES:
 - Do NOT wrap in markdown code fences. Return ONLY the JSON array.
 `;
 
-    const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: "application/pdf",
-                  data: pdfBase64,
+    // Setup timeout AbortController to protect against Deno gateway timeouts
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.warn("Gemini API call timed out after 130 seconds. Aborting request.");
+      controller.abort();
+    }, 130000);
+
+    let geminiRes;
+    try {
+      geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: "application/pdf",
+                    data: pdfBase64,
+                  },
                 },
-              },
-            ],
+              ],
+            },
+          ],
+          generationConfig: {
+            response_mime_type: "application/json",
           },
-        ],
-        generationConfig: {
-          response_mime_type: "application/json",
-        },
-      }),
-    });
+        }),
+      });
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') {
+        console.error("Gemini API call aborted due to 130s timeout.");
+        throw new Error("Gemini API request timed out after 130 seconds. Please try uploading a smaller PDF or verify network stability.");
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!geminiRes.ok) {
       const errorText = await geminiRes.text();

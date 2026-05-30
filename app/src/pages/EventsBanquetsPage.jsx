@@ -573,7 +573,12 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             alert("BEO Parsed Successfully!");
         } catch (err) {
             console.error("Error uploading BEO:", err);
-            alert("Failed to parse BEO. Check console for details.");
+            const errMsg = err?.message || String(err);
+            if (errMsg.includes('504') || errMsg.toLowerCase().includes('timeout') || errMsg.toLowerCase().includes('abort')) {
+                alert("Timeout Error: The BEO parsing request took too long. The Gemini AI model may be temporarily congested, or the PDF is too large/complex. Please try uploading again in a moment.");
+            } else {
+                alert(`Failed to parse BEO. Details: ${errMsg}`);
+            }
         } finally {
             setUploadingBEO(false);
         }
@@ -601,7 +606,12 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             alert(`${parts.join(', ')}. Tasks, notes, and order items preserved.`);
         } catch (err) {
             console.error("Error overwriting BEO:", err);
-            alert("Failed to overwrite BEO. Check console for details.");
+            const errMsg = err?.message || String(err);
+            if (errMsg.includes('504') || errMsg.toLowerCase().includes('timeout') || errMsg.toLowerCase().includes('abort')) {
+                alert("Timeout Error: The BEO overwrite confirmation took too long. The system may be temporarily overloaded. Please try again in a moment.");
+            } else {
+                alert(`Failed to overwrite BEO. Details: ${errMsg}`);
+            }
         } finally {
             setUploadingBEO(false);
         }

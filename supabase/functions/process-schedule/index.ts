@@ -68,7 +68,7 @@ RULES:
    - Green Highlights OR roles containing "Dish" or "Dishwasher" or "Wash" -> "green"
    - Blue Highlights OR roles/shifts containing "Pool" or "Cabana" or "Pavilion" -> "blue"
    - Pink Highlights OR roles/shifts containing "Banquet" or "BEO" or "Event" -> "pink"
-   - Yellow/Highlighter Yellow Highlights OR shift notes containing "AM" or shifts starting in the morning (e.g., start_time between 5:00 AM and 11:30 AM) -> "yellow"
+   - Yellow/Highlighter Yellow Highlights OR shift notes/times containing "AM" (as a separate word or abbreviation, e.g. "AM Shift", "8:00 AM", and NOT as a substring inside words like "team", "game", "exam", "came", "family") or shifts starting in the morning (e.g., start_time between 5:00 AM and 11:30 AM). NEVER set color to "yellow" if the shift starts in the afternoon/evening or contains explicit "PM" tags (e.g., "4:00 PM", "PM Shift", "Close").
    - If none of these match, set color to null.
 4. CALCULATE DATES: Use the starting Monday date ("week_start") to compute the exact YYYY-MM-DD date for each day of the week:
    - Monday shifts: same date as "week_start"

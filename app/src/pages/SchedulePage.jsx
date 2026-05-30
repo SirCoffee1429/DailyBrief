@@ -48,15 +48,15 @@ const HIGHLIGHT_COLORS = {
 }
 
 const getShiftColor = (shift, employeeRowColor = null, employeeRole = '') => {
+    // 1. Prioritize explicit shift-level color override (e.g. from individual verify edit)
     if (shift && shift.color) {
         return shift.color
     }
-    if (employeeRowColor) {
-        return employeeRowColor
-    }
+
+    // 2. Try to infer shift-specific color from the shift's own role, note, or timing first!
     if (shift) {
         const noteLower = (shift.note || '').toLowerCase()
-        const roleLower = (shift.role || employeeRole || '').toLowerCase()
+        const roleLower = (shift.role || '').toLowerCase()
         const startLower = (shift.start_time || '').toLowerCase()
 
         if (roleLower.includes('dish') || roleLower.includes('wash') || noteLower.includes('dish')) {
@@ -68,7 +68,10 @@ const getShiftColor = (shift, employeeRowColor = null, employeeRole = '') => {
         if (roleLower.includes('banquet') || roleLower.includes('beo') || roleLower.includes('event') || noteLower.includes('banquet') || noteLower.includes('beo')) {
             return 'pink'
         }
-        if (noteLower.includes('am') || startLower.includes('am')) {
+        
+        // Strict word-boundary check for 'am' or 'a.m.' to avoid matching words like 'team', 'came', 'game', etc.
+        const amWordRegex = /\b(am|a\.m\.)\b/i
+        if (amWordRegex.test(noteLower) || amWordRegex.test(startLower)) {
             const match = shift.start_time.match(/(\d+):(\d+)\s*(AM|PM)/i)
             if (match) {
                 const hour = parseInt(match[1])
@@ -77,10 +80,64 @@ const getShiftColor = (shift, employeeRowColor = null, employeeRole = '') => {
                     return 'yellow'
                 }
             } else {
-                return 'yellow'
+                // If there's no standard colon but it has AM (e.g., '8 AM' or '8am')
+                const simpleMatch = shift.start_time.match(/(\d+)\s*(AM|PM)/i)
+                if (simpleMatch) {
+                    const hour = parseInt(simpleMatch[1])
+                    const period = simpleMatch[2].toUpperCase()
+                    if (period === 'AM' && hour >= 5 && hour <= 11) {
+                        return 'yellow'
+                    }
+                } else {
+                    // Fallback only if it doesn't explicitly contain 'PM' in the start time
+                    const pmMatch = shift.start_time.match(/PM/i)
+                    if (!pmMatch) {
+                        return 'yellow'
+                    }
+                }
             }
         }
     }
+
+    // 3. Fall back to employeeRowColor (inherited from employee paintbrush or dominant role highlight)
+    // Validate to make sure AM yellow doesn't leak onto PM/evening shifts
+    if (employeeRowColor) {
+        if (employeeRowColor === 'yellow') {
+            if (shift) {
+                const startLower = (shift.start_time || '').toLowerCase()
+                // A shift with an explicit 'PM' or starting in PM should never inherit yellow
+                if (startLower.includes('pm')) {
+                    return null
+                }
+                const match = shift.start_time.match(/(\d+):(\d+)\s*(AM|PM)/i)
+                if (match) {
+                    const hour = parseInt(match[1])
+                    const period = match[3].toUpperCase()
+                    if (period === 'AM' && hour >= 5 && (hour < 11 || (hour === 11 && parseInt(match[2]) <= 30))) {
+                        return 'yellow'
+                    }
+                    return null
+                }
+            }
+            return 'yellow'
+        }
+        return employeeRowColor
+    }
+
+    // 4. Finally, fall back to employee role-based inference if we have the employeeRole
+    if (employeeRole) {
+        const roleLower = employeeRole.toLowerCase()
+        if (roleLower.includes('dish') || roleLower.includes('wash')) {
+            return 'green'
+        }
+        if (roleLower.includes('pool') || roleLower.includes('cabana') || roleLower.includes('pavilion')) {
+            return 'blue'
+        }
+        if (roleLower.includes('banquet') || roleLower.includes('beo') || roleLower.includes('event')) {
+            return 'pink'
+        }
+    }
+
     return null
 }
 
@@ -252,19 +309,47 @@ export default function SchedulePage({ officeMode = false }) {
         shifts.forEach(shift => {
             const empName = shift.employee_name || 'Unknown Staff'
             if (!employeeMap[empName]) {
-                employeeMap[empName] = { name: empName, role: shift.role || 'Crew', shiftsByDate: {}, color: null }
+                employeeMap[empName] = { name: empName, role: shift.role || 'Crew', shiftsByDate: {}, color: null, explicitColors: [] }
             }
             
-            // Prioritize explicit color in shift
+            // Collect explicit colors from individual shifts
             if (shift.color) {
-                employeeMap[empName].color = shift.color
+                employeeMap[empName].explicitColors.push(shift.color)
             }
 
             employeeMap[empName].shiftsByDate[shift.date] = shift
         })
 
-        // After grouping, if an employee has NO explicit color set, try to infer it
+        // Determine employee row color based on consensus of explicit shift colors
         Object.values(employeeMap).forEach(emp => {
+            if (emp.explicitColors.length > 0) {
+                // Count occurrences of each color
+                const counts = {}
+                emp.explicitColors.forEach(c => { counts[c] = (counts[c] || 0) + 1 })
+                
+                let dominantColor = null
+                let maxCount = 0
+                Object.entries(counts).forEach(([c, count]) => {
+                    if (count > maxCount) {
+                        maxCount = count
+                        dominantColor = c
+                    }
+                })
+
+                const numShifts = Object.keys(emp.shiftsByDate).length
+                // Only propagate shift color to the row level if:
+                // - It is set on at least 50% of their shifts
+                // - And we exclude 'yellow' from leaking unless it is set on ALL of their shifts (uniform AM worker)
+                if (dominantColor === 'yellow') {
+                    if (maxCount === numShifts) {
+                        emp.color = 'yellow'
+                    }
+                } else if (maxCount >= numShifts / 2) {
+                    emp.color = dominantColor
+                }
+            }
+
+            // After grouping, if an employee has NO explicit color set, try to infer it from their baseline role
             if (!emp.color) {
                 const roleLower = (emp.role || '').toLowerCase()
                 
@@ -280,32 +365,7 @@ export default function SchedulePage({ officeMode = false }) {
                 else if (roleLower.includes('banquet') || roleLower.includes('beo') || roleLower.includes('event')) {
                     emp.color = 'pink'
                 }
-                // 4. Yellow = AM / Morning
-                else {
-                    // Check if any shift note or role has "am" or starts in morning
-                    let isAm = false
-                    Object.values(emp.shiftsByDate).forEach(sh => {
-                        const noteLower = (sh.note || '').toLowerCase()
-                        const startLower = (sh.start_time || '').toLowerCase()
-                        
-                        if (noteLower.includes('am') || startLower.includes('am')) {
-                            // Verify it's actually morning, e.g. starts between 5 AM and 11:30 AM
-                            const match = sh.start_time.match(/(\d+):(\d+)\s*(AM|PM)/i)
-                            if (match) {
-                                const hour = parseInt(match[1])
-                                const period = match[3].toUpperCase()
-                                if (period === 'AM' && hour >= 5 && (hour < 11 || (hour === 11 && parseInt(match[2]) <= 30))) {
-                                    isAm = true
-                                }
-                            } else {
-                                isAm = true
-                            }
-                        }
-                    })
-                    if (isAm) {
-                        emp.color = 'yellow'
-                    }
-                }
+                // Note: AM (Yellow) is timing-based and is intentionally NOT inferred at the employee name cell/row level anymore.
             }
         })
 
