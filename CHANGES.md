@@ -1551,4 +1551,16 @@ under the wrong business day.
 
 ---
 
+### 2026-05-30 — Increased Daily Time Off Request Limit to 3 People
 
+**File(s) Changed:** `app/src/pages/TimeOff.jsx` **Type:** `feature`
+**Summary:** Increased the first-come, first-served daily time off request capacity limit from 2 people to 3 people. Updated front-end calendar rendering, click interception, and form validation to support up to 3 concurrent daily requests.
+
+**Details:**
+
+- **Capacity Limit Check (Click Interception):** Refactored `openFormForDay()` in `TimeOff.jsx` to only block requests and alert the user when a day has 3 or more requests (up from 2).
+- **Calendar Visual Highlights:** Updated the `isFullyBooked` state logic in the day renderer to trigger when `dayRequests.length >= 3`, ensuring the lock icon, `.fully-booked` style, and red outline are only shown when 3 slots are exhausted.
+- **Form Submit Validation Check:** Updated the pre-save validation loop inside `handleSubmit()` to verify daily overlapping requests against a threshold of 3, rejecting request ranges only if any target date has 3 or more existing bookings.
+- **User-Facing Alert Strings:** Adjusted client-side modal errors and calendar alert text blocks to read "(3-person limit)" and "(3-person limit reached)" for clear communication to team members.
+
+---

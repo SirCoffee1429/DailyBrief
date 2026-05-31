@@ -84,8 +84,8 @@ export default function TimeOff({ officeMode = false }) {
     function openFormForDay(day) {
         if (day) {
             const dayRequests = requestsByDate.get(day) || []
-            if (dayRequests.length >= 2) {
-                alert(`Cannot request time off: ${new Date(day + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} is already fully booked (2-person limit reached).`);
+            if (dayRequests.length >= 3) {
+                alert(`Cannot request time off: ${new Date(day + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} is already fully booked (3-person limit reached).`);
                 return;
             }
         }
@@ -137,7 +137,7 @@ export default function TimeOff({ officeMode = false }) {
                         const dayRequests = requestsByDate.get(key) || []
                         const inMonth = day.getMonth() === viewMonth.getMonth()
                         const isToday = key === todayIso
-                        const isFullyBooked = dayRequests.length >= 2
+                        const isFullyBooked = dayRequests.length >= 3
                         return (
                             <button
                                 key={key}
@@ -282,14 +282,14 @@ function RequestFormModal({ defaultDate, onClose, onSaved }) {
                     count++
                 }
             }
-            if (count >= 2) {
+            if (count >= 3) {
                 const formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 blockedDates.push(formattedDate)
             }
         }
 
         if (blockedDates.length > 0) {
-            setError(`Cannot submit request: the following date(s) are already fully booked (2-person limit): ${blockedDates.join(', ')}`)
+            setError(`Cannot submit request: the following date(s) are already fully booked (3-person limit): ${blockedDates.join(', ')}`)
             setSubmitting(false)
             return
         }
