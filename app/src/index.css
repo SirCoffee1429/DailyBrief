@@ -5110,3 +5110,99 @@ tr.beo-completed td .beo-check {
   box-shadow: inset 0 0 0 1px #f87171 !important;
 }
 
+/* ============================================
+   Weekly Schedule Popup Modal (Roster Detail)
+   ============================================ */
+.weekly-schedule-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 11, 14, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.weekly-schedule-modal-card {
+  width: 100%;
+  max-width: 1100px;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.weekly-schedule-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+}
+
+.weekly-day-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.weekly-day-card.has-shift {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.weekly-day-card.is-off {
+  opacity: 0.4;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+@media (max-width: 900px) {
+  .weekly-schedule-modal-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .weekly-schedule-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .weekly-day-card {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    text-align: left;
+    gap: 12px;
+  }
+  .weekly-day-card.is-off {
+    padding: 6px 12px;
+  }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+

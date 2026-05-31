@@ -1564,3 +1564,19 @@ under the wrong business day.
 - **User-Facing Alert Strings:** Adjusted client-side modal errors and calendar alert text blocks to read "(3-person limit)" and "(3-person limit reached)" for clear communication to team members.
 
 ---
+
+### 2026-05-31 — Interactive Employee Weekly Schedule Pop-up Modal
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx`, `app/src/index.css` **Type:** `feature`
+**Summary:** Implemented an interactive weekly schedule detail pop-up modal. Users can click any employee's name in both the desktop grid and mobile roster list to view their complete weekly schedule (Monday through Sunday) in a beautiful, scroll-free, responsive overlay.
+
+**Details:**
+
+- **Interactive Employee Names:** Styled employee names in both the desktop grid row cells and mobile day roster cards with hover animations, pointer cursors, and custom triggers to set the selected employee week.
+- **Scroll-Free Responsive Grid:** Built a custom 7-day visual card layout that automatically adjusts to viewport width, displaying as a single horizontal row on desktop, 4 columns on tablet, and a single stacked vertical column with compact key-value lines on mobile viewports to guarantee a zero-scroll experience on all devices.
+- **Premium Aesthetics:** Incorporated dynamic border styling that matches each employee's role/shift highlighting color (AM Yellow, Banquet Pink, Dish Green, Pool Blue) and highlights the current calendar day with a vibrant glow, while clearly representing off days with muted calendar icons.
+- **React State Integration:** Maintained pristine React states to handle outside card clicks and X buttons to close the overlay seamlessly.
+- **Production Verification:** Built the complete application successfully with Vite with no errors.
+
+---
+

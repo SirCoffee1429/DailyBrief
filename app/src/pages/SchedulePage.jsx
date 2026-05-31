@@ -164,6 +164,8 @@ export default function SchedulePage({ officeMode = false }) {
     const [lightboxFileIndex, setLightboxFileIndex] = useState(0)
     const [selectedMobileDay, setSelectedMobileDay] = useState(0) // Monday = 0
     const [activeColorMenu, setActiveColorMenu] = useState(null) // { employeeName } or null
+    const [selectedEmployeeSchedule, setSelectedEmployeeSchedule] = useState(null)
+
 
     // Lightbox variables
     const urls = (isViewingOriginal && activeSchedule && activeSchedule.file_url) ? activeSchedule.file_url.split(',') : []
@@ -1020,8 +1022,28 @@ export default function SchedulePage({ officeMode = false }) {
                                                 transition: 'all 0.2s'
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span style={{ color: '#e4e4e7', fontSize: '0.95rem' }}>{row.name}</span>
+                                                    <div 
+                                                        onClick={() => setSelectedEmployeeSchedule(row)}
+                                                        style={{ 
+                                                            display: 'flex', 
+                                                            flexDirection: 'column', 
+                                                            cursor: 'pointer',
+                                                            userSelect: 'none'
+                                                        }}
+                                                        title="Click to view weekly schedule"
+                                                    >
+                                                        <span 
+                                                            style={{ 
+                                                                color: '#e4e4e7', 
+                                                                fontSize: '0.95rem', 
+                                                                fontWeight: 600,
+                                                                transition: 'color 0.15s ease'
+                                                            }}
+                                                            onMouseEnter={(e) => e.target.style.color = '#f97316'}
+                                                            onMouseLeave={(e) => e.target.style.color = '#e4e4e7'}
+                                                        >
+                                                            {row.name}
+                                                        </span>
                                                         <span style={{ color: '#71717a', fontSize: '11px', fontWeight: 500, marginTop: '2px', textTransform: 'uppercase' }}>{row.role}</span>
                                                     </div>
                                                     {officeMode && (
@@ -1269,8 +1291,28 @@ export default function SchedulePage({ officeMode = false }) {
                                                         alignItems: 'center'
                                                     }}
                                                 >
-                                                    <div>
-                                                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e4e4e7' }}>{item.name}</h4>
+                                                    <div 
+                                                        onClick={() => {
+                                                            const fullRow = employeeRows.find(r => r.name === item.name)
+                                                            if (fullRow) {
+                                                                setSelectedEmployeeSchedule(fullRow)
+                                                            }
+                                                        }}
+                                                        style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
+                                                        title="Click to view weekly schedule"
+                                                    >
+                                                        <h4 
+                                                            style={{ 
+                                                                fontSize: '0.9rem', 
+                                                                fontWeight: 700, 
+                                                                color: '#e4e4e7',
+                                                                transition: 'color 0.15s ease'
+                                                            }}
+                                                            onMouseEnter={(e) => e.target.style.color = '#f97316'}
+                                                            onMouseLeave={(e) => e.target.style.color = '#e4e4e7'}
+                                                        >
+                                                            {item.name}
+                                                        </h4>
                                                         <span style={{ fontSize: '11px', color: shiftColorMeta ? shiftColorMeta.solid : '#71717a', textTransform: 'uppercase', fontWeight: shiftColorMeta ? 600 : 400 }}>{item.role}</span>
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
@@ -1555,8 +1597,230 @@ export default function SchedulePage({ officeMode = false }) {
                     </div>
                 </div>
             )}
+            {/* EMPLOYEE WEEKLY SCHEDULE DETAIL POPUP MODAL */}
+            {selectedEmployeeSchedule && (
+                <div 
+                    className="weekly-schedule-modal-overlay"
+                    onClick={() => setSelectedEmployeeSchedule(null)}
+                >
+                    <div 
+                        className="weekly-schedule-modal-card"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            borderTop: selectedEmployeeSchedule.color && HIGHLIGHT_COLORS[selectedEmployeeSchedule.color] 
+                                ? `4px solid ${HIGHLIGHT_COLORS[selectedEmployeeSchedule.color].solid}`
+                                : '4px solid #f97316'
+                        }}
+                    >
+                        {/* Close Button */}
+                        <button 
+                            onClick={() => setSelectedEmployeeSchedule(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '20px',
+                                right: '20px',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid #27272a',
+                                borderRadius: '50%',
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#a1a1aa',
+                                cursor: 'pointer',
+                                fontSize: '1rem',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = '#fff';
+                                e.currentTarget.style.background = 'rgba(248, 113, 113, 0.2)';
+                                e.currentTarget.style.borderColor = '#f87171';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = '#a1a1aa';
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.borderColor = '#27272a';
+                            }}
+                        >
+                            <i className="fa-solid fa-xmark" />
+                        </button>
+
+                        {/* Roster Modal Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <div style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '10px',
+                                background: selectedEmployeeSchedule.color && HIGHLIGHT_COLORS[selectedEmployeeSchedule.color]
+                                    ? HIGHLIGHT_COLORS[selectedEmployeeSchedule.color].bg
+                                    : 'rgba(249, 115, 22, 0.12)',
+                                border: `1px solid ${selectedEmployeeSchedule.color && HIGHLIGHT_COLORS[selectedEmployeeSchedule.color]
+                                    ? HIGHLIGHT_COLORS[selectedEmployeeSchedule.color].border
+                                    : 'rgba(249, 115, 22, 0.3)'}`,
+                                color: selectedEmployeeSchedule.color && HIGHLIGHT_COLORS[selectedEmployeeSchedule.color]
+                                    ? HIGHLIGHT_COLORS[selectedEmployeeSchedule.color].solid
+                                    : '#f97316',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.25rem'
+                            }}>
+                                <i className="fa-solid fa-user-clock" />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, color: '#fff' }}>
+                                    {selectedEmployeeSchedule.name}
+                                </h2>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                                    <span style={{ fontSize: '11px', color: '#a1a1aa', fontWeight: 600, textTransform: 'uppercase', background: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '4px' }}>
+                                        {selectedEmployeeSchedule.role || 'Crew'}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: '#71717a' }}>
+                                        •
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: '#f97316', fontWeight: 600 }}>
+                                        {Object.values(selectedEmployeeSchedule.shiftsByDate).filter(Boolean).length} Shifts Scheduled This Week
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 7-Day Scroll-Free Grid View */}
+                        <div className="weekly-schedule-modal-grid">
+                            {weekDays.map(day => {
+                                const shift = selectedEmployeeSchedule.shiftsByDate[day.dateStr]
+                                const isToday = day.dateStr === todayStr
+                                const shiftColor = shift ? getShiftColor(shift, selectedEmployeeSchedule.color, selectedEmployeeSchedule.role) : null
+                                const shiftColorMeta = shiftColor ? HIGHLIGHT_COLORS[shiftColor] : null
+
+                                return (
+                                    <div 
+                                        key={day.dayIndex} 
+                                        className={`weekly-day-card ${shift ? 'has-shift' : 'is-off'}`}
+                                        style={{
+                                            border: isToday 
+                                                ? '1px solid rgba(249, 115, 22, 0.4)' 
+                                                : (shiftColorMeta ? `1px solid ${shiftColorMeta.border}` : '1px solid #27272a'),
+                                            borderTop: isToday
+                                                ? '4px solid #f97316'
+                                                : (shiftColorMeta ? `4px solid ${shiftColorMeta.solid}` : '1px solid #27272a'),
+                                            boxShadow: isToday ? '0 0 15px rgba(249, 115, 22, 0.1)' : 'none'
+                                        }}
+                                    >
+                                        {/* Day Info */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <span style={{ 
+                                                fontSize: '11px', 
+                                                fontWeight: 800, 
+                                                textTransform: 'uppercase', 
+                                                color: isToday ? '#f97316' : '#a1a1aa'
+                                            }}>
+                                                {day.dayName}
+                                            </span>
+                                            <span style={{ 
+                                                fontSize: '11px', 
+                                                color: isToday ? '#e4e4e7' : '#71717a'
+                                            }}>
+                                                {new Date(day.dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                            </span>
+                                        </div>
+
+                                        {/* Shift Hours / Off Status */}
+                                        {shift ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                                                <div style={{ 
+                                                    fontSize: '0.85rem', 
+                                                    fontWeight: 700, 
+                                                    color: shiftColorMeta ? shiftColorMeta.solid : '#f97316' 
+                                                }}>
+                                                    {shift.start_time} - {shift.end_time}
+                                                </div>
+                                                {shift.note && (
+                                                    <div style={{ 
+                                                        fontSize: '10px', 
+                                                        color: '#e4e4e7', 
+                                                        background: 'rgba(255,255,255,0.03)',
+                                                        padding: '4px 6px',
+                                                        borderRadius: '4px',
+                                                        fontStyle: 'italic',
+                                                        border: '1px solid rgba(255,255,255,0.02)'
+                                                    }}>
+                                                        {shift.note}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div style={{ 
+                                                fontSize: '0.75rem', 
+                                                fontWeight: 600, 
+                                                color: '#3f3f46', 
+                                                marginTop: 'auto',
+                                                padding: '8px 0',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '4px'
+                                            }}>
+                                                <i className="fa-regular fa-calendar-xmark" style={{ fontSize: '0.85rem' }} />
+                                                <span>Scheduled Off</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Roster Action Details Footer */}
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            marginTop: '4px', 
+                            paddingTop: '16px', 
+                            borderTop: '1px solid #27272a',
+                            flexWrap: 'wrap',
+                            gap: '12px'
+                        }}>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f97316' }} />
+                                    <span style={{ fontSize: '11px', color: '#a1a1aa' }}>Week Starting: <strong>{new Date(activeWeekStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong></span>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setSelectedEmployeeSchedule(null)}
+                                style={{
+                                    background: '#f97316',
+                                    border: 'none',
+                                    color: '#0f1014',
+                                    padding: '8px 20px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = '#ea580c';
+                                    e.currentTarget.style.boxShadow = '0 0 12px rgba(249, 115, 22, 0.2)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = '#f97316';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                }}
+                            >
+                                Close Week View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ORIGINAL FILE LIGHTBOX OVERLAY */}
-                {isViewingOriginal && activeSchedule && (
+            {isViewingOriginal && activeSchedule && (
+
                     <div style={{
                         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                         background: 'rgba(15, 16, 20, 0.95)', backdropFilter: 'blur(10px)',
