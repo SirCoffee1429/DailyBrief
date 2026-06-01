@@ -256,11 +256,13 @@ export default function SchedulePage({ officeMode = false }) {
         loadActiveDetails()
     }, [activeWeekStart])
 
-    // Initialize schedule list
+    // Initialize schedule list once on mount
     useEffect(() => {
         loadScheduleWeeks()
+    }, [loadScheduleWeeks])
 
-        // Real-time subscription to schedules table
+    // Real-time subscription to schedules table
+    useEffect(() => {
         const channel = supabase
             .channel('realtime_schedules_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, (payload) => {

@@ -1580,3 +1580,18 @@ under the wrong business day.
 
 ---
 
+### 2026-06-01 — Fixed Schedule Week Selection Dropdown Reset Bug
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `fix`
+**Summary:** Fixed the bug where selecting any week from the dropdown in the Office/Kitchen schedule view would instantly reset and redirect the user back to the default/current week.
+
+**Details:**
+
+- **Decoupled Load Hooks:** Split the single overloaded `useEffect` hook in `SchedulePage.jsx` into two distinct hooks.
+- **Initial Load Isolation:** Configured the `loadScheduleWeeks()` database retrieval call to run exclusively on component mount rather than on every `activeWeekStart` state modification.
+- **Stable Real-time Sync:** Maintained the real-time Supabase database subscription hook independently, keeping it fully reactive to active week updates without triggering unwanted initial loads.
+- **Production Verification:** Built the React project successfully via Vite with zero compilation warnings or errors.
+
+---
+
+
