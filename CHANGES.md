@@ -1649,6 +1649,19 @@ under the wrong business day.
 - **Callback Parameters Type annotation:** Added explicit type annotations to parameters in map calls (`f` and `file`) inside the console logging and geminiParts constructor.
 - **Deno Lint Warning Fix:** Prefixed the unused `e` parameter in the `JSON.parse` catch block with an underscore (`_e`) to conform to `deno-lint` clean code standards.
 
+------
+
+### 2026-06-02 — Shift Editor Modal and Multiple Shifts Support in Office Dashboard
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `feature`
+**Summary:** Implemented the Shift Editor popup modal for custom shifts in the Office Dashboard, added support for multiple shifts in the mobile day accordion and employee detail modals, resolved the blank employee row filter/rendering bug, and added an "+ Add Employee Row" button under the main desktop schedule grid.
+
+**Details:**
+
+- **Shift Editor Modal:** Designed and implemented the UI/UX layout for the `ShiftEditorModal` overlay popup in `SchedulePage.jsx`, bound to input controls for Start Time, End Time, Role, Color Highlight (including Orange), and Shift Note.
+- **Multiple Shifts Support in Mobile:** Refactored the Mobile day accordion rendering to support multiple concurrent shifts per employee per day by flattening the day's shift arrays.
+- **Multiple Shifts Support in Detail Modal:** Refactored the Employee Weekly Schedule Detail modal to render all shifts in the day's card layout and updated the weekly shift counter using `.flat().filter(Boolean).length`.
+- **Add Employee Row UI:** Added a styled "+ Add Employee Row" button underneath the desktop grid (available in `officeMode` only) to trigger the new employee addition flow.
+- **Blank Row Bug Fix:** Corrected the falsy/blank employee name bug in `handleAddEmployeeRow` by using a placeholder name `'New Employee'` and updated the save and cancel helpers to correctly validate and filter based on this placeholder name.
+
 ---
-
-

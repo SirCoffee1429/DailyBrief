@@ -163,6 +163,11 @@ export default function SchedulePage({ officeMode = false }) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
+    // Inline schedule editing states (Office Dashboard)
+    const [extraEmployees, setExtraEmployees] = useState([])
+    const [editingEmployee, setEditingEmployee] = useState(null) // { originalName, name, role, isNew } or null
+    const [editingShift, setEditingShift] = useState(null) // { employee_name, date, start_time, end_time, role, color, note, isNew, shiftIndex } or null
+
     // Upload & Parsing states
     const [uploading, setUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState('')
@@ -247,6 +252,7 @@ export default function SchedulePage({ officeMode = false }) {
 
     // Load full details for the active week start
     useEffect(() => {
+        setExtraEmployees([]) // Reset extra employees when changing weeks
         if (!activeWeekStart) {
             setActiveSchedule(null)
             return
@@ -320,22 +326,45 @@ export default function SchedulePage({ officeMode = false }) {
 
     // Get shifts grouped by employee name
     const getEmployeeRows = useCallback(() => {
-        if (!activeSchedule || !activeSchedule.schedule_data || !activeSchedule.schedule_data.shifts) return []
-        const shifts = activeSchedule.schedule_data.shifts
         const employeeMap = {}
 
-        shifts.forEach(shift => {
-            const empName = shift.employee_name || 'Unknown Staff'
-            if (!employeeMap[empName]) {
-                employeeMap[empName] = { name: empName, role: shift.role || 'Crew', shiftsByDate: {}, color: null, explicitColors: [] }
-            }
-            
-            // Collect explicit colors from individual shifts
-            if (shift.color) {
-                employeeMap[empName].explicitColors.push(shift.color)
-            }
+        // 1. Process database shifts if available
+        if (activeSchedule && activeSchedule.schedule_data && activeSchedule.schedule_data.shifts) {
+            const shifts = activeSchedule.schedule_data.shifts
+            shifts.forEach((shift, originalIndex) => {
+                const empName = shift.employee_name || 'Unknown Staff'
+                if (!employeeMap[empName]) {
+                    employeeMap[empName] = { name: empName, role: shift.role || 'Crew', shiftsByDate: {}, color: null, explicitColors: [] }
+                }
+                
+                // Collect explicit colors from individual shifts
+                if (shift.color) {
+                    employeeMap[empName].explicitColors.push(shift.color)
+                }
 
-            employeeMap[empName].shiftsByDate[shift.date] = shift
+                if (!employeeMap[empName].shiftsByDate[shift.date]) {
+                    employeeMap[empName].shiftsByDate[shift.date] = []
+                }
+                employeeMap[empName].shiftsByDate[shift.date].push({
+                    ...shift,
+                    originalIndex
+                })
+            })
+        }
+
+        // 2. Process manually added extra employees
+        extraEmployees.forEach(extra => {
+            const empName = extra.name
+            if (empName && !employeeMap[empName]) {
+                employeeMap[empName] = {
+                    name: empName,
+                    role: extra.role || 'Crew',
+                    shiftsByDate: {},
+                    color: null,
+                    explicitColors: [],
+                    isExtra: true
+                }
+            }
         })
 
         // Determine employee row color based on consensus of explicit shift colors
@@ -354,7 +383,7 @@ export default function SchedulePage({ officeMode = false }) {
                     }
                 })
 
-                const numShifts = Object.keys(emp.shiftsByDate).length
+                const numShifts = Object.values(emp.shiftsByDate).flat().length
                 // Only propagate shift color to the row level if:
                 // - It is set on at least 50% of their shifts
                 // - And we exclude 'yellow' from leaking unless it is set on ALL of their shifts (uniform AM worker)
@@ -392,7 +421,7 @@ export default function SchedulePage({ officeMode = false }) {
         })
 
         return Object.values(employeeMap).sort((a, b) => a.name.localeCompare(b.name))
-    }, [activeSchedule])
+    }, [activeSchedule, extraEmployees])
 
     // Generate Monday to Sunday dates for the modal target week start
     const getModalWeekDays = useCallback(() => {
@@ -410,6 +439,250 @@ export default function SchedulePage({ officeMode = false }) {
         }
         return days
     }, [modalWeekStart, pendingData])
+
+    // Helper functions for inline schedule editing (Office Dashboard)
+    const handleAddEmployeeRow = () => {
+        // Prevent adding multiple blank rows
+        if (extraEmployees.some(emp => emp.name === 'New Employee' || emp.name === '')) {
+            alert('Please finish adding the current new employee first.')
+            return
+        }
+
+        const newEmp = { name: 'New Employee', role: 'Crew', isNew: true }
+        setExtraEmployees([...extraEmployees, newEmp])
+        setEditingEmployee({ originalName: 'New Employee', name: '', role: 'Crew', isNew: true })
+    }
+
+    const handleSaveEmployeeRow = async () => {
+        if (!editingEmployee) return
+        const { originalName, name, role, isNew } = editingEmployee
+        
+        const trimmedName = name.trim()
+        const trimmedRole = role.trim() || 'Crew'
+
+        if (!trimmedName) {
+            alert('Employee name cannot be empty.')
+            return
+        }
+
+        try {
+            const employeeRows = getEmployeeRows()
+            
+            if (isNew) {
+                // Check if name already exists
+                const nameExists = employeeRows.some(emp => emp.name.toLowerCase() === trimmedName.toLowerCase() && emp.name !== 'New Employee')
+                if (nameExists) {
+                    alert(`An employee named "${trimmedName}" already exists on this week's roster.`)
+                    return
+                }
+
+                // Add to extraEmployees state
+                const newExtra = extraEmployees.map(emp => emp.name === 'New Employee' ? { name: trimmedName, role: trimmedRole } : emp)
+                setExtraEmployees(newExtra)
+            } else {
+                // If renaming, check if name already exists (excluding originalName)
+                if (originalName.toLowerCase() !== trimmedName.toLowerCase()) {
+                    const nameExists = employeeRows.some(emp => emp.name.toLowerCase() === trimmedName.toLowerCase())
+                    if (nameExists) {
+                        alert(`An employee named "${trimmedName}" already exists on this week's roster.`)
+                        return
+                    }
+                }
+
+                // Update shifts in database
+                if (activeSchedule && activeSchedule.schedule_data && activeSchedule.schedule_data.shifts) {
+                    const updatedShifts = activeSchedule.schedule_data.shifts.map(shift => {
+                        if ((shift.employee_name || 'Unknown Staff') === originalName) {
+                            return { ...shift, employee_name: trimmedName, role: trimmedRole }
+                        }
+                        return shift
+                    })
+
+                    const finalizedSchedule = {
+                        ...activeSchedule,
+                        schedule_data: {
+                            ...activeSchedule.schedule_data,
+                            shifts: updatedShifts
+                        }
+                    }
+
+                    const { error: saveErr } = await supabase
+                        .from('schedules')
+                        .upsert(finalizedSchedule)
+
+                    if (saveErr) throw saveErr
+                }
+
+                // Also update extraEmployees if present
+                setExtraEmployees(prev => prev.map(emp => emp.name === originalName ? { ...emp, name: trimmedName, role: trimmedRole } : emp))
+            }
+            setEditingEmployee(null)
+        } catch (err) {
+            console.error('Error saving employee changes:', err)
+            alert(`Failed to save employee changes: ${err.message}`)
+        }
+    }
+
+    const handleDeleteEmployeeRow = async (employeeName) => {
+        if (!window.confirm(`Are you sure you want to delete all shifts for "${employeeName}" this week?`)) return
+
+        try {
+            // Delete shifts from database
+            if (activeSchedule && activeSchedule.schedule_data && activeSchedule.schedule_data.shifts) {
+                const updatedShifts = activeSchedule.schedule_data.shifts.filter(
+                    shift => (shift.employee_name || 'Unknown Staff') !== employeeName
+                )
+
+                const finalizedSchedule = {
+                    ...activeSchedule,
+                    schedule_data: {
+                        ...activeSchedule.schedule_data,
+                        shifts: updatedShifts
+                    }
+                }
+
+                const { error: saveErr } = await supabase
+                    .from('schedules')
+                    .upsert(finalizedSchedule)
+
+                if (saveErr) throw saveErr
+            }
+
+            // Remove from extraEmployees if present
+            setExtraEmployees(prev => prev.filter(emp => emp.name !== employeeName))
+        } catch (err) {
+            console.error('Error deleting employee row:', err)
+            alert(`Failed to delete employee: ${err.message}`)
+        }
+    }
+
+    const handleSetEmployeeColor = async (employeeName, colorId) => {
+        try {
+            // Update shifts in database
+            if (activeSchedule && activeSchedule.schedule_data && activeSchedule.schedule_data.shifts) {
+                const updatedShifts = activeSchedule.schedule_data.shifts.map(shift => {
+                    if ((shift.employee_name || 'Unknown Staff') === employeeName) {
+                        return { ...shift, color: colorId }
+                    }
+                    return shift
+                })
+
+                const finalizedSchedule = {
+                    ...activeSchedule,
+                    schedule_data: {
+                        ...activeSchedule.schedule_data,
+                        shifts: updatedShifts
+                    }
+                }
+
+                const { error: saveErr } = await supabase
+                    .from('schedules')
+                    .upsert(finalizedSchedule)
+
+                if (saveErr) throw saveErr
+            }
+
+            // Also update in extraEmployees if present
+            setExtraEmployees(prev => prev.map(emp => emp.name === employeeName ? { ...emp, color: colorId } : emp))
+            
+            // Close the menu
+            setActiveColorMenu(null)
+        } catch (err) {
+            console.error('Error setting employee color:', err)
+            alert(`Failed to set employee color: ${err.message}`)
+        }
+    }
+
+    const handleSaveShift = async () => {
+        if (!editingShift || !activeSchedule || !activeSchedule.schedule_data) return
+
+        const { isNew, employee_name, date, start_time, end_time, role, color, note, shiftIndex } = editingShift
+
+        const trimmedStart = start_time.trim()
+        const trimmedEnd = end_time.trim()
+
+        if (!trimmedStart || !trimmedEnd) {
+            alert('Start and End times are required.')
+            return
+        }
+
+        try {
+            const shifts = [...(activeSchedule.schedule_data.shifts || [])]
+            const targetShift = {
+                employee_name,
+                date,
+                start_time: trimmedStart,
+                end_time: trimmedEnd,
+                role: role.trim() || 'Crew',
+                color: color || null,
+                note: note.trim() || null
+            }
+
+            if (isNew) {
+                shifts.push(targetShift)
+            } else {
+                shifts[shiftIndex] = targetShift
+            }
+
+            const finalizedSchedule = {
+                ...activeSchedule,
+                schedule_data: {
+                    ...activeSchedule.schedule_data,
+                    shifts
+                }
+            }
+
+            const { error: saveErr } = await supabase
+                .from('schedules')
+                .upsert(finalizedSchedule)
+
+            if (saveErr) throw saveErr
+
+            // Remove from extraEmployees since they now have a shift saved in the DB
+            setExtraEmployees(prev => prev.filter(emp => emp.name !== employee_name))
+            setEditingShift(null)
+        } catch (err) {
+            console.error('Error saving shift:', err)
+            alert(`Failed to save shift: ${err.message}`)
+        }
+    }
+
+    const handleDeleteShift = async (shiftIndex, employeeName) => {
+        if (!window.confirm('Are you sure you want to delete this shift?')) return
+        if (!activeSchedule || !activeSchedule.schedule_data || !activeSchedule.schedule_data.shifts) return
+
+        try {
+            const shifts = activeSchedule.schedule_data.shifts.filter((_, idx) => idx !== shiftIndex)
+
+            const finalizedSchedule = {
+                ...activeSchedule,
+                schedule_data: {
+                    ...activeSchedule.schedule_data,
+                    shifts
+                }
+            }
+
+            const { error: saveErr } = await supabase
+                .from('schedules')
+                .upsert(finalizedSchedule)
+
+            if (saveErr) throw saveErr
+
+            // If the employee now has 0 shifts, add them to extraEmployees to prevent their row disappearing
+            const employeeShiftsRemaining = shifts.filter(s => (s.employee_name || 'Unknown Staff') === employeeName)
+            if (employeeShiftsRemaining.length === 0) {
+                const origShift = activeSchedule.schedule_data.shifts[shiftIndex]
+                const role = origShift ? origShift.role : 'Crew'
+                setExtraEmployees(prev => {
+                    if (prev.some(emp => emp.name === employeeName)) return prev
+                    return [...prev, { name: employeeName, role }]
+                })
+            }
+        } catch (err) {
+            console.error('Error deleting shift:', err)
+            alert(`Failed to delete shift: ${err.message}`)
+        }
+    }
 
     // Handle Upload & Parsing Sequence
     const handleFileUpload = async (e) => {
@@ -704,40 +977,7 @@ export default function SchedulePage({ officeMode = false }) {
         }
     }
 
-    // Persist highlight color change to the database in real-time
-    const handleSetEmployeeColor = async (employeeName, color) => {
-        if (!activeSchedule || !activeSchedule.schedule_data || !activeSchedule.schedule_data.shifts) return
 
-        try {
-            // Update the color property on all shifts for this employee
-            const updatedShifts = activeSchedule.schedule_data.shifts.map(shift => {
-                if ((shift.employee_name || 'Unknown Staff') === employeeName) {
-                    return { ...shift, color: color }
-                }
-                return shift
-            })
-
-            const finalizedSchedule = {
-                ...activeSchedule,
-                schedule_data: {
-                    ...activeSchedule.schedule_data,
-                    shifts: updatedShifts
-                }
-            }
-
-            const { error: saveErr } = await supabase
-                .from('schedules')
-                .upsert(finalizedSchedule)
-
-            if (saveErr) throw saveErr
-            
-            // The activeSchedule state will automatically update via the Realtime subscription!
-            setActiveColorMenu(null)
-        } catch (err) {
-            console.error('Error saving employee color highlight:', err)
-            alert(`Failed to save color: ${err.message}`)
-        }
-    }
 
     const weekDays = getWeekDays()
     const employeeRows = getEmployeeRows()
@@ -1058,134 +1298,267 @@ export default function SchedulePage({ officeMode = false }) {
                                                 position: 'relative',
                                                 transition: 'all 0.2s'
                                             }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                                    <div 
-                                                        onClick={() => setSelectedEmployeeSchedule(row)}
-                                                        style={{ 
-                                                            display: 'flex', 
-                                                            flexDirection: 'column', 
-                                                            cursor: 'pointer',
-                                                            userSelect: 'none'
-                                                        }}
-                                                        title="Click to view weekly schedule"
-                                                    >
-                                                        <span 
-                                                            style={{ 
-                                                                color: '#e4e4e7', 
-                                                                fontSize: '0.95rem', 
-                                                                fontWeight: 600,
-                                                                transition: 'color 0.15s ease'
+                                                {editingEmployee && editingEmployee.originalName === row.name ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                                        <input 
+                                                            type="text" 
+                                                            value={editingEmployee.name} 
+                                                            onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                                                            style={{
+                                                                background: '#1f1f23',
+                                                                border: '1px solid #3f3f46',
+                                                                borderRadius: '4px',
+                                                                color: '#fff',
+                                                                padding: '6px 8px',
+                                                                fontSize: '0.85rem',
+                                                                width: '100%',
+                                                                boxSizing: 'border-box'
                                                             }}
-                                                            onMouseEnter={(e) => e.target.style.color = '#f97316'}
-                                                            onMouseLeave={(e) => e.target.style.color = '#e4e4e7'}
-                                                        >
-                                                            {row.name}
-                                                        </span>
-                                                        <span style={{ color: '#71717a', fontSize: '11px', fontWeight: 500, marginTop: '2px', textTransform: 'uppercase' }}>{row.role}</span>
-                                                    </div>
-                                                    {officeMode && (
-                                                        <div style={{ position: 'relative' }}>
-                                                            <button
-                                                                onClick={() => setActiveColorMenu(activeColorMenu?.employeeName === row.name ? null : { employeeName: row.name })}
-                                                                title="Set Roster Color Highlight"
+                                                            placeholder="Employee Name"
+                                                            autoFocus
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            value={editingEmployee.role} 
+                                                            onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
+                                                            style={{
+                                                                background: '#1f1f23',
+                                                                border: '1px solid #3f3f46',
+                                                                borderRadius: '4px',
+                                                                color: '#a1a1aa',
+                                                                padding: '6px 8px',
+                                                                fontSize: '11px',
+                                                                width: '100%',
+                                                                boxSizing: 'border-box'
+                                                            }}
+                                                            placeholder="Role (e.g. Prep Cook)"
+                                                        />
+                                                        <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                                                            <button 
+                                                                onClick={handleSaveEmployeeRow}
                                                                 style={{
-                                                                    background: colorMeta ? colorMeta.bg : 'rgba(255,255,255,0.05)',
-                                                                    border: `1px solid ${colorMeta ? colorMeta.border : '#27272a'}`,
-                                                                    color: colorMeta ? colorMeta.solid : '#71717a',
+                                                                    background: '#f97316',
+                                                                    border: 'none',
+                                                                    color: '#0f1014',
                                                                     borderRadius: '4px',
-                                                                    width: '24px',
-                                                                    height: '24px',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    cursor: 'pointer',
+                                                                    padding: '4px 8px',
                                                                     fontSize: '11px',
-                                                                    transition: 'all 0.2s'
+                                                                    fontWeight: 700,
+                                                                    cursor: 'pointer'
                                                                 }}
-                                                                className="paintbrush-trigger"
                                                             >
-                                                                <i className="fa-solid fa-paintbrush" />
+                                                                Save
                                                             </button>
-                                                            {activeColorMenu?.employeeName === row.name && (
-                                                                <div style={{
-                                                                    position: 'absolute',
-                                                                    top: '100%',
-                                                                    left: '0',
-                                                                    marginTop: '6px',
-                                                                    background: 'rgba(15, 16, 20, 0.98)',
-                                                                    backdropFilter: 'blur(16px)',
+                                                            <button 
+                                                                onClick={() => {
+                                                                    if (editingEmployee.isNew) {
+                                                                        setExtraEmployees(extraEmployees.filter(emp => emp.name !== 'New Employee'))
+                                                                    }
+                                                                    setEditingEmployee(null)
+                                                                }}
+                                                                style={{
+                                                                    background: 'rgba(255, 255, 255, 0.05)',
                                                                     border: '1px solid #27272a',
-                                                                    borderRadius: '8px',
-                                                                    padding: '6px',
-                                                                    zIndex: 100,
-                                                                    width: '160px',
-                                                                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)'
-                                                                }}>
-                                                                    <div style={{ fontSize: '10px', color: '#71717a', fontWeight: 700, padding: '4px 6px', textTransform: 'uppercase', borderBottom: '1px solid #1f1f23', marginBottom: '4px' }}>
-                                                                        Highlight Color
-                                                                    </div>
-                                                                    {Object.values(HIGHLIGHT_COLORS).map(c => (
-                                                                        <button
-                                                                            key={c.id}
-                                                                            onClick={() => handleSetEmployeeColor(row.name, c.id)}
-                                                                            style={{
-                                                                                width: '100%',
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                gap: '8px',
-                                                                                padding: '6px 8px',
-                                                                                border: 'none',
-                                                                                background: row.color === c.id ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-                                                                                borderRadius: '4px',
-                                                                                color: c.solid,
-                                                                                fontSize: '11px',
-                                                                                fontWeight: 600,
-                                                                                cursor: 'pointer',
-                                                                                textAlign: 'left',
-                                                                                transition: 'background 0.15s'
-                                                                            }}
-                                                                            className="color-option-hover"
-                                                                        >
-                                                                            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: c.solid }} />
-                                                                            {c.name.split(' ')[0]}
-                                                                        </button>
-                                                                    ))}
+                                                                    color: '#a1a1aa',
+                                                                    borderRadius: '4px',
+                                                                    padding: '4px 8px',
+                                                                    fontSize: '11px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="employee-row-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
+                                                        <div 
+                                                            onClick={() => setSelectedEmployeeSchedule(row)}
+                                                            style={{ 
+                                                                display: 'flex', 
+                                                                flexDirection: 'column', 
+                                                                cursor: 'pointer',
+                                                                userSelect: 'none',
+                                                                flexGrow: 1
+                                                            }}
+                                                            title="Click to view weekly schedule"
+                                                        >
+                                                            <span 
+                                                                style={{ 
+                                                                    color: '#e4e4e7', 
+                                                                    fontSize: '0.95rem', 
+                                                                    fontWeight: 600,
+                                                                    transition: 'color 0.15s ease'
+                                                                }}
+                                                                onMouseEnter={(e) => e.target.style.color = '#f97316'}
+                                                                onMouseLeave={(e) => e.target.style.color = '#e4e4e7'}
+                                                            >
+                                                                {row.name}
+                                                            </span>
+                                                            <span style={{ color: '#71717a', fontSize: '11px', fontWeight: 500, marginTop: '2px', textTransform: 'uppercase' }}>{row.role}</span>
+                                                        </div>
+                                                        {officeMode && (
+                                                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                                <button
+                                                                    className="employee-action-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        setEditingEmployee({ originalName: row.name, name: row.name, role: row.role })
+                                                                    }}
+                                                                    title="Edit Name & Role"
+                                                                    style={{
+                                                                        background: 'rgba(255,255,255,0.05)',
+                                                                        border: '1px solid #27272a',
+                                                                        color: '#a1a1aa',
+                                                                        borderRadius: '4px',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '10px'
+                                                                    }}
+                                                                >
+                                                                    <i className="fa-solid fa-pencil" />
+                                                                </button>
+                                                                <button
+                                                                    className="employee-action-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        handleDeleteEmployeeRow(row.name)
+                                                                    }}
+                                                                    title="Delete Employee"
+                                                                    style={{
+                                                                        background: 'rgba(239, 68, 68, 0.05)',
+                                                                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                                                                        color: '#ef4444',
+                                                                        borderRadius: '4px',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '10px'
+                                                                    }}
+                                                                >
+                                                                    <i className="fa-solid fa-trash" />
+                                                                </button>
+                                                                <div style={{ position: 'relative' }}>
                                                                     <button
-                                                                        onClick={() => handleSetEmployeeColor(row.name, null)}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            setActiveColorMenu(activeColorMenu?.employeeName === row.name ? null : { employeeName: row.name })
+                                                                        }}
+                                                                        title="Set Roster Color Highlight"
                                                                         style={{
-                                                                            width: '100%',
+                                                                            background: colorMeta ? colorMeta.bg : 'rgba(255,255,255,0.05)',
+                                                                            border: `1px solid ${colorMeta ? colorMeta.border : '#27272a'}`,
+                                                                            color: colorMeta ? colorMeta.solid : '#71717a',
+                                                                            borderRadius: '4px',
+                                                                            width: '24px',
+                                                                            height: '24px',
                                                                             display: 'flex',
                                                                             alignItems: 'center',
-                                                                            gap: '8px',
-                                                                            padding: '6px 8px',
-                                                                            border: 'none',
-                                                                            background: !row.color ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-                                                                            borderRadius: '4px',
-                                                                            color: '#a1a1aa',
-                                                                            fontSize: '11px',
-                                                                            fontWeight: 500,
+                                                                            justifyContent: 'center',
                                                                             cursor: 'pointer',
-                                                                            textAlign: 'left',
-                                                                            transition: 'background 0.15s',
-                                                                            marginTop: '4px',
-                                                                            borderTop: '1px solid #1f1f23'
+                                                                            fontSize: '11px',
+                                                                            transition: 'all 0.2s'
                                                                         }}
-                                                                        className="color-option-hover"
+                                                                        className="paintbrush-trigger"
                                                                     >
-                                                                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#71717a' }} />
-                                                                        Clear Color
+                                                                        <i className="fa-solid fa-paintbrush" />
                                                                     </button>
+                                                                    {activeColorMenu?.employeeName === row.name && (
+                                                                        <div style={{
+                                                                            position: 'absolute',
+                                                                            top: '100%',
+                                                                            left: '0',
+                                                                            marginTop: '6px',
+                                                                            background: 'rgba(15, 16, 20, 0.98)',
+                                                                            backdropFilter: 'blur(16px)',
+                                                                            border: '1px solid #27272a',
+                                                                            borderRadius: '8px',
+                                                                            padding: '6px',
+                                                                            zIndex: 100,
+                                                                            width: '160px',
+                                                                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)'
+                                                                        }}>
+                                                                            <div style={{ fontSize: '10px', color: '#71717a', fontWeight: 700, padding: '4px 6px', textTransform: 'uppercase', borderBottom: '1px solid #1f1f23', marginBottom: '4px' }}>
+                                                                                Highlight Color
+                                                                            </div>
+                                                                            {Object.values(HIGHLIGHT_COLORS).map(c => (
+                                                                                <button
+                                                                                    key={c.id}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation()
+                                                                                        handleSetEmployeeColor(row.name, c.id)
+                                                                                    }}
+                                                                                    style={{
+                                                                                        width: '100%',
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '8px',
+                                                                                        padding: '6px 8px',
+                                                                                        border: 'none',
+                                                                                        background: row.color === c.id ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                                                                                        borderRadius: '4px',
+                                                                                        color: c.solid,
+                                                                                        fontSize: '11px',
+                                                                                        fontWeight: 600,
+                                                                                        cursor: 'pointer',
+                                                                                        textAlign: 'left',
+                                                                                        transition: 'background 0.15s'
+                                                                                    }}
+                                                                                    className="color-option-hover"
+                                                                                >
+                                                                                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: c.solid }} />
+                                                                                    {c.name.split(' ')[0]}
+                                                                                </button>
+                                                                            ))}
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation()
+                                                                                    handleSetEmployeeColor(row.name, null)
+                                                                                }}
+                                                                                style={{
+                                                                                    width: '100%',
+                                                                                    display: 'flex',
+                                                                                    alignItems: 'center',
+                                                                                    gap: '8px',
+                                                                                    padding: '6px 8px',
+                                                                                    border: 'none',
+                                                                                    background: !row.color ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                                                                                    borderRadius: '4px',
+                                                                                    color: '#a1a1aa',
+                                                                                    fontSize: '11px',
+                                                                                    fontWeight: 500,
+                                                                                    cursor: 'pointer',
+                                                                                    textAlign: 'left',
+                                                                                    transition: 'background 0.15s',
+                                                                                    marginTop: '4px',
+                                                                                    borderTop: '1px solid #1f1f23'
+                                                                                }}
+                                                                                className="color-option-hover"
+                                                                            >
+                                                                                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#71717a' }} />
+                                                                                Clear Color
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             {weekDays.map(day => {
-                                                const shift = row.shiftsByDate[day.dateStr]
+                                                const shifts = row.shiftsByDate[day.dateStr] || []
                                                 const isToday = day.dateStr === todayStr
-                                                const shiftColor = shift ? getShiftColor(shift, row.color, row.role) : null
-                                                const shiftColorMeta = shiftColor ? HIGHLIGHT_COLORS[shiftColor] : null
+                                                const firstShift = shifts[0]
+                                                const cellShiftColor = firstShift ? getShiftColor(firstShift, row.color, row.role) : null
+                                                const cellColorMeta = cellShiftColor ? HIGHLIGHT_COLORS[cellShiftColor] : null
                                                 return (
                                                     <td 
                                                         key={day.dayIndex} 
@@ -1194,50 +1567,160 @@ export default function SchedulePage({ officeMode = false }) {
                                                             borderLeft: '1px solid #27272a',
                                                             background: isToday 
                                                                 ? 'rgba(249, 115, 22, 0.02)' 
-                                                                : (shiftColorMeta ? shiftColorMeta.glow : 'transparent'),
+                                                                : (cellColorMeta ? cellColorMeta.glow : 'transparent'),
                                                             position: 'relative'
                                                         }}
                                                     >
-                                                        {shift ? (
-                                                            <div 
-                                                                style={{ 
-                                                                    background: isToday 
-                                                                        ? 'rgba(249, 115, 22, 0.1)' 
-                                                                        : (shiftColorMeta ? shiftColorMeta.bg : 'rgba(255, 255, 255, 0.03)'),
-                                                                    border: isToday 
-                                                                        ? '1px solid rgba(249, 115, 22, 0.3)' 
-                                                                        : (shiftColorMeta ? `1px solid ${shiftColorMeta.border}` : '1px solid #27272a'),
-                                                                    borderLeft: isToday 
-                                                                        ? '1px solid rgba(249, 115, 22, 0.3)' 
-                                                                        : (shiftColorMeta ? `4px solid ${shiftColorMeta.solid}` : '1px solid #27272a'),
-                                                                    padding: '8px 10px',
-                                                                    borderRadius: '6px',
-                                                                    display: 'flex',
-                                                                    flexDirection: 'column',
-                                                                    gap: '2px',
-                                                                    boxShadow: isToday 
-                                                                        ? '0 0 10px rgba(249, 115, 22, 0.05)' 
-                                                                        : 'none'
-                                                                }}
-                                                            >
-                                                                <span style={{ 
-                                                                    fontSize: '0.85rem', 
-                                                                    fontWeight: 700, 
-                                                                    color: isToday 
-                                                                        ? '#f97316' 
-                                                                        : (shiftColorMeta ? shiftColorMeta.solid : '#e4e4e7') 
-                                                                }}>
-                                                                    {shift.start_time} - {shift.end_time}
-                                                                </span>
-                                                                {shift.note && (
-                                                                    <span style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 500 }}>
-                                                                        {shift.note}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ color: '#3f3f46', fontSize: '0.8rem', textAlign: 'center', padding: '8px 0' }}>—</div>
-                                                        )}
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', height: '100%', minHeight: '40px', justifyContent: 'center' }}>
+                                                            {shifts.map((shift, idx) => {
+                                                                const shiftColor = getShiftColor(shift, row.color, row.role)
+                                                                const shiftColorMeta = shiftColor ? HIGHLIGHT_COLORS[shiftColor] : null
+                                                                return (
+                                                                    <div 
+                                                                        key={idx}
+                                                                        className="shift-card-interactive"
+                                                                        style={{ 
+                                                                            background: isToday 
+                                                                                ? 'rgba(249, 115, 22, 0.1)' 
+                                                                                : (shiftColorMeta ? shiftColorMeta.bg : 'rgba(255, 255, 255, 0.03)'),
+                                                                            border: isToday 
+                                                                                ? '1px solid rgba(249, 115, 22, 0.3)' 
+                                                                                : (shiftColorMeta ? `1px solid ${shiftColorMeta.border}` : '1px solid #27272a'),
+                                                                            borderLeft: isToday 
+                                                                                ? '1px solid rgba(249, 115, 22, 0.3)' 
+                                                                                : (shiftColorMeta ? `4px solid ${shiftColorMeta.solid}` : '1px solid #27272a'),
+                                                                            padding: '8px 10px',
+                                                                            borderRadius: '6px',
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            gap: '2px',
+                                                                            boxShadow: isToday 
+                                                                                ? '0 0 10px rgba(249, 115, 22, 0.05)' 
+                                                                                : 'none',
+                                                                            position: 'relative'
+                                                                        }}
+                                                                    >
+                                                                        <span style={{ 
+                                                                            fontSize: '0.85rem', 
+                                                                            fontWeight: 700, 
+                                                                            color: isToday 
+                                                                                ? '#f97316' 
+                                                                                : (shiftColorMeta ? shiftColorMeta.solid : '#e4e4e7'),
+                                                                            paddingRight: officeMode ? '36px' : '0'
+                                                                        }}>
+                                                                            {shift.start_time} - {shift.end_time}
+                                                                        </span>
+                                                                        {shift.note && (
+                                                                            <span style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 500 }}>
+                                                                                {shift.note}
+                                                                            </span>
+                                                                        )}
+                                                                        
+                                                                        {officeMode && (
+                                                                            <div 
+                                                                                className="shift-card-actions"
+                                                                                style={{
+                                                                                    position: 'absolute',
+                                                                                    right: '4px',
+                                                                                    top: '50%',
+                                                                                    transform: 'translateY(-50%)',
+                                                                                    display: 'flex',
+                                                                                    gap: '4px',
+                                                                                    background: 'rgba(15, 16, 20, 0.95)',
+                                                                                    padding: '2px 4px',
+                                                                                    borderRadius: '4px',
+                                                                                    border: '1px solid #27272a',
+                                                                                    opacity: 0,
+                                                                                    transition: 'opacity 0.2s'
+                                                                                }}
+                                                                            >
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation()
+                                                                                        setEditingShift({
+                                                                                            isNew: false,
+                                                                                            employee_name: row.name,
+                                                                                            date: day.dateStr,
+                                                                                            start_time: shift.start_time,
+                                                                                            end_time: shift.end_time,
+                                                                                            role: row.role,
+                                                                                            color: shift.color,
+                                                                                            note: shift.note || '',
+                                                                                            shiftIndex: shift.originalIndex
+                                                                                        })
+                                                                                    }}
+                                                                                    style={{
+                                                                                        background: 'none',
+                                                                                        border: 'none',
+                                                                                        color: '#a1a1aa',
+                                                                                        cursor: 'pointer',
+                                                                                        padding: '2px 4px',
+                                                                                        fontSize: '10px'
+                                                                                    }}
+                                                                                    title="Edit Shift"
+                                                                                >
+                                                                                    <i className="fa-solid fa-pencil" />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation()
+                                                                                        handleDeleteShift(shift.originalIndex, row.name)
+                                                                                    }}
+                                                                                    style={{
+                                                                                        background: 'none',
+                                                                                        border: 'none',
+                                                                                        color: '#ef4444',
+                                                                                        cursor: 'pointer',
+                                                                                        padding: '2px 4px',
+                                                                                        fontSize: '10px'
+                                                                                    }}
+                                                                                    title="Delete Shift"
+                                                                                >
+                                                                                    <i className="fa-solid fa-trash" />
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )
+                                                            })}
+
+                                                            {shifts.length === 0 && !officeMode && (
+                                                                <div style={{ color: '#3f3f46', fontSize: '0.8rem', textAlign: 'center', padding: '8px 0' }}>—</div>
+                                                            )}
+
+                                                            {officeMode && (
+                                                                <button
+                                                                    onClick={() => setEditingShift({
+                                                                        isNew: true,
+                                                                        employee_name: row.name,
+                                                                        date: day.dateStr,
+                                                                        start_time: '',
+                                                                        end_time: '',
+                                                                        role: row.role,
+                                                                        color: null,
+                                                                        note: ''
+                                                                    })}
+                                                                    className="add-shift-inline-btn"
+                                                                    style={{
+                                                                        border: '1px dashed #27272a',
+                                                                        background: 'none',
+                                                                        color: '#71717a',
+                                                                        borderRadius: '6px',
+                                                                        padding: '6px 8px',
+                                                                        fontSize: '0.75rem',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        gap: '4px',
+                                                                        transition: 'all 0.2s',
+                                                                        marginTop: shifts.length > 0 ? '4px' : '0'
+                                                                    }}
+                                                                >
+                                                                    <i className="fa-solid fa-plus" /> Add Shift
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 )
                                             })}
@@ -1246,6 +1729,39 @@ export default function SchedulePage({ officeMode = false }) {
                                 })}
                             </tbody>
                         </table>
+                        
+                        {officeMode && (
+                            <div style={{ padding: '12px 16px', borderTop: '1px solid #27272a', background: 'rgba(0,0,0,0.1)' }}>
+                                <button
+                                    onClick={handleAddEmployeeRow}
+                                    style={{
+                                        background: 'rgba(249, 115, 22, 0.1)',
+                                        border: '1px dashed rgba(249, 115, 22, 0.4)',
+                                        color: '#f97316',
+                                        borderRadius: '6px',
+                                        padding: '8px 16px',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(249, 115, 22, 0.15)';
+                                        e.currentTarget.style.borderColor = '#f97316';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
+                                        e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.4)';
+                                    }}
+                                >
+                                    <i className="fa-solid fa-user-plus" />
+                                    <span>Add Employee Row</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* MOBILE VIEW: Premium Day-by-Day Accordion / Toggles (Hidden on Desktop) */}
@@ -1296,11 +1812,20 @@ export default function SchedulePage({ officeMode = false }) {
                             {/* Roster list */}
                              {(() => {
                                 const targetDayStr = weekDays[selectedMobileDay]?.dateStr
-                                const dayShifts = employeeRows
-                                    .map(row => ({ name: row.name, role: row.role, color: row.color, shift: row.shiftsByDate[targetDayStr] }))
-                                    .filter(item => item.shift)
+                                const flatDayShifts = []
+                                employeeRows.forEach(row => {
+                                    const shifts = row.shiftsByDate[targetDayStr] || []
+                                    shifts.forEach(shift => {
+                                        flatDayShifts.push({
+                                            employeeName: row.name,
+                                            employeeRole: row.role,
+                                            employeeColor: row.color,
+                                            shift: shift
+                                        })
+                                    })
+                                })
 
-                                if (dayShifts.length === 0) {
+                                if (flatDayShifts.length === 0) {
                                     return (
                                         <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#71717a' }}>
                                             <i className="fa-solid fa-mug-hot" style={{ fontSize: '1.5rem', marginBottom: '0.75rem', opacity: 0.5 }} />
@@ -1311,12 +1836,12 @@ export default function SchedulePage({ officeMode = false }) {
 
                                 return (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        {dayShifts.map(item => {
-                                            const shiftColor = getShiftColor(item.shift, item.color, item.role)
+                                        {flatDayShifts.map((item, idx) => {
+                                            const shiftColor = getShiftColor(item.shift, item.employeeColor, item.employeeRole)
                                             const shiftColorMeta = shiftColor ? HIGHLIGHT_COLORS[shiftColor] : null
                                             return (
                                                 <div 
-                                                    key={item.name}
+                                                    key={`${item.employeeName}_${idx}`}
                                                     style={{
                                                         background: shiftColorMeta ? shiftColorMeta.bg : 'rgba(255, 255, 255, 0.02)',
                                                         border: shiftColorMeta ? `1px solid ${shiftColorMeta.border}` : '1px solid #27272a',
@@ -1330,7 +1855,7 @@ export default function SchedulePage({ officeMode = false }) {
                                                 >
                                                     <div 
                                                         onClick={() => {
-                                                            const fullRow = employeeRows.find(r => r.name === item.name)
+                                                            const fullRow = employeeRows.find(r => r.name === item.employeeName)
                                                             if (fullRow) {
                                                                 setSelectedEmployeeSchedule(fullRow)
                                                             }
@@ -1348,9 +1873,11 @@ export default function SchedulePage({ officeMode = false }) {
                                                             onMouseEnter={(e) => e.target.style.color = '#f97316'}
                                                             onMouseLeave={(e) => e.target.style.color = '#e4e4e7'}
                                                         >
-                                                            {item.name}
+                                                            {item.employeeName}
                                                         </h4>
-                                                        <span style={{ fontSize: '11px', color: shiftColorMeta ? shiftColorMeta.solid : '#71717a', textTransform: 'uppercase', fontWeight: shiftColorMeta ? 600 : 400 }}>{item.role}</span>
+                                                        <span style={{ fontSize: '11px', color: shiftColorMeta ? shiftColorMeta.solid : '#71717a', textTransform: 'uppercase', fontWeight: shiftColorMeta ? 600 : 400 }}>
+                                                            {item.shift.role || item.employeeRole}
+                                                        </span>
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
                                                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: shiftColorMeta ? shiftColorMeta.solid : '#f97316' }}>
@@ -1875,7 +2402,7 @@ export default function SchedulePage({ officeMode = false }) {
                                         •
                                     </span>
                                     <span style={{ fontSize: '11px', color: '#f97316', fontWeight: 600 }}>
-                                        {Object.values(selectedEmployeeSchedule.shiftsByDate).filter(Boolean).length} Shifts Scheduled This Week
+                                        {Object.values(selectedEmployeeSchedule.shiftsByDate).flat().filter(Boolean).length} Shifts Scheduled This Week
                                     </span>
                                 </div>
                             </div>
@@ -1884,23 +2411,25 @@ export default function SchedulePage({ officeMode = false }) {
                         {/* 7-Day Scroll-Free Grid View */}
                         <div className="weekly-schedule-modal-grid">
                             {weekDays.map(day => {
-                                const shift = selectedEmployeeSchedule.shiftsByDate[day.dateStr]
+                                const shifts = selectedEmployeeSchedule.shiftsByDate[day.dateStr] || []
                                 const isToday = day.dateStr === todayStr
-                                const shiftColor = shift ? getShiftColor(shift, selectedEmployeeSchedule.color, selectedEmployeeSchedule.role) : null
-                                const shiftColorMeta = shiftColor ? HIGHLIGHT_COLORS[shiftColor] : null
 
                                 return (
                                     <div 
                                         key={day.dayIndex} 
-                                        className={`weekly-day-card ${shift ? 'has-shift' : 'is-off'}`}
+                                        className={`weekly-day-card ${shifts.length > 0 ? 'has-shift' : 'is-off'}`}
                                         style={{
                                             border: isToday 
                                                 ? '1px solid rgba(249, 115, 22, 0.4)' 
-                                                : (shiftColorMeta ? `1px solid ${shiftColorMeta.border}` : '1px solid #27272a'),
+                                                : '1px solid #27272a',
                                             borderTop: isToday
                                                 ? '4px solid #f97316'
-                                                : (shiftColorMeta ? `4px solid ${shiftColorMeta.solid}` : '1px solid #27272a'),
-                                            boxShadow: isToday ? '0 0 15px rgba(249, 115, 22, 0.1)' : 'none'
+                                                : '1px solid #27272a',
+                                            boxShadow: isToday ? '0 0 15px rgba(249, 115, 22, 0.1)' : 'none',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '8px',
+                                            minHeight: '120px'
                                         }}
                                     >
                                         {/* Day Info */}
@@ -1922,45 +2451,64 @@ export default function SchedulePage({ officeMode = false }) {
                                         </div>
 
                                         {/* Shift Hours / Off Status */}
-                                        {shift ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: shifts.length > 0 ? 'flex-start' : 'center' }}>
+                                            {shifts.length > 0 ? (
+                                                shifts.map((sh, sIdx) => {
+                                                    const shiftColor = getShiftColor(sh, selectedEmployeeSchedule.color, selectedEmployeeSchedule.role)
+                                                    const shiftColorMeta = shiftColor ? HIGHLIGHT_COLORS[shiftColor] : null
+                                                    return (
+                                                        <div 
+                                                            key={sIdx} 
+                                                            style={{ 
+                                                                display: 'flex', 
+                                                                flexDirection: 'column', 
+                                                                gap: '2px', 
+                                                                background: shiftColorMeta ? shiftColorMeta.bg : 'rgba(255,255,255,0.02)',
+                                                                border: shiftColorMeta ? `1px solid ${shiftColorMeta.border}` : '1px solid #27272a',
+                                                                borderLeft: shiftColorMeta ? `3px solid ${shiftColorMeta.solid}` : '1px solid #27272a',
+                                                                padding: '6px 8px',
+                                                                borderRadius: '6px'
+                                                            }}
+                                                        >
+                                                            <div style={{ 
+                                                                fontSize: '0.8rem', 
+                                                                fontWeight: 700, 
+                                                                color: shiftColorMeta ? shiftColorMeta.solid : '#f97316' 
+                                                            }}>
+                                                                {sh.start_time} - {sh.end_time}
+                                                            </div>
+                                                            {sh.role && sh.role !== selectedEmployeeSchedule.role && (
+                                                                <div style={{ fontSize: '9px', color: '#a1a1aa', textTransform: 'uppercase' }}>
+                                                                    {sh.role}
+                                                                </div>
+                                                            )}
+                                                            {sh.note && (
+                                                                <div style={{ 
+                                                                    fontSize: '9px', 
+                                                                    color: '#e4e4e7', 
+                                                                    fontStyle: 'italic'
+                                                                }}>
+                                                                    {sh.note}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                })
+                                            ) : (
                                                 <div style={{ 
-                                                    fontSize: '0.85rem', 
-                                                    fontWeight: 700, 
-                                                    color: shiftColorMeta ? shiftColorMeta.solid : '#f97316' 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: 600, 
+                                                    color: '#3f3f46', 
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '4px'
                                                 }}>
-                                                    {shift.start_time} - {shift.end_time}
+                                                    <i className="fa-regular fa-calendar-xmark" style={{ fontSize: '0.85rem' }} />
+                                                    <span>Scheduled Off</span>
                                                 </div>
-                                                {shift.note && (
-                                                    <div style={{ 
-                                                        fontSize: '10px', 
-                                                        color: '#e4e4e7', 
-                                                        background: 'rgba(255,255,255,0.03)',
-                                                        padding: '4px 6px',
-                                                        borderRadius: '4px',
-                                                        fontStyle: 'italic',
-                                                        border: '1px solid rgba(255,255,255,0.02)'
-                                                    }}>
-                                                        {shift.note}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div style={{ 
-                                                fontSize: '0.75rem', 
-                                                fontWeight: 600, 
-                                                color: '#3f3f46', 
-                                                marginTop: 'auto',
-                                                padding: '8px 0',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '4px'
-                                            }}>
-                                                <i className="fa-regular fa-calendar-xmark" style={{ fontSize: '0.85rem' }} />
-                                                <span>Scheduled Off</span>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
                                 )
                             })}
@@ -2009,6 +2557,249 @@ export default function SchedulePage({ officeMode = false }) {
                                 Close Week View
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SHIFT EDITOR MODAL (Office mode only) */}
+            {editingShift && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(15, 16, 20, 0.85)', backdropFilter: 'blur(12px)',
+                    zIndex: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '1rem'
+                }} onClick={() => setEditingShift(null)}>
+                    <div style={{
+                        background: '#15161c',
+                        border: editingShift.color && HIGHLIGHT_COLORS[editingShift.color] 
+                            ? `1px solid ${HIGHLIGHT_COLORS[editingShift.color].border}` 
+                            : '1px solid #27272a',
+                        borderTop: editingShift.color && HIGHLIGHT_COLORS[editingShift.color]
+                            ? `4px solid ${HIGHLIGHT_COLORS[editingShift.color].solid}`
+                            : '4px solid #f97316',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        width: '100%',
+                        maxWidth: '460px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1.25rem',
+                        position: 'relative',
+                        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
+                    }} onClick={(e) => e.stopPropagation()}>
+                        
+                        {/* Close Button */}
+                        <button 
+                            onClick={() => setEditingShift(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid #27272a',
+                                borderRadius: '50%',
+                                width: '30px',
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#a1a1aa',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = '#fff';
+                                e.currentTarget.style.background = 'rgba(248, 113, 113, 0.2)';
+                                e.currentTarget.style.borderColor = '#f87171';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = '#a1a1aa';
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.borderColor = '#27272a';
+                            }}
+                        >
+                            <i className="fa-solid fa-xmark" />
+                        </button>
+
+                        {/* Header */}
+                        <div>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#fff' }}>
+                                {editingShift.isNew ? 'Add New Shift' : 'Edit Shift'}
+                            </h3>
+                            <p style={{ fontSize: '0.85rem', color: '#a1a1aa', marginTop: '4px' }}>
+                                For <strong>{editingShift.employee_name}</strong> on {editingShift.date ? new Date(editingShift.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
+                            </p>
+                        </div>
+
+                        {/* Fields */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {/* Time range */}
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Start Time
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingShift.start_time || ''}
+                                        onChange={(e) => setEditingShift({ ...editingShift, start_time: e.target.value })}
+                                        placeholder="e.g. 8:00 AM"
+                                        autoFocus
+                                        style={{
+                                            width: '100%',
+                                            background: '#0f1014',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            padding: '10px 12px',
+                                            color: '#e4e4e7',
+                                            fontSize: '0.9rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        End Time
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingShift.end_time || ''}
+                                        onChange={(e) => setEditingShift({ ...editingShift, end_time: e.target.value })}
+                                        placeholder="e.g. 4:00 PM"
+                                        style={{
+                                            width: '100%',
+                                            background: '#0f1014',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            padding: '10px 12px',
+                                            color: '#e4e4e7',
+                                            fontSize: '0.9rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Role & Color */}
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Role
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingShift.role || ''}
+                                        onChange={(e) => setEditingShift({ ...editingShift, role: e.target.value })}
+                                        placeholder="e.g. Cook, Dishwasher"
+                                        style={{
+                                            width: '100%',
+                                            background: '#0f1014',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            padding: '10px 12px',
+                                            color: '#e4e4e7',
+                                            fontSize: '0.9rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Color Highlight
+                                    </label>
+                                    <select
+                                        value={editingShift.color || ''}
+                                        onChange={(e) => setEditingShift({ ...editingShift, color: e.target.value || null })}
+                                        style={{
+                                            width: '100%',
+                                            background: '#0f1014',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            padding: '10px 12px',
+                                            color: editingShift.color ? (HIGHLIGHT_COLORS[editingShift.color]?.solid || '#e4e4e7') : '#e4e4e7',
+                                            fontSize: '0.9rem',
+                                            fontWeight: editingShift.color ? 700 : 400,
+                                            outline: 'none'
+                                        }}
+                                    >
+                                        <option value="" style={{ color: '#71717a' }}>Clear / None</option>
+                                        <option value="orange" style={{ color: HIGHLIGHT_COLORS.orange.solid, fontWeight: 'bold' }}>Orange</option>
+                                        <option value="yellow" style={{ color: HIGHLIGHT_COLORS.yellow.solid, fontWeight: 'bold' }}>AM (Yellow)</option>
+                                        <option value="blue" style={{ color: HIGHLIGHT_COLORS.blue.solid, fontWeight: 'bold' }}>Pool (Blue)</option>
+                                        <option value="green" style={{ color: HIGHLIGHT_COLORS.green.solid, fontWeight: 'bold' }}>Dish (Green)</option>
+                                        <option value="pink" style={{ color: HIGHLIGHT_COLORS.pink.solid, fontWeight: 'bold' }}>Banquet (Pink)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Shift Note */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#a1a1aa', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase' }}>
+                                    Shift Note
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editingShift.note || ''}
+                                    onChange={(e) => setEditingShift({ ...editingShift, note: e.target.value })}
+                                    placeholder="e.g. Banquet Prep, Pool Bar Opening"
+                                    style={{
+                                        width: '100%',
+                                        background: '#0f1014',
+                                        border: '1px solid #27272a',
+                                        borderRadius: '6px',
+                                        padding: '10px 12px',
+                                        color: '#e4e4e7',
+                                        fontSize: '0.9rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '4px', borderTop: '1px solid #27272a', paddingTop: '16px' }}>
+                            <button
+                                onClick={() => setEditingShift(null)}
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid #27272a',
+                                    color: '#a1a1aa',
+                                    borderRadius: '6px',
+                                    padding: '8px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveShift}
+                                style={{
+                                    background: '#f97316',
+                                    border: '1px solid #f97316',
+                                    color: '#0f1014',
+                                    borderRadius: '6px',
+                                    padding: '8px 18px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = '#ea580c';
+                                    e.currentTarget.style.borderColor = '#ea580c';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = '#f97316';
+                                    e.currentTarget.style.borderColor = '#f97316';
+                                }}
+                            >
+                                Save Shift
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             )}

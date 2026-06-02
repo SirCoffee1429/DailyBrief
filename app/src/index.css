@@ -5205,4 +5205,27 @@ tr.beo-completed td .beo-check {
   }
 }
 
+/* Shift Card Interactive & Actions */
+.shift-card-interactive {
+  position: relative;
+  transition: all 0.2s ease;
+}
+.shift-card-interactive:hover .shift-card-actions {
+  opacity: 1 !important;
+}
+.add-shift-inline-btn:hover {
+  border-color: #f97316 !important;
+  color: #f97316 !important;
+  background: rgba(249, 115, 22, 0.05) !important;
+}
+.employee-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+.employee-action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+}
+
+
 
