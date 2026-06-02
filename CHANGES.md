@@ -1594,4 +1594,61 @@ under the wrong business day.
 
 ---
 
+### 2026-06-01 — Editable Shift Roster Preview and 8-Column Grid Parser
+
+**File(s) Changed:** `supabase/functions/process-schedule/index.ts`, `app/src/pages/SchedulePage.jsx` **Type:** `feature`
+**Summary:** Implemented fully interactive inline editing for all fields in the parsed schedule preview modal (including Name, Role, Highlight color, date select, start/end hours, notes, and direct Add/Delete shift actions), and updated Gemini parsing rules to strictly enforce the 8-column kitchen grid layout sequence.
+
+**Details:**
+
+- **Interactive Table Inputs:** Replaced all static text cells in the "Parsed Shift Rosters" preview table with premium input and select controls in `SchedulePage.jsx`.
+- **Custom Shift Dates Dropdown:** Developed a `getModalWeekDays` callback to generate Monday-to-Sunday dates based on the active target week, supplying a beautiful date selection dropdown for every shift row.
+- **Add & Delete Custom Shift Controls:** Added a trash can action button on every shift row to delete individual shifts, and a stylized "+ Add Custom Shift Row" button at the bottom of the table to insert blank editable records.
+- **8-Column Layout Parsing Rules:** Rewrote Gemini extraction rules inside `process-schedule/index.ts` to strictly instruct the model to map sheets as exactly 8-column grids (Employee Name + Monday through Sunday), ensuring shifts are placed under the correct calendar dates even when sheet headers are cut off or missing.
+- **Deno Edge Function Deployment:** Deployed version 6 of `process-schedule` to Supabase production, fully updated with the new parsing constraints.
+- **Widened Verification Modal Popup:** Expanded the verification modal's container layout from `800px` to a spacious `1250px` (`maxWidth`) with a fluid `95vw` baseline, giving all inline input fields, selectors, notes, and actions abundant breathing room.
+- **Expanded Shift List Table View:** Increased the parsed shift table container's scroll threshold (`maxHeight`) from `240px` to `450px`, allowing administrators to view and verify twice as many shifts concurrently before needing to scroll.
+
+---
+
+### 2026-06-01 — Orange Highlight Color Addition
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx`, `supabase/functions/process-schedule/index.ts` **Type:** `feature`
+**Summary:** Added the new 'Orange' highlight color option to the schedule system, integrating it into the client-side constants, dropdown pickers, and Edge Function parser.
+
+**Details:**
+
+- **Client Color Registry:** Added the `orange` color metadata configuration to `HIGHLIGHT_COLORS` in `SchedulePage.jsx` with customized theme tokens (solid, background, border, and glow effects).
+- **Verification Selector Options:** Integrated Orange into the verification modal shift highlight dropdown list in the exact requested sequence (Orange, Yellow, Blue, Green, Pink).
+- **Shift & Employee Role Auto-Inferences:** Configured fallback text matching rules inside `getShiftColor` and `getEmployeeRows` to auto-detect and highlight "orange" if found in role or note texts.
+- **Edge Function Prompt Update & Deploy:** Added "orange" highlight detection rules to the Gemini extraction instruction set within `process-schedule/index.ts` and successfully deployed version 7 of the Edge Function to production on Supabase.
+
+---
+
+### 2026-06-01 — Custom Shift Row Button Repair
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx` **Type:** `fix`
+**Summary:** Repaired and enhanced the "+ Add Custom Shift Row" button inside the verification modal so that newly added shifts are instantly visible and focusable without causing silent failures or layout folds.
+
+**Details:**
+
+- **Prepend Position Ordering:** Changed new shift insertions from append-to-bottom to prepend-to-top (`shifts: [newShift, ...shifts]`). This keeps the brand-new editable row at the very top of the table inside plain visual field, removing the need for any scroll actions.
+- **Unique Item Keys:** Implemented stable custom shift keying `key={sh.id || sh.tempId || idx}` where each custom shift receives a randomized `tempId`. This guarantees react-reconciler doesn't jitter input fields or trigger focus dropouts upon insertion.
+- **Event Bubble Prevention:** Added `e.preventDefault()` and `e.stopPropagation()` triggers to the click handler to block bubbling parent click events or background page refiring.
+
+---
+
+### 2026-06-02 — Edge Function Deno TS Diagnostic Fixes
+
+**File(s) Changed:** `supabase/functions/process-schedule/index.ts` **Type:** `fix`
+**Summary:** Resolved Deno compilation and TypeScript linter warnings inside the `process-schedule` Edge Function payload handler.
+
+**Details:**
+
+- **Typed Files Array:** Declared a strict `ScheduleFile` interface containing `fileBase64`, `mimeType`, and optional `fileName` properties, and explicitly typed the `files` array to resolve implicit `any` diagnostics (TypeScript code `7006`).
+- **Callback Parameters Type annotation:** Added explicit type annotations to parameters in map calls (`f` and `file`) inside the console logging and geminiParts constructor.
+- **Deno Lint Warning Fix:** Prefixed the unused `e` parameter in the `JSON.parse` catch block with an underscore (`_e`) to conform to `deno-lint` clean code standards.
+
+---
+
 

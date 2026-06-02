@@ -13,13 +13,21 @@ const PARSING_MESSAGES = [
     "Making sure nobody has to work a clopen... wait, too late."
 ]
 const HIGHLIGHT_COLORS = {
-    green: {
-        id: 'green',
-        name: 'Dish (Green)',
-        bg: 'rgba(34, 197, 94, 0.12)',
-        border: 'rgba(34, 197, 94, 0.4)',
-        solid: '#22c55e',
-        glow: 'rgba(34, 197, 94, 0.06)'
+    orange: {
+        id: 'orange',
+        name: 'Orange',
+        bg: 'rgba(249, 115, 22, 0.12)',
+        border: 'rgba(249, 115, 22, 0.4)',
+        solid: '#f97316',
+        glow: 'rgba(249, 115, 22, 0.06)'
+    },
+    yellow: {
+        id: 'yellow',
+        name: 'AM (Yellow)',
+        bg: 'rgba(234, 179, 8, 0.15)',
+        border: 'rgba(234, 179, 8, 0.4)',
+        solid: '#eab308',
+        glow: 'rgba(234, 179, 8, 0.08)'
     },
     blue: {
         id: 'blue',
@@ -29,6 +37,14 @@ const HIGHLIGHT_COLORS = {
         solid: '#3b82f6',
         glow: 'rgba(59, 130, 246, 0.06)'
     },
+    green: {
+        id: 'green',
+        name: 'Dish (Green)',
+        bg: 'rgba(34, 197, 94, 0.12)',
+        border: 'rgba(34, 197, 94, 0.4)',
+        solid: '#22c55e',
+        glow: 'rgba(34, 197, 94, 0.06)'
+    },
     pink: {
         id: 'pink',
         name: 'Banquet (Pink)',
@@ -36,14 +52,6 @@ const HIGHLIGHT_COLORS = {
         border: 'rgba(236, 72, 153, 0.4)',
         solid: '#ec4899',
         glow: 'rgba(236, 72, 153, 0.06)'
-    },
-    yellow: {
-        id: 'yellow',
-        name: 'AM (Yellow)',
-        bg: 'rgba(234, 179, 8, 0.15)',
-        border: 'rgba(234, 179, 8, 0.4)',
-        solid: '#eab308',
-        glow: 'rgba(234, 179, 8, 0.08)'
     }
 }
 
@@ -67,6 +75,9 @@ const getShiftColor = (shift, employeeRowColor = null, employeeRole = '') => {
         }
         if (roleLower.includes('banquet') || roleLower.includes('beo') || roleLower.includes('event') || noteLower.includes('banquet') || noteLower.includes('beo')) {
             return 'pink'
+        }
+        if (roleLower.includes('orange') || noteLower.includes('orange')) {
+            return 'orange'
         }
         
         // Strict word-boundary check for 'am' or 'a.m.' to avoid matching words like 'team', 'came', 'game', etc.
@@ -135,6 +146,9 @@ const getShiftColor = (shift, employeeRowColor = null, employeeRole = '') => {
         }
         if (roleLower.includes('banquet') || roleLower.includes('beo') || roleLower.includes('event')) {
             return 'pink'
+        }
+        if (roleLower.includes('orange')) {
+            return 'orange'
         }
     }
 
@@ -369,12 +383,33 @@ export default function SchedulePage({ officeMode = false }) {
                 else if (roleLower.includes('banquet') || roleLower.includes('beo') || roleLower.includes('event')) {
                     emp.color = 'pink'
                 }
+                // 4. Orange
+                else if (roleLower.includes('orange')) {
+                    emp.color = 'orange'
+                }
                 // Note: AM (Yellow) is timing-based and is intentionally NOT inferred at the employee name cell/row level anymore.
             }
         })
 
         return Object.values(employeeMap).sort((a, b) => a.name.localeCompare(b.name))
     }, [activeSchedule])
+
+    // Generate Monday to Sunday dates for the modal target week start
+    const getModalWeekDays = useCallback(() => {
+        const start = modalWeekStart || (pendingData && pendingData.week_start) || ''
+        if (!start) return []
+        const baseDate = new Date(start + 'T00:00:00')
+        const days = []
+        for (let i = 0; i < 7; i++) {
+            const nextDate = new Date(baseDate)
+            nextDate.setDate(baseDate.getDate() + i)
+            days.push({
+                dateStr: nextDate.toISOString().split('T')[0],
+                label: nextDate.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' })
+            })
+        }
+        return days
+    }, [modalWeekStart, pendingData])
 
     // Handle Upload & Parsing Sequence
     const handleFileUpload = async (e) => {
@@ -1367,7 +1402,7 @@ export default function SchedulePage({ officeMode = false }) {
                     padding: '1rem'
                 }}>
                     <div className="card" style={{
-                        width: '100%', maxWidth: '800px', maxHeight: '90vh',
+                        width: '95vw', maxWidth: '1250px', maxHeight: '90vh',
                         display: 'flex', flexDirection: 'column', padding: 0,
                         border: '2px solid #f97316', overflow: 'hidden',
                         boxShadow: '0 10px 40px rgba(249, 115, 22, 0.15)'
@@ -1418,76 +1453,234 @@ export default function SchedulePage({ officeMode = false }) {
                                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#e4e4e7', marginBottom: '8px' }}>
                                     Parsed Shift Rosters:
                                 </label>
-                                <div style={{ border: '1px solid #27272a', borderRadius: '8px', overflow: 'hidden', maxHeight: '200px', overflowY: 'auto' }} className="custom-scrollbar">
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
-                                        <thead>
-                                            <tr style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid #27272a' }}>
-                                                <th style={{ padding: '8px 12px', color: '#a1a1aa' }}>Name</th>
-                                                <th style={{ padding: '8px 12px', color: '#a1a1aa' }}>Role</th>
-                                                <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '130px' }}>Highlight</th>
-                                                <th style={{ padding: '8px 12px', color: '#a1a1aa' }}>Shift Date</th>
-                                                <th style={{ padding: '8px 12px', color: '#a1a1aa' }}>Shift Hours</th>
-                                                <th style={{ padding: '8px 12px', color: '#a1a1aa' }}>Note</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(pendingData.shifts || []).map((sh, idx) => {
-                                                const formattedDate = sh.date 
-                                                    ? new Date(sh.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }) 
-                                                    : '—'
-                                                const colorMeta = sh.color ? HIGHLIGHT_COLORS[sh.color] : null
-                                                return (
-                                                    <tr key={idx} style={{ 
-                                                        borderBottom: '1px solid #1f1f23', 
-                                                        background: idx % 2 === 1 ? 'rgba(255,255,255,0.01)' : 'transparent',
-                                                        borderLeft: colorMeta ? `3px solid ${colorMeta.solid}` : 'none'
-                                                    }}>
-                                                        <td style={{ padding: '8px 12px', fontWeight: 600 }}>{sh.employee_name}</td>
-                                                        <td style={{ padding: '8px 12px', color: '#a1a1aa' }}>{sh.role || 'Crew'}</td>
-                                                        <td style={{ padding: '4px 12px' }}>
-                                                            <select
-                                                                value={sh.color || ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value || null
-                                                                    // Update the color ONLY for this specific shift in pendingData
-                                                                    const updatedShifts = pendingData.shifts.map((s, sIdx) => {
-                                                                        if (sIdx === idx) {
-                                                                            return { ...s, color: val }
-                                                                        }
-                                                                        return s
-                                                                    })
-                                                                    setPendingData({
-                                                                        ...pendingData,
-                                                                        shifts: updatedShifts
-                                                                    })
-                                                                }}
-                                                                style={{
-                                                                    background: '#0f1014',
-                                                                    border: '1px solid #27272a',
-                                                                    borderRadius: '4px',
-                                                                    color: sh.color ? (HIGHLIGHT_COLORS[sh.color]?.solid || '#e4e4e7') : '#a1a1aa',
-                                                                    padding: '4px 6px',
-                                                                    fontSize: '11px',
-                                                                    outline: 'none',
-                                                                    cursor: 'pointer',
-                                                                    fontWeight: sh.color ? 700 : 500
-                                                                }}
-                                                            >
-                                                                <option value="" style={{ color: '#71717a' }}>None</option>
-                                                                <option value="green" style={{ color: HIGHLIGHT_COLORS.green.solid, fontWeight: 'bold' }}>Dish (Green)</option>
-                                                                <option value="blue" style={{ color: HIGHLIGHT_COLORS.blue.solid, fontWeight: 'bold' }}>Pool (Blue)</option>
-                                                                <option value="pink" style={{ color: HIGHLIGHT_COLORS.pink.solid, fontWeight: 'bold' }}>Banquet (Pink)</option>
-                                                                <option value="yellow" style={{ color: HIGHLIGHT_COLORS.yellow.solid, fontWeight: 'bold' }}>AM (Yellow)</option>
-                                                            </select>
-                                                        </td>
-                                                        <td style={{ padding: '8px 12px' }}>{formattedDate}</td>
-                                                        <td style={{ padding: '8px 12px', color: '#f97316', fontWeight: 700 }}>{sh.start_time} - {sh.end_time}</td>
-                                                        <td style={{ padding: '8px 12px', color: '#71717a', fontStyle: 'italic' }}>{sh.note || '—'}</td>
-                                                    </tr>
-                                                )
-                                            })}
-                                        </tbody>
-                                    </table>
+                                <div style={{ border: '1px solid #27272a', borderRadius: '8px', overflow: 'hidden', paddingBottom: '8px', display: 'flex', flexDirection: 'column' }} className="custom-scrollbar-wrapper">
+                                    <div style={{ maxHeight: '450px', overflowY: 'auto' }} className="custom-scrollbar">
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                                            <thead>
+                                                <tr style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid #27272a' }}>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa' }}>Name</th>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '120px' }}>Role</th>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '120px' }}>Highlight</th>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '110px' }}>Shift Date</th>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '180px' }}>Shift Hours</th>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '120px' }}>Note</th>
+                                                    <th style={{ padding: '8px 12px', color: '#a1a1aa', width: '50px', textAlign: 'center' }}>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(pendingData.shifts || []).map((sh, idx) => {
+                                                    const colorMeta = sh.color ? HIGHLIGHT_COLORS[sh.color] : null
+                                                    const cellInputStyles = {
+                                                        background: '#0f1014',
+                                                        border: '1px solid #27272a',
+                                                        borderRadius: '4px',
+                                                        color: '#e4e4e7',
+                                                        padding: '4px 8px',
+                                                        fontSize: '0.75rem',
+                                                        outline: 'none',
+                                                        width: '100%',
+                                                        boxSizing: 'border-box'
+                                                    }
+                                                    return (
+                                                        <tr key={sh.id || sh.tempId || idx} style={{ 
+                                                            borderBottom: '1px solid #1f1f23', 
+                                                            background: idx % 2 === 1 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                                                            borderLeft: colorMeta ? `3px solid ${colorMeta.solid}` : 'none'
+                                                        }}>
+                                                            <td style={{ padding: '4px 8px' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={sh.employee_name || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value
+                                                                        const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                            if (sIdx === idx) return { ...s, employee_name: val }
+                                                                            return s
+                                                                        })
+                                                                        setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                    }}
+                                                                    style={cellInputStyles}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '4px 8px' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={sh.role || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value
+                                                                        const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                            if (sIdx === idx) return { ...s, role: val }
+                                                                            return s
+                                                                        })
+                                                                        setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                    }}
+                                                                    style={cellInputStyles}
+                                                                    placeholder="Crew"
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '4px 8px' }}>
+                                                                <select
+                                                                    value={sh.color || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value || null
+                                                                        const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                            if (sIdx === idx) return { ...s, color: val }
+                                                                            return s
+                                                                        })
+                                                                        setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                    }}
+                                                                    style={{
+                                                                        ...cellInputStyles,
+                                                                        color: sh.color ? (HIGHLIGHT_COLORS[sh.color]?.solid || '#e4e4e7') : '#a1a1aa',
+                                                                        fontWeight: sh.color ? 700 : 500
+                                                                    }}
+                                                                >
+                                                                    <option value="" style={{ color: '#71717a' }}>None</option>
+                                                                    <option value="orange" style={{ color: HIGHLIGHT_COLORS.orange.solid, fontWeight: 'bold' }}>Orange</option>
+                                                                    <option value="yellow" style={{ color: HIGHLIGHT_COLORS.yellow.solid, fontWeight: 'bold' }}>AM (Yellow)</option>
+                                                                    <option value="blue" style={{ color: HIGHLIGHT_COLORS.blue.solid, fontWeight: 'bold' }}>Pool (Blue)</option>
+                                                                    <option value="green" style={{ color: HIGHLIGHT_COLORS.green.solid, fontWeight: 'bold' }}>Dish (Green)</option>
+                                                                    <option value="pink" style={{ color: HIGHLIGHT_COLORS.pink.solid, fontWeight: 'bold' }}>Banquet (Pink)</option>
+                                                                </select>
+                                                            </td>
+                                                            <td style={{ padding: '4px 8px' }}>
+                                                                <select
+                                                                    value={sh.date || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value
+                                                                        const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                            if (sIdx === idx) return { ...s, date: val }
+                                                                            return s
+                                                                        })
+                                                                        setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                    }}
+                                                                    style={cellInputStyles}
+                                                                >
+                                                                    {getModalWeekDays().map(day => (
+                                                                        <option key={day.dateStr} value={day.dateStr}>
+                                                                            {day.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                            <td style={{ padding: '4px 8px' }}>
+                                                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={sh.start_time || ''}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value
+                                                                            const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                                if (sIdx === idx) return { ...s, start_time: val }
+                                                                                return s
+                                                                            })
+                                                                            setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                        }}
+                                                                        style={{ ...cellInputStyles, flex: 1, minWidth: '60px' }}
+                                                                        placeholder="Start"
+                                                                    />
+                                                                    <span style={{ color: '#71717a', fontSize: '0.75rem' }}>-</span>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={sh.end_time || ''}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value
+                                                                            const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                                if (sIdx === idx) return { ...s, end_time: val }
+                                                                                return s
+                                                                            })
+                                                                            setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                        }}
+                                                                        style={{ ...cellInputStyles, flex: 1, minWidth: '60px' }}
+                                                                        placeholder="End"
+                                                                    />
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '4px 8px' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={sh.note || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value
+                                                                        const updatedShifts = pendingData.shifts.map((s, sIdx) => {
+                                                                            if (sIdx === idx) return { ...s, note: val }
+                                                                            return s
+                                                                        })
+                                                                        setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                    }}
+                                                                    style={cellInputStyles}
+                                                                    placeholder="Note"
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const updatedShifts = pendingData.shifts.filter((_, sIdx) => sIdx !== idx)
+                                                                        setPendingData({ ...pendingData, shifts: updatedShifts })
+                                                                    }}
+                                                                    style={{
+                                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                                        borderRadius: '4px',
+                                                                        color: '#ef4444',
+                                                                        padding: '4px 8px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '11px',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        transition: 'all 0.15s ease'
+                                                                    }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)' }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)' }}
+                                                                    title="Delete Shift"
+                                                                >
+                                                                    <i className="fa-solid fa-trash-can" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style={{ padding: '8px 12px 0 12px' }}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const newShift = {
+                                                    employee_name: '',
+                                                    role: '',
+                                                    color: null,
+                                                    date: modalWeekStart || (pendingData && pendingData.week_start) || new Date().toISOString().split('T')[0],
+                                                    start_time: '',
+                                                    end_time: '',
+                                                    note: '',
+                                                    tempId: 'new_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+                                                };
+                                                setPendingData({ ...pendingData, shifts: [newShift, ...(pendingData.shifts || [])] });
+                                            }}
+                                            style={{
+                                                background: 'rgba(255, 255, 255, 0.04)',
+                                                border: '1px solid #27272a',
+                                                borderRadius: '6px',
+                                                color: '#e4e4e7',
+                                                padding: '6px 12px',
+                                                fontSize: '0.75rem',
+                                                cursor: 'pointer',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)' }}
+                                        >
+                                            <i className="fa-solid fa-plus" />
+                                            <span>Add Custom Shift Row</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
