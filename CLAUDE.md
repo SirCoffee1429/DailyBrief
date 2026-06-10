@@ -31,7 +31,7 @@ The app is live at: https://brief-club.vercel.app
 
 ## App Structure
 
-### Two Dashboards
+### Three Dashboards
 
 - `/` — Role select screen (Kitchen or Office)
 - `/kitchen/*` — Crew-facing: briefing, tasks, recipes, sales, AI assistant
