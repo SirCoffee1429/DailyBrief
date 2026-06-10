@@ -2,14 +2,10 @@
 
 ## What This App Is
 
-DailyBrief is a digital kitchen management web app built for Old Hawthorne
-Country Club in Mid-Missouri. It serves three audiences — kitchen crew, front of
-house, and office/management — through role-based dashboards (office is password
-protected).
-
-The app is live at: https://brief-club.vercel.app
-
----
+DailyBrief is a digital kitchen management web app for Old Hawthorne Country Club
+(Mid-Missouri). It serves three audiences — kitchen crew, front of house, and
+office/management — via role-based dashboards (office is password protected).
+Live at: https://brief-club.vercel.app
 
 ## Tech Stack
 
@@ -24,42 +20,26 @@ The app is live at: https://brief-club.vercel.app
 - **Deployment:** Vercel (with `@vercel/analytics` + `@vercel/speed-insights`)
 - **Supabase Project Ref:** chajwmoohmiugdgvqjyo
 
----
-
 ## Repository Layout
 
 This is a monorepo. **The web app lives in `app/`, not at the repo root.**
 
-```
-/                     repo root
-├── app/              Vite + React frontend (run npm commands FROM HERE)
-│   ├── src/
-│   │   ├── App.jsx        all routes (Routes/Route table)
-│   │   ├── main.jsx       React entry (BrowserRouter + Vercel widgets)
-│   │   ├── pages/         route-level screens
-│   │   ├── components/    shared UI (layouts, widgets, modals)
-│   │   ├── lib/           supabase client + hooks/helpers
-│   │   ├── index.css / mobile.css
-│   ├── public/           static assets
-│   ├── sample-data/       example BEOs, sales, schedules for testing parsers
-│   ├── vite.config.js     dev server on port 5173
-│   └── vercel.json        SPA rewrite → index.html
-├── supabase/
-│   ├── functions/        Deno edge functions (one folder each)
-│   └── migrations/        SQL migrations (timestamped)
-├── docs/superpowers/     feature plans + design specs
-├── .agents/rules/        session init + change-tracking rules
-└── CHANGES.md            running change log (repo root)
-```
-
+- `app/` — Vite + React frontend; **run all npm commands from here**
+  - `src/App.jsx` (all routes), `src/main.jsx` (entry), `src/pages/`,
+    `src/components/`, `src/lib/`, `index.css` / `mobile.css`
+  - `public/` (static), `sample-data/` (test BEOs/sales/schedules),
+    `vite.config.js` (port 5173), `vercel.json` (SPA rewrite)
+- `supabase/functions/` — Deno edge functions (one folder each)
+- `supabase/migrations/` — timestamped SQL migrations
+- `docs/superpowers/` — feature plans + design specs
+- `.agents/rules/` — session-init + change-tracking rules
+- `CHANGES.md` — running change log (repo root)
 - **GitHub:** https://github.com/SirCoffee1429/DailyBrief
-
----
 
 ## App Structure & Routing
 
-Routes are defined in `app/src/App.jsx`. Each route wraps a page in its role
-layout; office routes are additionally wrapped in `<OfficeGate>`.
+Routes live in `app/src/App.jsx`; each wraps a page in its role layout, with
+office routes additionally wrapped in `<OfficeGate>`.
 
 - `/` — `RoleSelect` (Kitchen / FOH / Office)
 - `/kitchen/*` — Crew: dashboard, recipes (+ create + viewer), AI chat, sales,
@@ -71,46 +51,37 @@ layout; office routes are additionally wrapped in `<OfficeGate>`.
 
 ### Key Pages (`app/src/pages`)
 
-- `Dashboard.jsx` — Kitchen dashboard (briefing, tasks, recipes, sales, weather)
-- `FOHDashboard.jsx` — Front of house dashboard
-- `OfficeDashboard.jsx` — Office dashboard (stats, tiles, sales)
-- `KitchenRecipes.jsx` — Recipe browser with category filter + search
-- `RecipeCreator.jsx` — Manual recipe authoring (no Excel upload)
-- `WorkbookViewer.jsx` — Read view of a single recipe/workbook (`/recipes/:id`)
-- `WorkbookLibrary.jsx` — Office recipe management (upload, edit, delete, categorize)
-- `WorkbookUpload.jsx` — Excel upload → AI categorization → chunk embedding
-- `AiChat.jsx` — Full-page RAG knowledge-base chat
-- `Communication.jsx` — Office management board / internal comms
-- `SalesReports.jsx` / `SalesReportDetail.jsx` — Sales date list + top sellers
-- `Briefings.jsx` / `BriefingEditor.jsx` — Briefing list + create/edit briefings & tasks
-- `History.jsx` — 30-day briefing & task completion log
-- `EventsBanquetsPage.jsx` — Banquets & special events with BEO parsing
-- `TimeOff.jsx` — Staff time-off requests (`officeMode` prop for manager view)
-- `SchedulePage.jsx` — Weekly schedule viewer (`officeMode` for upload/edit)
+- `Dashboard` / `FOHDashboard` / `OfficeDashboard` — role dashboards (briefing,
+  tasks, recipes, sales, weather)
+- `KitchenRecipes` (browse + filter/search), `RecipeCreator` (manual authoring),
+  `WorkbookViewer` (`/recipes/:id`), `WorkbookLibrary` (office mgmt),
+  `WorkbookUpload` (Excel → AI categorize → chunk embed)
+- `AiChat` — full-page RAG knowledge-base chat
+- `Communication` — office management board / internal comms
+- `SalesReports` / `SalesReportDetail` — sales date list + top sellers
+- `Briefings` / `BriefingEditor` — list + create/edit briefings & tasks
+- `History` — 30-day briefing & task completion log
+- `EventsBanquetsPage` — banquets & special events with BEO parsing
+- `TimeOff` — time-off requests (`officeMode` for manager view)
+- `SchedulePage` — weekly schedule viewer (`officeMode` for upload/edit)
 
 ### Key Components (`app/src/components`)
 
-- `KitchenLayout.jsx` / `FOHLayout.jsx` / `OfficeLayout.jsx` — Shells with bottom tab nav
-- `OfficeGate.jsx` — Client-side password gate for office routes
-- `AssistantWidget.jsx` — Floating AI assistant with voice input (long-press)
-- `WeatherWidget.jsx` — 5-day forecast via Google Weather API
-- `SalesBriefing.jsx` / `SalesTrendChart.jsx` / `SalesUploadModal.jsx` — Sales UI
-- `ManagementWhiteboard.jsx` — Coordination whiteboard
-- `WeeklyFeatures.jsx` / `FeaturesUploadModal.jsx` — Lunch/dinner features
-- `ScheduleWidget.jsx` — Schedule summary card
-- `EightySixFeed.jsx` — 86'd items feed
-- `CategoryManager.jsx` — Recipe category management
-- `EditRecipeModal.jsx` / `EditRecipeContentModal.jsx` — Recipe editing modals
+- `KitchenLayout` / `FOHLayout` / `OfficeLayout` — shells with bottom tab nav
+- `OfficeGate` — client-side password gate for office routes
+- `AssistantWidget` — floating AI assistant with voice input (long-press)
+- `WeatherWidget` — 5-day forecast; `SalesBriefing` / `SalesTrendChart` /
+  `SalesUploadModal` — sales UI; `ScheduleWidget` — schedule card
+- `ManagementWhiteboard` — coordination board; `WeeklyFeatures` /
+  `FeaturesUploadModal` — lunch/dinner features; `EightySixFeed` — 86'd items
+- `CategoryManager`, `EditRecipeModal` / `EditRecipeContentModal` — recipe mgmt
 
 ### Lib (`app/src/lib`)
 
-- `supabase.js` — Supabase client (reads `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`,
-  falls back to production values)
-- `useCategories.js` — Hook for recipe categories
-- `useVoiceInput.js` — Web Speech API voice-input hook
-- `workbooks.js` — Workbook parsing/upload helpers
-
----
+- `supabase.js` — Supabase client (reads `VITE_SUPABASE_URL` /
+  `VITE_SUPABASE_ANON_KEY`, falls back to production values)
+- `useCategories.js` (categories hook), `useVoiceInput.js` (Web Speech API),
+  `workbooks.js` (parsing/upload helpers)
 
 ## Supabase Tables
 
@@ -130,11 +101,7 @@ layout; office routes are additionally wrapped in `<OfficeGate>`.
 | `event_tasks`          | Tasks per BEO event; supports subtasks (`parent_id`) + `is_generated` AI flag      |
 | `event_order_items`    | Per-event food order list; AI-generated + manual, with ordered checkoff + notes    |
 | `time_off_requests`    | Staff time-off requests with date range, time type, and crew name (2/day cap)      |
-| `schedules`            | AI-parsed weekly schedules (one row per `week_start`, `schedule_data` jsonb)       |
-
-Storage buckets include `schedules` (public) for uploaded schedule PDFs/images.
-
----
+| `schedules`            | AI-parsed weekly schedules (1/`week_start`, jsonb; public `schedules` bucket)      |
 
 ## Edge Functions (`supabase/functions`)
 
@@ -152,83 +119,51 @@ Storage buckets include `schedules` (public) for uploaded schedule PDFs/images.
 | `process-features`     | Parses uploaded weekly features (handles docx via fflate unzip)        |
 | `process-schedule`     | Parses uploaded weekly schedule (PDF/image) into `schedules`           |
 
----
-
 ## RAG Pipeline (Vector Search)
 
-The kitchen assistant uses RAG instead of dumping all chunks into the prompt:
-
-1. Recipe uploaded → text parsed into chunks → `embed-chunks` called → each
-   chunk embedded via `gemini-embedding-001` → stored in
-   `workbook_chunks.embedding` (vector(768))
-2. Question asked → question embedded → `match_chunks` Postgres function finds
-   top 15 similar chunks → only those sent to Gemini
-3. Gemini answers from relevant context only
-
-**Postgres function:** `match_chunks(query_embedding vector(768), match_count int)`
-**Vector index:** ivfflat on `workbook_chunks.embedding`
-
----
+The kitchen assistant uses RAG rather than dumping all chunks into the prompt:
+recipe uploaded → parsed into chunks → `embed-chunks` embeds each via
+`gemini-embedding-001` → stored in `workbook_chunks.embedding` (vector(768)).
+At query time the question is embedded, the `match_chunks(query_embedding
+vector(768), match_count int)` Postgres function returns the top 15 similar
+chunks, and only those are sent to Gemini. Vector index: ivfflat on
+`workbook_chunks.embedding`.
 
 ## Development Workflow
 
-All app commands run from `app/`:
-
-```bash
-cd app
-npm install          # install deps
-npm run dev          # Vite dev server → http://localhost:5173 (auto-opens)
-npm run build        # production build → app/dist
-npm run preview      # preview the built bundle
-```
+All app commands run from `app/`: `npm install`, `npm run dev` (Vite dev server
+→ http://localhost:5173), `npm run build` (→ `app/dist`), `npm run preview`.
 
 - **Env:** create `app/.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
   Without them, `supabase.js` falls back to production credentials.
-- **Edge functions:** deployed to Supabase (project ref `chajwmoohmiugdgvqjyo`).
-  Each lives in `supabase/functions/<name>/index.ts` (Deno). Schema changes go in
-  `supabase/migrations/` as timestamped SQL files.
-- **Deploy:** Vercel builds from `app/` (`vercel.json`); pushes to the connected
-  branch trigger deploys. SPA routes are rewritten to `index.html`.
-- **No automated test suite or linter** is configured — verify changes manually
-  in the dev server.
-
----
+- **Edge functions:** deployed to Supabase (ref `chajwmoohmiugdgvqjyo`); each is
+  `supabase/functions/<name>/index.ts` (Deno). Schema changes are timestamped SQL
+  files in `supabase/migrations/`.
+- **Deploy:** Vercel builds from `app/` (`vercel.json`); branch pushes trigger
+  deploys; SPA routes rewrite to `index.html`. No tests/linter — verify manually.
 
 ## Key Design Decisions
 
 - Office password (`chef21`) is hardcoded in `OfficeGate.jsx` — client-side only,
-  no real auth yet. Never store JWTs locally.
-- Category stored as `text[]` in Supabase, with legacy string parsing in
-  components for older records
-- Voice input uses Web Speech API — long-press (1.5s) on center nav button
-  triggers voice mode
-- Weather widget defaults to Columbia, MO (38.9517, -92.3341) if geolocation is denied
-- Realtime is enabled on several tables (e.g. `schedules`) so dashboards auto-refresh
-- RLS policies are intentionally open (`USING (true)`) matching the no-auth model
-
----
+  no real auth yet. Never store JWTs locally. RLS policies are intentionally open
+  (`USING (true)`), matching the no-auth model.
+- Category stored as `text[]` in Supabase, with legacy string parsing for old records
+- Voice input via Web Speech API — long-press (1.5s) on center nav triggers it
+- Weather defaults to Columbia, MO (38.9517, -92.3341) if geolocation is denied
+- Realtime is enabled on tables like `schedules` so dashboards auto-refresh
 
 ## Future Plans
 
-- Build a universal version of DailyBrief (separate repo/org) that works for any
-  restaurant or country club regardless of file type or structure
-- Integrate KitchSync (scheduling) and PrepMaster (inventory/prep) after
-  DailyBrief validates with paying customers
-- Add real authentication to replace the hardcoded office password
-- Universal file ingestion: PDF, DOCX, CSV, plain text in addition to XLSX
+- A universal version of DailyBrief (separate repo/org) for any restaurant/club,
+  with universal ingestion (PDF/DOCX/CSV/text); integrate KitchSync (scheduling)
+  + PrepMaster (inventory/prep) post-validation; add real auth to replace `chef21`
 
----
+## Change Tracking & Session Init
 
-## Change Tracking
-
-The running change log lives at `CHANGES.md` in the repo root. (Legacy local
-path on the developer's machine: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`.)
-Session-init and change-tracking rules live in `.agents/rules/`.
-
-## Session Initialization
-
-At the start of every new session, or whenever a new model is loaded, you MUST
-read all files in `.agents/rules/`.
+The running change log lives at `CHANGES.md` in the repo root (legacy local path:
+`C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`). At the start of every new
+session, or whenever a new model is loaded, you MUST read all files in
+`.agents/rules/` (session-init + change-tracking rules).
 
 ## Your Behavior
 
