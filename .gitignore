@@ -24,3 +24,6 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# External framework clone (separate repo, not part of DailyBrief)
+SuperClaude_Framework/
