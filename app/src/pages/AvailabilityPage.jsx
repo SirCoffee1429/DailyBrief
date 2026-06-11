@@ -20,7 +20,7 @@ export default function AvailabilityPage() {
             try {
                 const { data, error } = await supabase
                     .from('employees')
-                    .select('id, name, availability_notes')
+                    .select('id, name')
                     .eq('active', true)
                     .order('name', { ascending: true })
                 if (error) throw error
@@ -88,12 +88,17 @@ export default function AvailabilityPage() {
 
                 {selected && (
                     <>
-                        {selected.availability_notes && (
-                            <p className="avail-office-note">
-                                <i className="fa-regular fa-note-sticky" style={{ marginRight: '0.4rem' }} />
-                                On file: {selected.availability_notes}
-                            </p>
-                        )}
+                        {/* Explainer — Available with no hours = open all day (matches how
+                            crew naturally use it; the generator treats blank times as any time) */}
+                        <div className="avail-explainer">
+                            <i className="fa-solid fa-circle-info" />
+                            <span>
+                                <strong>Available with no times entered = you can work any time
+                                that day.</strong> Only add start/end times if you're limited to
+                                certain hours. Can't work a day at all? Mark it
+                                <strong> Unavailable</strong>.
+                            </span>
+                        </div>
 
                         <div className="roster-avail-header">
                             <h3>Editing</h3>

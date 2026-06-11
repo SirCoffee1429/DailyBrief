@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { DAY_LABELS } from '../lib/rosterConstants.js'
 
-// Per-day entry states the editor cycles through. "none" = no DB row, which
-// means "no entry" — fully available on a default week, or "inherit my
-// normal week" on a specific-week override (docs/auto-scheduler-design.md §3.2).
+// Visible per-day choices. The third state — "none" (no DB row: fully open on
+// a default week, "inherit my normal week" on a week override) — is not a
+// button; it's reached via the × clear control on rows that have an entry
+// (docs/auto-scheduler-design.md §3.2).
 const STATUS_OPTIONS = [
-    { value: 'none', label: 'No entry' },
     { value: 'available', label: 'Available' },
     { value: 'unavailable', label: 'Unavailable' },
 ]
@@ -118,8 +118,8 @@ export default function AvailabilityWeekEditor({ employeeId, weekStart = null, o
         <div className="avail-editor">
             <p className="avail-editor-hint">
                 {weekStart === null
-                    ? 'No entry on a day means fully available that day.'
-                    : 'No entry on a day means your normal week applies that day.'}
+                    ? 'Untouched days count as fully open. Available with no times = open all day. Use × to undo a day.'
+                    : 'Untouched days follow your normal week. Use × to undo a change for this week.'}
             </p>
 
             {DAY_LABELS.map((label, dayIdx) => {
@@ -168,6 +168,19 @@ export default function AvailabilityWeekEditor({ employeeId, weekStart = null, o
                                 value={entry.note}
                                 onChange={e => setDay(dayIdx, { note: e.target.value })}
                             />
+                        )}
+
+                        {/* Clear/undo — removes the entry, returning the day to its
+                            default state (open on normal week, inherited on overrides) */}
+                        {status !== 'none' && (
+                            <button
+                                type="button"
+                                className="avail-day-clear"
+                                title="Clear this day"
+                                onClick={() => setDay(dayIdx, { status: 'none' })}
+                            >
+                                <i className="fa-solid fa-xmark" />
+                            </button>
                         )}
                     </div>
                 )

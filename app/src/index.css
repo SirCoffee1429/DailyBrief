@@ -5565,6 +5565,29 @@ tr.beo-completed td .beo-check {
   min-width: 160px;
 }
 
+/* Clear/undo control on day rows that have an entry */
+.avail-day-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.avail-day-clear:hover {
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
 .avail-editor-error {
   color: #f87171;
   font-size: var(--font-size-sm);
@@ -5580,16 +5603,6 @@ tr.beo-completed td .beo-check {
 /* ── Crew availability page ── */
 .avail-name-select {
   max-width: 360px;
-}
-
-.avail-office-note {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  background: rgba(230, 107, 53, 0.08);
-  border: 1px solid rgba(230, 107, 53, 0.25);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-4);
 }
 
 .avail-saved-flash {
@@ -5654,6 +5667,31 @@ tr.beo-completed td .beo-check {
   margin-left: var(--space-3);
   color: #fbbf24;
   font-weight: 600;
+}
+
+/* Crew-facing "no entry = open availability" explainer */
+.avail-explainer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.avail-explainer i {
+  color: #60a5fa;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.avail-explainer strong {
+  color: var(--text-bright);
 }
 
 /* ============================================
