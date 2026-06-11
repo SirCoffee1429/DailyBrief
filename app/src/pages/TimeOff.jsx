@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 // Time off request calendar. Crew members can submit requests by typing their
@@ -109,9 +110,16 @@ export default function TimeOff({ officeMode = false }) {
                     </h1>
                     <p className="page-subtitle">Request days off and see who&apos;s out.</p>
                 </div>
-                <button className="btn btn-orange" onClick={() => openFormForDay(null)}>
-                    <i className="fa-solid fa-plus" /> Request Time Off
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {!officeMode && (
+                        <Link to="/kitchen/availability" className="btn btn-secondary">
+                            <i className="fa-solid fa-clock" /> My Availability
+                        </Link>
+                    )}
+                    <button className="btn btn-orange" onClick={() => openFormForDay(null)}>
+                        <i className="fa-solid fa-plus" /> Request Time Off
+                    </button>
+                </div>
             </div>
 
             <div className="dash-card" style={{ marginBottom: '1rem' }}>

@@ -5227,5 +5227,455 @@ tr.beo-completed td .beo-check {
   color: #ef4444 !important;
 }
 
+/* ============================================
+   Roster Manager + Crew Availability (Phase 1)
+   ============================================ */
+
+/* Inputs inside the roster modal and availability editor inherit the app's
+   standard form styling without needing .input/.select classes on each one */
+.roster-modal input[type="text"],
+.roster-modal input[type="number"],
+.roster-modal select,
+.roster-modal textarea,
+.avail-editor input[type="text"],
+.avail-editor input[type="time"],
+.avail-name-select,
+.roster-avail-header select {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-input, #0f0f12);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.roster-modal input:focus,
+.roster-modal select:focus,
+.roster-modal textarea:focus,
+.avail-editor input:focus,
+.avail-name-select:focus,
+.roster-avail-header select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.roster-modal input[type="text"],
+.roster-modal textarea,
+.avail-name-select {
+  width: 100%;
+}
+
+/* ── Roster list ── */
+.roster-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.roster-search {
+  flex: 1;
+  min-width: 220px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-input, #0f0f12);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  outline: none;
+}
+
+.roster-search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.roster-inactive-toggle,
+.roster-active-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.roster-loading {
+  color: var(--text-muted);
+  padding: var(--space-4) 0;
+}
+
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.roster-row:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.roster-row-inactive {
+  opacity: 0.5;
+}
+
+.roster-row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.roster-row-name {
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.roster-row-station {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.roster-row-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.roster-chip-static {
+  padding: 2px 8px;
+  background: rgba(230, 107, 53, 0.12);
+  border: 1px solid rgba(230, 107, 53, 0.3);
+  border-radius: var(--radius-full);
+  color: #f5a87a;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.roster-chip-days {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.roster-chip-inactive {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+}
+
+.roster-row-toggle {
+  flex-shrink: 0;
+}
+
+/* ── Roster editor modal ── */
+.roster-modal {
+  max-width: 720px;
+  width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-modal-body {
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  flex: 1;
+}
+
+.roster-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.roster-delete-btn {
+  margin-right: auto;
+  color: #f87171;
+}
+
+.roster-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.roster-chip-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.roster-chip {
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-family);
+}
+
+.roster-chip:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.roster-chip.selected {
+  background: rgba(230, 107, 53, 0.18);
+  border-color: var(--accent);
+  color: #f5a87a;
+}
+
+.roster-avail-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+
+.roster-avail-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.roster-avail-header h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--text-bright);
+}
+
+.roster-avail-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: var(--space-4);
+}
+
+/* ── Availability week editor ── */
+.avail-editor-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.avail-editor-loading {
+  color: var(--text-muted);
+  padding: var(--space-4) 0;
+}
+
+.avail-day-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  background: rgba(255, 255, 255, 0.02);
+  flex-wrap: wrap;
+}
+
+.avail-day-available {
+  border-left: 3px solid #22c55e;
+}
+
+.avail-day-unavailable {
+  border-left: 3px solid #f87171;
+  opacity: 0.75;
+}
+
+.avail-day-label {
+  width: 88px;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.avail-day-status {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avail-status-btn {
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: all var(--transition-fast);
+}
+
+.avail-status-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.avail-status-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.avail-day-times {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avail-time-sep {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.avail-day-note {
+  flex: 1;
+  min-width: 160px;
+}
+
+.avail-editor-error {
+  color: #f87171;
+  font-size: var(--font-size-sm);
+  margin: var(--space-2) 0;
+}
+
+.avail-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+/* ── Crew availability page ── */
+.avail-name-select {
+  max-width: 360px;
+}
+
+.avail-office-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  background: rgba(230, 107, 53, 0.08);
+  border: 1px solid rgba(230, 107, 53, 0.25);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.avail-saved-flash {
+  color: #22c55e;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+/* Mobile: stack day rows vertically */
+@media (max-width: 640px) {
+  .avail-day-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .avail-day-label {
+    width: auto;
+  }
+  .avail-day-status {
+    align-self: flex-start;
+  }
+  .roster-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* ============================================
+   Kitchen Sidebar Layout (kitchen-v2)
+   ============================================
+   The kitchen shell reuses the office-v2 structural classes for the
+   sidebar/main split. This modifier only swaps surfaces back to the
+   kitchen's own palette — no accent/color changes. */
+.office-v2-container.kitchen-v2 {
+  background-color: #0f1014;
+  background-image: radial-gradient(circle at top left, #1c1917 0%, #0f1014 40%);
+}
+
+/* Kitchen keeps its clean background — no office grid-pattern overlay */
+.office-v2-container.kitchen-v2::before {
+  display: none;
+}
+
+.kitchen-v2 .office-v2-sidebar {
+  background-color: #18181b;
+  border-right: 1px solid #27272a;
+}
+
+.kitchen-v2 .office-v2-sidebar-header {
+  border-bottom: 1px solid #27272a;
+}
+
+/* Scroll wrapper inside the kitchen main area — pages keep their centered
+   max-width styling via the existing .main-content class */
+.kitchen-v2-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile hamburger needs space above the page content in the kitchen shell */
+.kitchen-v2 .office-v2-hamburger-mobile {
+  margin: 0.75rem 0 0 0.75rem;
+}
+
+/* Briefing + Tasks two-column grid (replaces the old dashboard-grid on the
+   kitchen Brief page; weather and features render full-width above it) */
+.kitchen-brief-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  align-items: start;
+}
+
+/* Neutralize the dashboard-grid named areas these cards carry */
+.kitchen-brief-grid .morning-notes-card,
+.kitchen-brief-grid .tasks-card {
+  grid-area: auto;
+}
+
+@media (max-width: 900px) {
+  .kitchen-brief-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 

@@ -1755,3 +1755,111 @@ the 2026-06-10 design review so the two docs no longer disagree.
   3-day workers) and Q14 (crew availability identity / no auth in v1)
 
 ---
+
+### 2026-06-10 — Auto-Scheduler Phase 1: Roster Manager + Crew Availability
+
+**File(s) Changed:**
+`supabase/migrations/20260610000000_create_roster_tables.sql` (NEW),
+`supabase/migrations/20260610000001_seed_roster.sql` (NEW),
+`app/src/lib/rosterConstants.js` (NEW),
+`app/src/components/AvailabilityWeekEditor.jsx` (NEW),
+`app/src/pages/RosterPage.jsx` (NEW),
+`app/src/pages/AvailabilityPage.jsx` (NEW),
+`app/src/App.jsx`, `app/src/components/OfficeLayout.jsx`,
+`app/src/pages/TimeOff.jsx`, `app/src/index.css`
+**Type:** `feature` + `migration`
+**Summary:** Built and shipped Phase 1 of the auto-scheduler: employees +
+employee_availability tables (applied to production Supabase), 32-person roster
+seeded from Roster Roles.txt, office Roster Manager page, and crew-facing My
+Availability page. Production build verified clean.
+
+**Details:**
+
+- **Migration (`create_roster_tables`, applied to prod):** `employees` (name
+  unique case-insensitive, active, eligible_shift_types text[], trained_stations
+  text[], primary_station, max/target weekly hours, typical_days_per_week,
+  availability_notes, notes) + `employee_availability` (week_start NULL =
+  recurring default week, dated Monday = per-week override; day_of_week Mon=0;
+  loose status + optional time window + free-text note). Partial unique indexes
+  for the NULL/dated week contexts, open RLS, realtime publication on both.
+- **Seed (applied to prod):** 32 employees with shift types, stations, primary
+  station, days/week, and availability notes derived from Roster Roles.txt;
+  16 explicit availability rows for Becca Liptak (Tue–Fri 6a–3p windows),
+  Rico Struckoff (Wednesdays only), Matthew Biebel (no Mondays, Wed Pizza
+  Wagon 1:30–9:30). Verified counts: 32 employees / 16 availability rows.
+- **`rosterConstants.js`:** canonical SHIFT_TYPES + 14 STATIONS, Monday-start
+  day labels, isoDate/mondayOf/upcomingMondays/friendlyTime helpers.
+- **`AvailabilityWeekEditor.jsx` (shared):** 7-day grid editor; per-day
+  No entry / Available / Unavailable segmented control, optional time window,
+  note field; replace-all save; used by both office and crew pages.
+- **`RosterPage.jsx` (`/office/roster`):** searchable employee list with shift
+  chips and active filter; full editor modal (chip toggles for shift types and
+  stations, primary-station select constrained to trained stations, hours and
+  days fields, notes); availability section with Normal week / next 8 weeks
+  selector; deactivate/reactivate, delete with confirm; realtime list refresh.
+- **`AvailabilityPage.jsx` (`/kitchen/availability`):** TimeOff-style
+  name-select (no auth, v1), shows office's availability_notes on file,
+  edits normal week or a specific upcoming week, saved confirmation flash.
+- **Wiring:** routes in App.jsx, Roster sidebar link in OfficeLayout, "My
+  Availability" button on kitchen Time Off page header (bottom tab bar full).
+- **CSS:** ~300 lines — roster list/chips/modal, availability day rows with
+  green/red status edges, scoped form-control styling, mobile stacking.
+- **Verification:** `npm run build` clean (pre-existing chunk-size warning only).
+- **Checkpoint 1 (open):** owner reviews seeded roster in UI, fills unknown
+  days for 3-day/week workers, confirms Becca/Christian/Jyanelli handling.
+
+---
+
+### 2026-06-10 — Add My Availability Button to Kitchen Dashboard
+
+**File(s) Changed:** `app/src/components/ScheduleWidget.jsx` **Type:** `fix`
+**Summary:** The crew availability page had no entry point on the kitchen
+dashboard (owner had to type the URL). Added a "My Availability" button to the
+"Who's Working Today" schedule widget header.
+
+**Details:**
+
+- Converted the widget's outer `<Link>` wrapper to a `<div>` with an `onClick`
+  navigate to `/kitchen/schedule` (nested links are invalid HTML)
+- Added a "My Availability" `Link` button (clock icon, `btn-secondary btn-sm`)
+  in the header with `stopPropagation` so it doesn't trigger the card's
+  schedule navigation
+- Verified production build clean
+
+---
+
+### 2026-06-10 — Kitchen Dashboard Redesign: Office-Style Sidebar Layout
+
+**File(s) Changed:** `app/src/components/KitchenLayout.jsx`,
+`app/src/pages/Dashboard.jsx`, `app/src/index.css`
+**File(s) Deleted:** `app/src/components/ScheduleWidget.jsx`,
+`app/src/components/SalesBriefing.jsx`
+**Type:** `feature`
+**Summary:** Rebuilt the kitchen shell to match the office dashboard layout: a
+left sidebar (Brief, Events, Schedule, Availability, Recipes, Sales, Time Off,
+Assistant) replaces the floating bottom tab bar, and the Brief page now shows
+only Weather, Features, Briefing, and Tasks. Colors unchanged — the kitchen
+keeps its own background and orange accents.
+
+**Details:**
+
+- **KitchenLayout.jsx:** rewrote to the office-v2 sidebar structure (reusing
+  `office-v2-*` classes with a `.kitchen-v2` modifier). Sidebar nav: Brief,
+  Events, Schedule, Availability, Recipes, Sales, Time Off; Assistant button
+  pinned at the bottom with the same long-press-for-voice behavior; mobile
+  hamburger + slide-in sidebar + overlay inherited from the office media queries
+- **Dashboard.jsx (Brief page):** removed the Events card, Who's Working Today
+  widget, Active Recipes card, 86 Feed, and Sales Briefing card (all reachable
+  from the sidebar now); removed their now-dead data fetches (workbook count,
+  BEO queries); kept header/settings, Weather, WeeklyFeatures, Briefing notes,
+  and Tasks in a new two-column `kitchen-brief-grid`
+- **index.css:** `.kitchen-v2` overrides keep the kitchen's body gradient and
+  `#18181b` sidebar surface (no office grid-pattern overlay); new
+  `.kitchen-brief-grid` (2fr/1fr, stacks under 900px) with `grid-area: auto`
+  neutralizers for the reused cards
+- **Dead code removed:** deleted `ScheduleWidget.jsx` and `SalesBriefing.jsx`
+  (kitchen-dashboard-only components, now unused; `EightySixFeed` kept — still
+  used by FOH dashboard)
+- **Verification:** production build clean (125 modules)
+
+---

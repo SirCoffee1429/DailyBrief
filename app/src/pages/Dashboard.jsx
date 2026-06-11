@@ -3,10 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 import WeatherWidget from '../components/WeatherWidget.jsx'
-import SalesBriefing from '../components/SalesBriefing.jsx'
-import EightySixFeed from '../components/EightySixFeed.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
-import ScheduleWidget from '../components/ScheduleWidget.jsx'
 
 
 // Witty messages shown when no briefing exists for today — rotates by calendar day
@@ -27,12 +24,9 @@ function getDailyNoBriefingMessage() {
 
 export default function Dashboard() {
     const navigate = useNavigate()
-    const [stats, setStats] = useState({ workbooks: 0, briefings: 0 })
     const [todaysBriefings, setTodaysBriefings] = useState([])
     const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
-    const [todaysEvents, setTodaysEvents] = useState([])
-    const [nextEvent, setNextEvent] = useState(null)
 
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
@@ -41,27 +35,17 @@ export default function Dashboard() {
 
     useEffect(() => {
         async function load() {
-            const [wbRes, brRes, latestDateRes] = await Promise.all([
-                supabase.from('workbooks').select('id', { count: 'exact', head: true }),
-                supabase
-                    .from('briefings')
-                    .select('id', { count: 'exact', head: true })
-                    .in('destination', ['boh', 'both']),
-                supabase
-                    .from('briefings')
-                    .select('date')
-                    .in('destination', ['boh', 'both'])
-                    .order('date', { ascending: false })
-                    .limit(1)
-                    .maybeSingle(),
-            ])
-            setStats({
-                workbooks: wbRes.count || 0,
-                briefings: brRes.count || 0,
-            })
+            const { data: latestDate } = await supabase
+                .from('briefings')
+                .select('date')
+                .in('destination', ['boh', 'both'])
+                .order('date', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
             // Only load a briefing if it is dated today — stale entries should not display
             const todayStr = new Date().toISOString().split('T')[0]
-            if (latestDateRes.data && latestDateRes.data.date === todayStr) {
+            if (latestDate && latestDate.date === todayStr) {
                 const { data: dayBriefings } = await supabase
                     .from('briefings')
                     .select('*')
@@ -71,25 +55,6 @@ export default function Dashboard() {
 
                 setTodaysBriefings(dayBriefings || [])
                 setActiveIndex(0)
-            }
-
-            // Fetch today's BEOs for the events widget
-            const { data: todayData } = await supabase
-                .from('banquet_event_orders')
-                .select('id, event_name, start_time, guest_count, location')
-                .eq('event_date', todayStr)
-                .order('start_time', { ascending: true })
-            setTodaysEvents(todayData || [])
-            // If no events today, fetch the next upcoming event as a fallback
-            if (!todayData || todayData.length === 0) {
-                const { data: nextData } = await supabase
-                    .from('banquet_event_orders')
-                    .select('id, event_name, start_time, guest_count, event_date')
-                    .gt('event_date', todayStr)
-                    .order('event_date', { ascending: true })
-                    .limit(1)
-                    .maybeSingle()
-                setNextEvent(nextData || null)
             }
         }
         load()
@@ -165,7 +130,7 @@ export default function Dashboard() {
 
             <WeeklyFeatures readOnly />
 
-            <div className="dashboard-grid">
+            <div className="kitchen-brief-grid">
                 <div className="dash-card morning-notes-card">
                     {todaysBriefings.length > 1 && (
                         <div className="briefing-cycler">
@@ -236,56 +201,6 @@ export default function Dashboard() {
                     </div>
                     {latestBriefing && <div className="updated-text">Updated 5m ago</div>}
                 </div>
-
-                <EightySixFeed />
-
-                <Link to="/kitchen/events" className="dash-card events-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="recipes-top-row">
-                        <div className="recipes-icon-box" style={{ background: '#1e3a5f' }}><i className="fa-solid fa-champagne-glasses" /></div>
-                        <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>
-                    </div>
-                    <div className="events-card-label">Today's Events</div>
-                    {todaysEvents.length > 0 ? (
-                        <ul className="events-card-list">
-                            {todaysEvents.map(ev => (
-                                <li key={ev.id} className="events-card-item">
-                                    <span className="events-card-name">{ev.event_name}</span>
-                                    <span className="events-card-meta">
-                                        {ev.start_time && <span>{ev.start_time}</span>}
-                                        {ev.guest_count && <span>{ev.guest_count} guests</span>}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : nextEvent ? (
-                        <div className="events-card-next">
-                            <div className="events-card-next-label">
-                                Next: {new Date(nextEvent.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </div>
-                            <div className="events-card-name">{nextEvent.event_name}</div>
-                            <div className="events-card-meta">
-                                {nextEvent.start_time && <span>{nextEvent.start_time}</span>}
-                                {nextEvent.guest_count && <span>{nextEvent.guest_count} guests</span>}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="events-card-empty">No upcoming events</div>
-                    )}
-                </Link>
-
-                <ScheduleWidget />
-
-                <Link to="/kitchen/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-
-                    <div className="recipes-top-row">
-                        <div className="recipes-icon-box"><i className="fa-solid fa-book-open" /></div>
-                        <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>
-                    </div>
-                    <div className="recipes-number">{stats.workbooks}</div>
-                    <div className="recipes-subtitle">Active Recipes</div>
-                </Link>
-
-                <SalesBriefing />
             </div>
 
         </div>
