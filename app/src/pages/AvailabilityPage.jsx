@@ -36,10 +36,20 @@ export default function AvailabilityPage() {
 
     const selected = employees.find(e => e.id === selectedId) || null
 
-    // Brief "Saved!" confirmation after the editor reports a successful save
-    function handleSaved() {
+    // After a crew save: flash confirmation and flag the submission for office
+    // review (any crew edit returns the employee to 'pending', even if they
+    // were previously approved)
+    async function handleSaved() {
         setSavedFlash(true)
         setTimeout(() => setSavedFlash(false), 2500)
+        try {
+            await supabase
+                .from('employees')
+                .update({ availability_status: 'pending', updated_at: new Date().toISOString() })
+                .eq('id', selectedId)
+        } catch (err) {
+            console.error('Failed to flag availability for review:', err)
+        }
     }
 
     return (

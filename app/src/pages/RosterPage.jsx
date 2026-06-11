@@ -131,6 +131,21 @@ export default function RosterPage() {
         }
     }
 
+    // Office sign-off on a crew-submitted availability
+    async function approveAvailability(emp) {
+        try {
+            const { error } = await supabase
+                .from('employees')
+                .update({ availability_status: 'approved', updated_at: new Date().toISOString() })
+                .eq('id', emp.id)
+            if (error) throw error
+            await loadEmployees()
+        } catch (err) {
+            console.error('Failed to approve availability:', err)
+            alert('Could not approve availability.')
+        }
+    }
+
     async function toggleActive(emp) {
         try {
             const { error } = await supabase
@@ -159,6 +174,14 @@ export default function RosterPage() {
     }
 
     const activeCount = employees.filter(e => e.active).length
+    const pendingCount = employees.filter(e => e.active && e.availability_status === 'pending').length
+
+    // Badge config per availability workflow state
+    const AVAIL_BADGES = {
+        none: { label: 'No availability', icon: 'fa-regular fa-circle', cls: 'avail-badge-none' },
+        pending: { label: 'Pending review', icon: 'fa-solid fa-hourglass-half', cls: 'avail-badge-pending' },
+        approved: { label: 'Approved', icon: 'fa-solid fa-circle-check', cls: 'avail-badge-approved' },
+    }
 
     return (
         <div>
@@ -170,6 +193,11 @@ export default function RosterPage() {
                     </h1>
                     <p className="page-subtitle">
                         {activeCount} active employees — source of truth for the schedule builder.
+                        {pendingCount > 0 && (
+                            <span className="avail-pending-summary">
+                                <i className="fa-solid fa-hourglass-half" /> {pendingCount} availability {pendingCount === 1 ? 'submission' : 'submissions'} awaiting review
+                            </span>
+                        )}
                     </p>
                 </div>
                 <button className="btn btn-orange" onClick={() => openEditor(null)}>
@@ -225,6 +253,22 @@ export default function RosterPage() {
                                     )}
                                     {!emp.active && <span className="roster-chip-static roster-chip-inactive">Inactive</span>}
                                 </div>
+                                {(() => {
+                                    const badge = AVAIL_BADGES[emp.availability_status] || AVAIL_BADGES.none
+                                    return (
+                                        <span className={`avail-badge ${badge.cls}`} title="Availability status">
+                                            <i className={badge.icon} /> {badge.label}
+                                        </span>
+                                    )
+                                })()}
+                                {emp.availability_status === 'pending' && (
+                                    <button
+                                        className="btn btn-orange btn-sm roster-row-toggle"
+                                        onClick={e => { e.stopPropagation(); approveAvailability(emp) }}
+                                    >
+                                        <i className="fa-solid fa-check" /> Approve
+                                    </button>
+                                )}
                                 <button
                                     className="btn btn-secondary btn-sm roster-row-toggle"
                                     onClick={e => { e.stopPropagation(); toggleActive(emp) }}
