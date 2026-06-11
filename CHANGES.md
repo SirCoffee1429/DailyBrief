@@ -1894,3 +1894,70 @@ pending, and the office approves with one click.
 - **Verification:** production build clean
 
 ---
+
+### 2026-06-11 — Availability Wording: "Available With No Times = Open All Day"
+
+**File(s) Changed:** `app/src/components/AvailabilityWeekEditor.jsx`,
+`app/src/pages/AvailabilityPage.jsx`, `app/src/index.css`
+**Type:** `fix`
+**Summary:** Crew were selecting "Available" without entering hours to mean
+"open anytime that day" — which already matches how the data is stored and
+interpreted. Updated the crew-facing UI text to confirm that behavior instead
+of fighting it. No data or logic changes.
+
+**Details:**
+
+- **AvailabilityWeekEditor.jsx:** editor hints rewritten — default week:
+  "Available with no times = open all day. Only add times if you are limited
+  to certain hours."; week override: "Days without an entry follow your normal
+  week. Available with no times = open all day."
+- **AvailabilityPage.jsx:** added a blue info explainer box above the editor:
+  Available with no times = any time that day; add times only if limited;
+  mark Unavailable if you can't work
+- **index.css:** `.avail-explainer` info-box styling
+- Labels remain No entry / Available / Unavailable; status values and the
+  generator's interpretation (blank times = whole day) were already correct
+
+---
+
+### 2026-06-11 — Replace "No entry" Button with × Clear Control
+
+**File(s) Changed:** `app/src/components/AvailabilityWeekEditor.jsx`,
+`app/src/index.css`
+**Type:** `fix`
+**Summary:** Removed "No entry" as a visible third status button — crew now
+choose only between Available and Unavailable. The no-entry state still exists
+underneath (fully open on the normal week, inherit-normal-week on overrides)
+but is reached via a small × clear/undo icon on rows that have an entry.
+
+**Details:**
+
+- `STATUS_OPTIONS` reduced to Available / Unavailable; "none" removed from
+  the segmented control
+- Added a circular × button (`.avail-day-clear`, red hover) on any day row
+  with an entry; clicking it deletes the entry, returning the day to its
+  default state — also serves as the undo for mistaken entries
+- Editor hints rewritten: normal week — "Untouched days count as fully open…
+  Use × to undo a day."; week override — "Untouched days follow your normal
+  week. Use × to undo a change for this week."
+- No data model or save-logic changes; week-override inheritance unchanged
+
+---
+
+### 2026-06-11 — Remove "On File" Note from Crew Availability Page
+
+**File(s) Changed:** `app/src/pages/AvailabilityPage.jsx`, `app/src/index.css`
+**Type:** `fix`
+**Summary:** Removed the "On file: …" banner that showed crew the manager-
+entered `availability_notes` from their roster record — internal management
+notes should not be visible kitchen-side.
+
+**Details:**
+
+- Removed the `avail-office-note` banner block from `AvailabilityPage.jsx`
+- Trimmed `availability_notes` from the crew page's employees query
+  (now selects `id, name` only)
+- Deleted the orphaned `.avail-office-note` CSS rule
+- Office roster modal still shows/edits availability notes as before
+
+---
