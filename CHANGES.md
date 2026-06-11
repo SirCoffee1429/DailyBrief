@@ -1665,3 +1665,93 @@ under the wrong business day.
 - **Blank Row Bug Fix:** Corrected the falsy/blank employee name bug in `handleAddEmployeeRow` by using a placeholder name `'New Employee'` and updated the save and cancel helpers to correctly validate and filter based on this placeholder name.
 
 ---
+
+### 2026-06-10 — Auto-Scheduler Phase 0 Design: Roster Schema & Architecture
+
+**File(s) Changed:** `docs/auto-scheduler-design.md` (NEW) **Type:** `config`
+**Summary:** Produced the Phase 0 design document for the auto-scheduler roster:
+full SQL schema for the roster tables, Phase 0 architecture decisions (T0.1–T0.5
+recommendations), and integration plan with the existing schedule grid. Design
+only — no migrations applied; awaiting owner approval (Checkpoint 0).
+
+**Details:**
+
+- **Phase 0 decisions recorded:** deterministic solver Edge Function (Gemini only
+  for unfilled-slot explanations), hard 40h cap with per-run OT toggle, soft target
+  hours, `schedules.status` draft/published column, labor cost out of scope v1
+- **Canonical vocabularies:** shift types (AM/PM/Banquet/Turn/Pool) and 14 stations
+  enforced via CHECK constraints; `Grill` normalized to `Char`
+- **`employees` table:** name (unique, case-insensitive), active, eligible shift
+  types, trained stations, primary station (no secondary column — derived),
+  max/target weekly hours, typical days/week, `varies_weekly` flag, notes
+- **`availability_rules` table:** one polymorphic relational table covering all
+  four §4.1 availability shapes via `rule_type` (available_window /
+  exclude_shift_type / locked_shift) with per-type CHECK integrity
+- **`weekly_availability` table:** per-week entries for varies-weekly staff
+  (Christian Aaron, Jyanelli Rosas); generator flags missing weeks
+- **Compatibility:** generator will emit `schedule_data.shifts[]` in the existing
+  grid shape (employee_name keyed) plus an `employee_id` field, so current grid,
+  colors, and edit flows need zero changes
+- **Open items:** owner sign-off on §1 decisions, Becca Liptak modeling choice,
+  weekly-entry workflow ownership, Live Music date source, exact days for
+  3-day/week workers
+
+---
+
+### 2026-06-10 — Auto-Scheduler Design Approved with Owner Revisions
+
+**File(s) Changed:** `docs/auto-scheduler-design.md` **Type:** `config`
+**Summary:** Owner reviewed Checkpoint 0 and approved with revisions. Design doc
+rewritten to match: deterministic solver builds the draft first, then AI reviews
+as the safety net; availability is free-form with no rigid rule types; employees
+set their own availability from the crew side.
+
+**Details:**
+
+- **Generator pipeline (T0.1 final):** deterministic solver places standing
+  shifts and fills all slots honoring hard constraints → Gemini review pass
+  cross-references candidates for unfilled slots, sanity-checks the week, and
+  writes plain-English explanations → AI-suggested fills re-checked against hard
+  constraints before landing
+- **Overtime (T0.2):** 40h cap, manager override via per-run "Allow overtime"
+  toggle — confirmed
+- **Labor cost (T0.5):** fully out of scope, no pay columns
+- **Availability redesign:** dropped the `availability_rules` rule-type table;
+  replaced with a single flexible `employee_availability` table — per-day rows
+  with loose status, optional time window, free-text note; `week_start NULL` =
+  recurring default week, dated = per-week override; no row = fully available
+- **Dropped `varies_weekly` flag:** week-override model covers Christian Aaron /
+  Jyanelli Rosas naturally (sparse default + weekly entries)
+- **Added `employees.availability_notes`** free-text field the AI reads
+- **New crew-facing page planned:** `/kitchen/availability` (TimeOff name-select
+  pattern) so staff enter their own availability, reflected live to the office
+  roster and generator
+- **New Phase 3 feature noted:** "Who can cover this shift?" — click an open slot,
+  AI returns ranked eligible candidates with reasons (owner's core use case)
+
+---
+
+### 2026-06-10 — Requirements Doc Synced with Approved Design
+
+**File(s) Changed:** `docs/auto-scheduler-requirements.md` **Type:** `config`
+**Summary:** Updated the requirements spec to reflect all decisions made during
+the 2026-06-10 design review so the two docs no longer disagree.
+
+**Details:**
+
+- Header status: requirements → design complete & approved; points to
+  `docs/auto-scheduler-design.md`
+- §2 Users: crew are no longer read-only — they self-serve availability
+- §3 Confirmed Decisions: added 9 rows (generator architecture, overtime, target
+  hours, publish semantics, labor cost, free-form availability model, crew
+  self-service ownership, roster seeding source)
+- §4.1: replaced the rigid four-shape recurring availability spec with the
+  free-form model (default week + per-week overrides, no entry = fully available)
+- §5 Phase 1: retitled "Roster Manager + Crew Availability"; FR1.3/FR1.4 rewritten;
+  added FR1.5 crew availability page
+- §5 Phase 3: FR3.6 confirmed params; added FR3.7 "Who can cover this shift?"
+- §6.1 feasibility note marked RESOLVED (solver-first + AI safety net)
+- §9: marked Q4, Q5, Q7, Q8, Q9, Q10, Q11 resolved; added Q13 (exact days for
+  3-day workers) and Q14 (crew availability identity / no auth in v1)
+
+---

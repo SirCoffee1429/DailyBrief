@@ -1,8 +1,9 @@
 # Auto-Scheduler — Requirements Specification
 
-> Status: **Requirements discovery complete** (via `/sc:brainstorm`, 2026-06-05).
-> Next step: `/sc:design` for data model + architecture, then phased build.
-> This document is requirements only — no schema, architecture, or code decisions are made here.
+> Status: **Design complete & approved** (Checkpoint 0 closed 2026-06-10).
+> Requirements discovery via `/sc:brainstorm` 2026-06-05; design via `/sc:design` 2026-06-10.
+> Schema + architecture live in `docs/auto-scheduler-design.md`. Next step: `/sc:implement` Phase 1.
+> Updated 2026-06-10 to reflect owner decisions made during design review (see §3 and §9).
 
 ---
 
@@ -24,8 +25,10 @@ exist in the app yet.
 
 - **Office / Management** — owns the roster, coverage template, and event staffing;
   presses "Generate," reviews the draft, edits, and publishes. (Gated by existing office password.)
-- **Kitchen / FOH crew** — read-only consumers of the published schedule; continue to
-  submit time-off requests (existing `time_off_requests` flow).
+- **Kitchen / FOH crew** — consumers of the published schedule; continue to submit
+  time-off requests (existing `time_off_requests` flow). **New:** crew also enter and
+  maintain their own availability from the kitchen side (name-select pattern, like
+  Time Off), which reflects live to the office roster and the generator.
 
 ---
 
@@ -41,6 +44,14 @@ exist in the app yet.
 | Station policy | **Mostly consistent** — keep each person on their primary station; move only to cover gaps or balance hours |
 | AI autonomy | **Draft → office approves** — generator fills the existing editable grid; nothing publishes automatically |
 | Rollout | **Phased** — roster → coverage template → generation |
+| Generator architecture | **Deterministic solver first, AI safety-net second** — solver builds the draft honoring all hard constraints; Gemini then reviews, cross-references candidates for unfilled slots, and writes plain-English explanations. AI-suggested fills are re-checked against hard constraints before landing. *(2026-06-10)* |
+| Overtime | **Hard 40h cap by default; managers can override** via a per-run "Allow overtime" toggle. *(2026-06-10)* |
+| Min/target hours | **Soft target only** — guides the generator toward full-timers' hours, never blocks. *(2026-06-10)* |
+| Publish semantics | **`status` column on `schedules`** (`draft` \| `published`); office sees both, kitchen/FOH see published only; existing weeks backfill as published. *(2026-06-10)* |
+| Labor cost | **Out of scope** — no pay data anywhere in v1. *(2026-06-10)* |
+| Availability model | **Free-form, no rigid rule types** — per-day entries (status, optional time window, free-text note) + a free-text summary per employee; the AI interprets, the validator enforces. *(2026-06-10)* |
+| Availability ownership | **Employees self-serve** — crew set their own default week + per-week overrides from the kitchen side; office can edit anyone's. *(2026-06-10)* |
+| Roster seeding | **Seed from `Schedule Context Data/Roster Roles.txt`** (hand-curated 32-person roster), not from parsed history. *(2026-06-09)* |
 
 ---
 
@@ -57,11 +68,18 @@ Per employee:
 - **Primary station** (for the "mostly consistent" policy) and optional secondary stations.
 - **Max weekly hours** (hard cap, default 40; part-timers lower).
 - Optional **target/min hours** (e.g., guarantee full-timers ~40).
-- **Recurring availability** rich enough to express all four worker shapes:
-  - Fully open.
-  - Day-of-week + time-window limits (students: only certain days, only certain hours).
-  - Shift-type exclusions on specific days (parents: no Night on Tue/Thu).
-  - **Locked recurring shifts** (strictly-part-time set days that auto-place every week).
+- **Availability** — free-form model (decided 2026-06-10, replaces the earlier rigid
+  four-shape rule system): per-day entries with a loose status, optional time window,
+  and free-text notes, plus a free-text availability summary per employee. A default
+  ("normal") week can be overridden for any specific week. No entry = fully available.
+  This must still be expressive enough to cover all real worker shapes:
+  - Fully open (no entries at all).
+  - Students: only certain days/hours (entries with time windows).
+  - Parents: no nights on set days (notes/time cutoffs the AI honors).
+  - Standing recurring shifts (Becca pastry, Rico Wed Salad, Matthew Wed Pizza Wagon) —
+    placed first every week.
+  - Week-to-week variers (Christian Aaron, Jyanelli Rosas): sparse default week +
+    per-week entries before generation; generator warns when a target week has none.
 
 ### 4.2 Coverage Template (Fixed Weekly)
 - Required headcount **per station, per shift type, per day of week**.
@@ -80,14 +98,18 @@ Per employee:
 
 ## 5. Functional Requirements (by phase)
 
-### Phase 1 — Roster Manager
+### Phase 1 — Roster Manager + Crew Availability
 - FR1.1 Office can create/edit/deactivate employees with all fields in §4.1.
 - FR1.2 Office can set each employee's eligible shift types, trained stations, primary
   station, and max/target hours.
-- FR1.3 Office can define each employee's recurring availability covering all four shapes
-  (open / day+time windows / shift-type-by-day exclusions / locked recurring shifts).
+- FR1.3 Office can view/edit any employee's availability (default week + per-week
+  overrides + notes) in the free-form model of §4.1.
 - FR1.4 Roster is the single source of truth; the existing "names parsed from upload"
-  behavior is superseded (migration/seed path from past schedules is a nice-to-have, not required).
+  behavior is superseded. Seeded from `Roster Roles.txt` (32 employees); unknowns left
+  blank for staff/office to fill in the UI.
+- FR1.5 **Crew availability page** (`/kitchen/availability`): an employee picks their
+  name (Time Off pattern, no auth in v1) and sets their default week and per-week
+  overrides; changes reflect live on the office side and feed the generator.
 
 ### Phase 2 — Coverage Template + Shift Definitions
 - FR2.1 Office can define the fixed weekly staffing template: headcount per station per
@@ -107,8 +129,11 @@ Per employee:
 - FR3.4 Generator reports **unfilled slots** and **why** (e.g., "Sat Night Sautee — no
   eligible staff under 40h"), so the office can resolve manually.
 - FR3.5 Nothing publishes automatically; office explicitly saves/publishes the week.
-- FR3.6 Generation accepts a small set of **parameters** at button press (see Open Questions
-  — e.g., target week, overtime tolerance, fairness vs. consistency weighting).
+- FR3.6 Generation accepts a small set of **parameters** at button press (confirmed:
+  target week + "Allow overtime" toggle; other knobs per Open Q6).
+- FR3.7 **"Who can cover this shift?"** — office can click any open/unfilled slot and
+  get an AI-ranked list of eligible candidates with reasons (trained, available, under
+  hours). This is the core manual-work-elimination use case (added 2026-06-10).
 
 ---
 
@@ -128,10 +153,10 @@ Per employee:
 - Honor **locked recurring shifts** first, then fill around them.
 - (Possible future) seniority / preference weighting.
 
-> Feasibility note carried into design: hard constraints above are a constraint-satisfaction
-> problem. A pure-LLM generator risks silent violations. Strong candidate architecture is a
-> deterministic solver for §6.1 + AI for §6.2 judgment and human-readable explanations.
-> **Decision deferred to `/sc:design`.**
+> **RESOLVED 2026-06-10:** deterministic solver enforces §6.1 while building the draft;
+> Gemini runs afterward as the safety net — reviewing the week, cross-referencing
+> candidates for unfilled slots, and writing plain-English reasons. AI suggestions are
+> re-validated against §6.1 before entering the draft. See `docs/auto-scheduler-design.md` §1/§6.
 
 ---
 
@@ -169,19 +194,21 @@ Per employee:
 
 ---
 
-## 9. Open Questions (resolve in design)
+## 9. Open Questions
 1. ~~Exact coverage numbers~~ — **RESOLVED, see Appendix A** (Book2.xlsx, confirmed 2026-06-09).
 2. ~~The Turn & Pool~~ — **RESOLVED**: Turn = 1/day 7 days; Pool = 3/day, **summer only**. See Appendix A.
 3. ~~Operating days~~ — **RESOLVED**: 7 days; no standing closed day; a **manager is always on duty AM & PM**.
-4. **Overtime** — hard stop at 40, or allow with an explicit override flag/parameter?
-5. **Min/guaranteed hours** — should full-timers be pushed toward 40, or only capped?
-6. **Generation parameters** — which knobs at button press (week, OT tolerance, consistency-vs-fairness, prioritize filling events first)?
-7. **Labor cost** — is pay rate / labor budget in scope at all (even as a future parameter)?
-8. **Generator approach** — deterministic solver + AI vs. LLM-driven (the §6 feasibility note).
-9. **Roster seeding** — auto-import employees/roles from historical parsed schedules, or hand-enter?
-10. **Publish semantics** — does "publish" differ from the current save, and who can see drafts vs. published?
-11. **Pastry person** — identify the one regular pastry employee from history (standing recurring role, not in the headcount template).
-12. **Live Music staffing** — the +2 PM cooks: any specific people/stations, and confirmed sourced from the events section?
+4. ~~Overtime~~ — **RESOLVED 2026-06-10**: hard cap 40; managers override via per-run "Allow overtime" toggle.
+5. ~~Min/guaranteed hours~~ — **RESOLVED 2026-06-10**: soft target only; never blocks generation.
+6. **Generation parameters** — confirmed so far: target week + OT toggle. Other knobs (consistency-vs-fairness weight, events-first priority) decided during Phase 3 build.
+7. ~~Labor cost~~ — **RESOLVED 2026-06-10**: out of scope; no pay data in v1.
+8. ~~Generator approach~~ — **RESOLVED 2026-06-10**: deterministic solver first, AI safety-net review second (see §6 note).
+9. ~~Roster seeding~~ — **RESOLVED 2026-06-09**: seed from hand-curated `Roster Roles.txt` (32 people), not parsed history.
+10. ~~Publish semantics~~ — **RESOLVED 2026-06-10**: `draft`/`published` status on `schedules`; kitchen/FOH see published only.
+11. ~~Pastry person~~ — **RESOLVED 2026-06-09**: Becca Liptak; self-scheduled ~3 days/wk within Tue–Fri 6:00a–3:00p; modeled as a standing/self-managed assignment.
+12. **Live Music staffing** — the +2 PM cooks: any specific people/stations, and confirmed sourced from the events section? *(Phase 2)*
+13. **Exact days for 3-day/week workers** (Etta, Germinator, Kenessa, etc.) — collected via the new availability UIs after Phase 1 ships.
+14. **Crew availability identity** — name-select with no auth in v1 (matches Time Off); revisit when real auth lands.
 
 ---
 
