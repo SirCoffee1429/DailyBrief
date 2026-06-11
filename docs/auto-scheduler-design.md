@@ -227,11 +227,21 @@ for staff/office to fill via the new UIs (Checkpoint 1).
 
 ---
 
-## 7. Open Items Riding Into Phase 1 (do not block schema)
+## 7. Phase 2 Decisions (owner-confirmed 2026-06-10, pre-build)
+
+1. **Live Music** — manual office add, not event-driven. Entered as a per-week
+   exception (+2 PM cooks) during final review before publish; the draft/review
+   UI shows a visible "Live Music tonight" warning badge on that day.
+2. **Pool seasonality** — manual on/off toggle on the coverage template
+   (flipped around Memorial Day / Labor Day); not date-driven.
+3. **The Turn** — template demands "1 Turn per day, 7 days"; the generator
+   picks the person (Dewinston's 5 days / Mel's 2 covered via roster notes and
+   availability), no pinned per-person days in the template.
+
+## 8. Open Items (do not block schema)
 
 1. Crew availability page identity: name-select with no auth (TimeOff pattern) is the
    v1 plan — acceptable until real auth lands (already a known app-wide gap).
-2. Live Music date source (Q12) — Phase 2 concern.
-3. Exact days for 3-day/week workers — collected via the new availability UIs.
-4. Validator repair loop depth (how many AI repair rounds before surfacing warnings) —
+2. Exact days for 3-day/week workers — collected via the new availability UIs.
+3. Validator repair loop depth (how many AI repair rounds before surfacing warnings) —
    tune in Phase 3.

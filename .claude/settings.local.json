@@ -25,7 +25,8 @@
       "Bash(git -C \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\" status --short)",
       "Bash(git -C \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\" log --oneline -8)",
       "mcp__claude_ai_Supabase__execute_sql",
-      "PowerShell(\\(Get-Content \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\\\\CHANGES.md\" | Measure-Object -Line\\).Lines)"
+      "PowerShell(\\(Get-Content \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\\\\CHANGES.md\" | Measure-Object -Line\\).Lines)",
+      "mcp__serena__write_memory"
     ]
   }
 }

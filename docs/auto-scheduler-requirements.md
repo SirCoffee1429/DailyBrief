@@ -206,7 +206,10 @@ Per employee:
 9. ~~Roster seeding~~ — **RESOLVED 2026-06-09**: seed from hand-curated `Roster Roles.txt` (32 people), not parsed history.
 10. ~~Publish semantics~~ — **RESOLVED 2026-06-10**: `draft`/`published` status on `schedules`; kitchen/FOH see published only.
 11. ~~Pastry person~~ — **RESOLVED 2026-06-09**: Becca Liptak; self-scheduled ~3 days/wk within Tue–Fri 6:00a–3:00p; modeled as a standing/self-managed assignment.
-12. **Live Music staffing** — the +2 PM cooks: any specific people/stations, and confirmed sourced from the events section? *(Phase 2)*
+12. ~~Live Music staffing~~ — **RESOLVED 2026-06-10**: manual office entry, not event-section
+    driven. Office adds the +2 PM cooks as a per-week exception during final review before
+    publishing; the review/draft UI must show a visible "Live Music tonight" warning badge
+    on that day so it isn't missed.
 13. **Exact days for 3-day/week workers** (Etta, Germinator, Kenessa, etc.) — collected via the new availability UIs after Phase 1 ships.
 14. **Crew availability identity** — name-select with no auth in v1 (matches Time Off); revisit when real auth lands.
 
