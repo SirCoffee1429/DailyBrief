@@ -1863,3 +1863,34 @@ keeps its own background and orange accents.
 - **Verification:** production build clean (125 modules)
 
 ---
+
+### 2026-06-11 — Availability Submission Status + Office Approval
+
+**File(s) Changed:**
+`supabase/migrations/20260611000000_add_availability_status.sql` (NEW),
+`app/src/pages/AvailabilityPage.jsx`, `app/src/pages/RosterPage.jsx`,
+`app/src/index.css`
+**Type:** `feature` + `migration`
+**Summary:** Office can now see at a glance who has filled out their
+availability and who hasn't. Each roster row shows a status badge (No
+availability / Pending review / Approved); crew saves flag the employee as
+pending, and the office approves with one click.
+
+**Details:**
+
+- **Migration (applied to prod):** added `employees.availability_status` text
+  column, default `'none'` (`none` → never filled out, `pending` → crew saved,
+  awaiting office review, `approved` → office signed off)
+- **AvailabilityPage.jsx (crew):** after a successful availability save,
+  updates the employee's status to `pending` — including re-edits after a
+  previous approval, so changed availability always returns for review
+- **RosterPage.jsx (office):** color-coded status badge on every roster row
+  (gray "No availability", amber "Pending review", green "Approved"); an
+  orange one-click "Approve" button appears only on pending rows; header
+  subtitle shows "N availability submissions awaiting review" when any are
+  pending; existing realtime subscription on `employees` makes badges flip
+  live as crew submit
+- **index.css:** `.avail-badge` variants + `.avail-pending-summary` styles
+- **Verification:** production build clean
+
+---
