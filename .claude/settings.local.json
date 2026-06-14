@@ -26,7 +26,16 @@
       "Bash(git -C \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\" log --oneline -8)",
       "mcp__claude_ai_Supabase__execute_sql",
       "PowerShell(\\(Get-Content \"C:\\\\Old Hawthorne Projects\\\\DailyBrief\\\\CHANGES.md\" | Measure-Object -Line\\).Lines)",
-      "mcp__serena__write_memory"
+      "mcp__serena__write_memory",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__serena__find_symbol",
+      "PowerShell(git fetch *)",
+      "mcp__serena__replace_content",
+      "PowerShell(npm run *)",
+      "PowerShell(\\(Get-Content \"CHANGES.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"CHANGES.md\" | Select-String '^### '\\).Count)",
+      "mcp__serena__list_memories",
+      "mcp__serena__activate_project",
+      "mcp__serena__read_memory"
     ]
   }
 }

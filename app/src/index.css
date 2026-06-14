@@ -5478,6 +5478,20 @@ tr.beo-completed td .beo-check {
   margin-top: var(--space-4);
 }
 
+/* Subtle hint under the availability header that office saves auto-approve */
+.roster-avail-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.roster-avail-note i {
+  color: var(--accent);
+}
+
 /* ── Availability week editor ── */
 .avail-editor-hint {
   font-size: var(--font-size-xs);
@@ -5586,6 +5600,28 @@ tr.beo-completed td .beo-check {
   border-color: #f87171;
   color: #f87171;
   background: rgba(248, 113, 113, 0.1);
+}
+
+/* Office-view chip on untouched days — "open by default" must not look blank */
+.avail-open-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* Week-override variant: untouched days inherit the normal week, not "open" */
+.avail-open-chip.inherit {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-color);
 }
 
 .avail-editor-error {

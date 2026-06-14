@@ -14,7 +14,7 @@ const STATUS_OPTIONS = [
 // Editable 7-day availability grid for one employee in one week context.
 // weekStart === null edits the recurring "normal week"; a YYYY-MM-DD Monday
 // string edits that specific week's override rows.
-export default function AvailabilityWeekEditor({ employeeId, weekStart = null, onSaved }) {
+export default function AvailabilityWeekEditor({ employeeId, weekStart = null, onSaved, officeView = false }) {
     const [days, setDays] = useState({}) // day_of_week -> { status, start_time, end_time, note }
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -141,6 +141,15 @@ export default function AvailabilityWeekEditor({ employeeId, weekStart = null, o
                                 </button>
                             ))}
                         </div>
+
+                        {/* Office view: spell out what an untouched day means so a
+                            valid "open by default" submission doesn't read as blank */}
+                        {officeView && status === 'none' && (
+                            <span className={`avail-open-chip${weekStart !== null ? ' inherit' : ''}`}>
+                                <i className={`fa-solid ${weekStart === null ? 'fa-door-open' : 'fa-rotate-left'}`} />
+                                {weekStart === null ? 'Open — any time' : 'Follows normal week'}
+                            </span>
+                        )}
 
                         {status === 'available' && (
                             <div className="avail-day-times">

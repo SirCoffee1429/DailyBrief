@@ -131,18 +131,24 @@ export default function RosterPage() {
         }
     }
 
-    // Office sign-off on a crew-submitted availability
-    async function approveAvailability(emp) {
+    // Office sign-off control. Sets the employee's availability workflow flag:
+    //  'approved' — office has reviewed (or entered) this person's availability
+    //  'none'     — clears approval (un-approve / back to untouched)
+    // Office entering availability is itself the approval, so the editor's
+    // onSaved handler calls this with 'approved' (see the editor wiring below).
+    async function setAvailabilityStatus(emp, status) {
         try {
             const { error } = await supabase
                 .from('employees')
-                .update({ availability_status: 'approved', updated_at: new Date().toISOString() })
+                .update({ availability_status: status, updated_at: new Date().toISOString() })
                 .eq('id', emp.id)
             if (error) throw error
+            // Reflect immediately in the open editor modal if it's the same person
+            setEditing(prev => (prev && prev.id === emp.id ? { ...prev, availability_status: status } : prev))
             await loadEmployees()
         } catch (err) {
-            console.error('Failed to approve availability:', err)
-            alert('Could not approve availability.')
+            console.error('Failed to update availability status:', err)
+            alert('Could not update availability status.')
         }
     }
 
@@ -264,9 +270,18 @@ export default function RosterPage() {
                                 {emp.availability_status === 'pending' && (
                                     <button
                                         className="btn btn-orange btn-sm roster-row-toggle"
-                                        onClick={e => { e.stopPropagation(); approveAvailability(emp) }}
+                                        onClick={e => { e.stopPropagation(); setAvailabilityStatus(emp, 'approved') }}
                                     >
                                         <i className="fa-solid fa-check" /> Approve
+                                    </button>
+                                )}
+                                {emp.availability_status === 'approved' && (
+                                    <button
+                                        className="btn btn-secondary btn-sm roster-row-toggle"
+                                        onClick={e => { e.stopPropagation(); setAvailabilityStatus(emp, 'none') }}
+                                        title="Clear approval"
+                                    >
+                                        <i className="fa-solid fa-rotate-left" /> Un-approve
                                     </button>
                                 )}
                                 <button
@@ -406,6 +421,23 @@ export default function RosterPage() {
                                 <div className="roster-avail-section">
                                     <div className="roster-avail-header">
                                         <h3>Availability</h3>
+                                        {(() => {
+                                            const badge = AVAIL_BADGES[editing.availability_status] || AVAIL_BADGES.none
+                                            return (
+                                                <span className={`avail-badge ${badge.cls}`} title="Availability status">
+                                                    <i className={badge.icon} /> {badge.label}
+                                                </span>
+                                            )
+                                        })()}
+                                        {editing.availability_status === 'approved' && (
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => setAvailabilityStatus(editing, 'none')}
+                                                title="Clear approval"
+                                            >
+                                                <i className="fa-solid fa-rotate-left" /> Un-approve
+                                            </button>
+                                        )}
                                         <select value={availWeek} onChange={e => setAvailWeek(e.target.value)}>
                                             <option value="default">Normal week (every week)</option>
                                             {weekOptions.map(w => (
@@ -413,9 +445,17 @@ export default function RosterPage() {
                                             ))}
                                         </select>
                                     </div>
+                                    {/* Saving from the office side marks this person Approved
+                                        automatically — the office entering availability is the
+                                        approval (auto-approve on save, confirmed by owner). */}
+                                    <p className="roster-avail-note">
+                                        <i className="fa-solid fa-circle-info" /> Saving marks this employee’s availability as Approved.
+                                    </p>
                                     <AvailabilityWeekEditor
                                         employeeId={editing.id}
                                         weekStart={availWeek === 'default' ? null : availWeek}
+                                        officeView
+                                        onSaved={() => setAvailabilityStatus(editing, 'approved')}
                                     />
                                 </div>
                             ) : (
