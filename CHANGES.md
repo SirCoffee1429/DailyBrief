@@ -459,3 +459,38 @@ save, and approvals can be cleared (un-approve).
 - **Verification:** production build clean (125 modules).
 
 ---
+
+### 2026-06-14 — Source of Truth: Scheduling Rules Section (Office Schedule)
+
+**File(s) Changed:**
+`supabase/migrations/20260614000000_create_scheduling_rules.sql` (NEW),
+`app/src/components/SchedulingRulesSection.jsx` (NEW),
+`app/src/pages/SchedulePage.jsx`, `app/src/index.css`
+**Type:** `feature` + `migration`
+**Summary:** Added an office-only "Source of Truth — Scheduling Rules" section
+to the Schedule page where managers capture standing constraints and per-week
+exceptions. This is the data-capture layer for the auto-scheduler generator
+(Phase 2/3, not yet built): the generator will read these rules when creating a
+new schedule. Captures rules now so the constraints exist before the generator.
+
+**Details:**
+
+- **Migration (`create_scheduling_rules`, APPLIED TO PROD):** `scheduling_rules`
+  table — `rule_text`, `active` (pause without deleting), `week_start`
+  (NULL = standing rule for every schedule; dated Monday = that week only,
+  mirroring the `employee_availability` week-context model), `sort_order`.
+  Index on `week_start`, open RLS (`allow_all_scheduling_rules`), realtime
+  publication. Verified queryable (0 rows).
+- **`SchedulingRulesSection.jsx` (NEW):** self-contained manager UI — segmented
+  scope toggle (Standing / Just for <week>), add via input+Enter, click-to-edit
+  inline, active/pause checkbox toggle, delete. Loads standing + current-week
+  rules with `.or(week_start.is.null,week_start.eq.<week>)`; realtime refresh.
+  "This week" scope disabled until a week is selected.
+- **`SchedulePage.jsx`:** renders `<SchedulingRulesSection weekStart={activeWeekStart} />`
+  after the toolbar, **office mode only** (crew never see management constraints).
+- **`index.css`:** `.sot-*` styles matching the page's dark/orange card system.
+- **Not built yet (by design):** the generator that reads these rules — that's
+  the Phase 2/3 `/sc:implement` work. This change only captures + stores them.
+- **Verification:** production build clean (126 modules).
+
+---
