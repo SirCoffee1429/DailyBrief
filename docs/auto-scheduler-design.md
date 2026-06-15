@@ -150,11 +150,16 @@ CREATE INDEX employee_availability_week ON public.employee_availability (week_st
 
 ## 4. Downstream Tables (sketch — finalized in Phases 2–3)
 
-- **`coverage_slots`** (Phase 2): `day_of_week`, `shift_type`, `station` (nullable for
-  station-less AM), `headcount`, `start_time`, `end_time`, `seasonal` (`NULL`|`'summer'`),
-  `active`. Seeded verbatim from Appendix A.
-- **`coverage_exceptions`** (Phase 2): `week_start`, headcount deltas / closures —
-  holidays, Pool on/off, Live Music +2.
+- **`coverage_slots`** (Phase 2 — BUILT 2026-06-14): finalized with `days_of_week int[]`
+  (Mon=0…Sun=6) so one row = one station/role demand over a day-range, matching the
+  grouped slot-card editor (instead of one row per single day). Columns: `group_label`,
+  `role_label`, `shift_type`, `station` (nullable for station-less AM / extra cooks),
+  `days_of_week int[]`, `headcount`, `start_time`, `end_time`, `seasonal`
+  (`NULL`|`'summer'`), `active`, `sort_order`. Seeded verbatim from Appendix A (25 slots).
+- **`coverage_exceptions`** (Phase 2 — BUILT 2026-06-14): `week_start`, `day_of_week`
+  (nullable = whole week), `exception_type` (`closure`|`live_music`|`headcount`|`note`),
+  `shift_type`, `station`, `headcount_delta`, `note`, `active`. Pool on/off is handled on
+  the template itself (group active toggle), not as an exception.
 - **`banquet_event_orders.required_cooks int`** (+ shift window) (Phase 2, FR2.4).
 - **`generation_runs`** (Phase 3): `week_start`, `params jsonb` (incl. OT toggle),
   `unfilled jsonb` (slot + AI reason), `validator_report jsonb`, `duration_ms`,

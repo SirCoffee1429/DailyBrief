@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import SchedulingRulesSection from '../components/SchedulingRulesSection.jsx'
 
 const PARSING_MESSAGES = [
     "Decoding management's chicken scratch...",
@@ -1147,9 +1146,6 @@ export default function SchedulePage({ officeMode = false }) {
                     </div>
                 )}
             </div>
-
-            {/* Source of Truth — scheduling rules the future generator reads (office only) */}
-            {officeMode && <SchedulingRulesSection weekStart={activeWeekStart} />}
 
             {/* AI processing loader overlay */}
             {uploading && (

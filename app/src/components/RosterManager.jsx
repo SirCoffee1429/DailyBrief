@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import AvailabilityWeekEditor from '../components/AvailabilityWeekEditor.jsx'
+import AvailabilityWeekEditor from './AvailabilityWeekEditor.jsx'
 import { SHIFT_TYPES, STATIONS, upcomingMondays } from '../lib/rosterConstants.js'
 
 // Blank employee shape used when adding a new person
@@ -19,8 +19,10 @@ const EMPTY_EMPLOYEE = {
 
 // Office Roster Manager — single source of truth for the auto-scheduler.
 // List/search/filter employees, edit all scheduling fields, and manage each
-// person's availability (normal week + per-week overrides).
-export default function RosterPage() {
+// person's availability (normal week + per-week overrides). Rendered as a tab
+// inside the Roster & Coverage hub, so it uses a compact header (the hub owns
+// the page title).
+export default function RosterManager() {
     const [employees, setEmployees] = useState([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
@@ -191,21 +193,16 @@ export default function RosterPage() {
 
     return (
         <div>
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">
-                        <i className="fa-solid fa-users" style={{ marginRight: '0.5rem' }} />
-                        Roster
-                    </h1>
-                    <p className="page-subtitle">
-                        {activeCount} active employees — source of truth for the schedule builder.
-                        {pendingCount > 0 && (
-                            <span className="avail-pending-summary">
-                                <i className="fa-solid fa-hourglass-half" /> {pendingCount} availability {pendingCount === 1 ? 'submission' : 'submissions'} awaiting review
-                            </span>
-                        )}
-                    </p>
-                </div>
+            {/* Compact tab header — the hub supplies the main page title */}
+            <div className="roster-tab-head">
+                <p className="roster-tab-sub">
+                    {activeCount} active employees — source of truth for the schedule builder.
+                    {pendingCount > 0 && (
+                        <span className="avail-pending-summary">
+                            <i className="fa-solid fa-hourglass-half" /> {pendingCount} availability {pendingCount === 1 ? 'submission' : 'submissions'} awaiting review
+                        </span>
+                    )}
+                </p>
                 <button className="btn btn-orange" onClick={() => openEditor(null)}>
                     <i className="fa-solid fa-plus" /> Add Employee
                 </button>

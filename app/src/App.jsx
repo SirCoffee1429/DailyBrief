@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import RoleSelect from './pages/RoleSelect.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import FOHDashboard from './pages/FOHDashboard.jsx'
@@ -22,7 +22,7 @@ import RecipeCreator from './pages/RecipeCreator.jsx'
 import Communication from './pages/Communication.jsx'
 import TimeOff from './pages/TimeOff.jsx'
 import SchedulePage from './pages/SchedulePage.jsx'
-import RosterPage from './pages/RosterPage.jsx'
+import RosterCoveragePage from './pages/RosterCoveragePage.jsx'
 import AvailabilityPage from './pages/AvailabilityPage.jsx'
 
 export default function App() {
@@ -66,7 +66,9 @@ export default function App() {
             <Route path="/office/sales/:date" element={<OfficeGate><OfficeLayout><SalesReportDetail /></OfficeLayout></OfficeGate>} />
             <Route path="/office/time-off" element={<OfficeGate><OfficeLayout><TimeOff officeMode /></OfficeLayout></OfficeGate>} />
             <Route path="/office/schedule" element={<OfficeGate><OfficeLayout><SchedulePage officeMode /></OfficeLayout></OfficeGate>} />
-            <Route path="/office/roster" element={<OfficeGate><OfficeLayout><RosterPage /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/roster-coverage" element={<OfficeGate><OfficeLayout><RosterCoveragePage /></OfficeLayout></OfficeGate>} />
+            {/* Legacy path → new bundled hub (keeps old links/bookmarks working) */}
+            <Route path="/office/roster" element={<Navigate to="/office/roster-coverage" replace />} />
         </Routes>
     )
 }

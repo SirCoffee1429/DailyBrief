@@ -494,3 +494,51 @@ new schedule. Captures rules now so the constraints exist before the generator.
 - **Verification:** production build clean (126 modules).
 
 ---
+
+### 2026-06-14 — Auto-Scheduler Phase 2: Coverage Template + Roster & Coverage Hub
+
+**File(s) Changed:**
+`supabase/migrations/20260614010000_create_coverage_tables.sql` (NEW),
+`app/src/components/CoverageTemplateSection.jsx` (NEW),
+`app/src/components/RosterManager.jsx` (NEW),
+`app/src/pages/RosterCoveragePage.jsx` (NEW),
+`app/src/pages/RosterPage.jsx` (DELETED),
+`app/src/pages/SchedulePage.jsx`, `app/src/components/OfficeLayout.jsx`,
+`app/src/App.jsx`, `app/src/index.css`
+**Type:** `feature` + `migration`
+**Summary:** Built Phase 2 of the auto-scheduler (coverage template + per-week
+exceptions, FR2.1–FR2.3) and consolidated all scheduler INPUTS into one office
+hub. The `/office/schedule` page stays the schedule OUTPUT (grid). Per-BEO
+required cook count (FR2.4) deferred per owner.
+
+**Details:**
+
+- **Migration (`create_coverage_tables`, APPLIED TO PROD):** `coverage_slots`
+  (finalized the design §4 sketch with `days_of_week int[]` — one row per
+  station/day-range, matching the grouped-card UI) + `coverage_exceptions`
+  (per-week closures / Live Music +2 / headcount deltas / notes). Open RLS,
+  realtime. **Seeded 25 slots verbatim from requirements Appendix A** (AM
+  Kitchen, PM Kitchen incl. Fri–Sat +2 cooks, Managers every shift, Turn, Pool
+  summer-only, Dish, Pizza Wagon Wed). Verified seed counts.
+- **`CoverageTemplateSection.jsx` (NEW):** grouped slot-card editor — inline
+  edit of role/shift/station/days/headcount/hours, per-slot active toggle,
+  Pool seasonal on/off (group active toggle), add/delete slots, plus a per-week
+  exceptions panel scoped to the selected week. Realtime.
+- **Roster & Coverage hub (`RosterCoveragePage.jsx`, NEW):** new `/office/roster-coverage`
+  with 3 tabs — Roster | Coverage Template | Source of Truth Rules — and a
+  shared week selector driving the per-week pieces (coverage exceptions +
+  week-specific rules).
+- **`RosterManager.jsx` (NEW):** extracted from the old RosterPage (tab-friendly
+  compact header); `RosterPage.jsx` deleted. `/office/roster` now redirects to
+  the hub (old links still work).
+- **`SchedulePage.jsx`:** Source of Truth section removed (moved to the hub's
+  Rules tab) — no duplication.
+- **`OfficeLayout.jsx`:** sidebar "Roster" → "Roster & Coverage" (layer-group icon).
+- **Seed notes flagged:** Appendix A has no Sunday PM kitchen row and the Fri/Sat
+  "+2 cooks" are station-less — seeded exactly as documented, left for office to
+  adjust rather than inventing numbers.
+- **Still Phase 3 (not built):** the generator that reads coverage_slots +
+  exceptions + roster + availability + rules to produce a draft.
+- **Verification:** production build clean (128 modules).
+
+---

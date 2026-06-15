@@ -90,9 +90,9 @@ export default function OfficeLayout({ children }) {
                         <i className="fa-solid fa-calendar-days office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Schedule</span>
                     </NavLink>
-                    <NavLink to="/office/roster" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
-                        <i className="fa-solid fa-users office-v2-nav-icon" />
-                        <span style={{ marginLeft: '0.75rem' }}>Roster</span>
+                    <NavLink to="/office/roster-coverage" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                        <i className="fa-solid fa-layer-group office-v2-nav-icon" />
+                        <span style={{ marginLeft: '0.75rem' }}>Roster &amp; Coverage</span>
                     </NavLink>
                     <NavLink to="/office/chat" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-comments office-v2-nav-icon" />
