@@ -1002,6 +1002,44 @@ tr.beo-completed td .beo-check {
   opacity: 0.5;
 }
 
+/* Per-row "being worked on" toggle button (anonymous, one tap to mark/clear). */
+.event-progress-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--text-muted);
+  opacity: 0.4;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.event-progress-btn:hover {
+  opacity: 0.85;
+}
+
+/* Amber treatment for a task actively being worked on.
+   inset box-shadow draws the left bar without changing layout/box size. */
+.event-task-row.in-progress {
+  background: rgba(245, 158, 11, 0.12);
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.event-task-row.in-progress:hover {
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.event-task-row.in-progress .event-progress-btn {
+  color: #f59e0b;
+  opacity: 1;
+}
+
+.event-task-row.in-progress .task-label {
+  color: #f8b94b;
+}
+
 .event-task-add {
   display: flex;
   gap: var(--space-2);

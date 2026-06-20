@@ -70,6 +70,17 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         }
     }, [beos])
 
+    // Subscribe to live event_tasks changes so task status (in progress / done)
+    // reflects across all devices in real time without a manual refresh.
+    useEffect(() => {
+        if (beos.length === 0 || isFOH) return
+        const channel = supabase
+            .channel('event_tasks_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'event_tasks' }, () => loadAllEventTasks())
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
+    }, [beos])
+
     async function loadNotes() {
         const { data } = await supabase
             .from('management_notes')
@@ -189,7 +200,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         promises.push(
             supabase
                 .from('event_tasks')
-                .update({ is_completed: newCompleted })
+                .update({ is_completed: newCompleted, in_progress: false })
                 .eq('id', taskId)
         )
 
@@ -198,7 +209,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             promises.push(
                 supabase
                     .from('event_tasks')
-                    .update({ is_completed: newCompleted })
+                    .update({ is_completed: newCompleted, in_progress: false })
                     .in('id', subtaskIds)
             )
         }
@@ -221,7 +232,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 promises.push(
                     supabase
                         .from('event_tasks')
-                        .update({ is_completed: autoParentCompleted })
+                        .update({ is_completed: autoParentCompleted, in_progress: false })
                         .eq('id', parentId)
                 )
             }
@@ -235,19 +246,42 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             for (const [beoId, tasks] of Object.entries(prev)) {
                 updated[beoId] = tasks.map(t => {
                     if (t.id === taskId) {
-                        return { ...t, is_completed: newCompleted }
+                        return { ...t, is_completed: newCompleted, in_progress: false }
                     }
                     if (subtaskIds.includes(t.id)) {
-                        return { ...t, is_completed: newCompleted }
+                        return { ...t, is_completed: newCompleted, in_progress: false }
                     }
                     if (autoParentCompleted !== null && t.id === parentId) {
-                        return { ...t, is_completed: autoParentCompleted }
+                        return { ...t, is_completed: autoParentCompleted, in_progress: false }
                     }
                     return t
                 })
             }
             return updated
         })
+    }
+
+    // Toggle a single task's "being worked on" (in progress) state.
+    // Independent per row — no parent/subtask cascade (a parent never reflects a subtask's progress).
+    async function toggleInProgress(taskId, current) {
+        const newVal = !current
+        // Optimistic local update for instant feedback; the realtime subscription confirms across devices.
+        setTasksByBeo(prev => {
+            const updated = {}
+            for (const [beoId, tasks] of Object.entries(prev)) {
+                updated[beoId] = tasks.map(t => t.id === taskId ? { ...t, in_progress: newVal } : t)
+            }
+            return updated
+        })
+        const { error } = await supabase
+            .from('event_tasks')
+            .update({ in_progress: newVal })
+            .eq('id', taskId)
+        if (error) {
+            console.error('Failed to toggle in-progress state:', error)
+            // Revert to authoritative state on failure.
+            await loadAllEventTasks()
+        }
     }
 
     // Delete a task (office only)
@@ -1374,13 +1408,24 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
                                     return (
                                         <div key={task.id}>
-                                            <label className="event-task-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label className={`event-task-row ${task.in_progress && !task.is_completed ? 'in-progress' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <input
                                                     type="checkbox"
                                                     className="task-box"
                                                     checked={task.is_completed}
                                                     onChange={() => toggleEventTask(task.id, task.is_completed)}
                                                 />
+                                                {!task.is_completed && (
+                                                    <button
+                                                        type="button"
+                                                        className="event-progress-btn"
+                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleInProgress(task.id, task.in_progress) }}
+                                                        title={task.in_progress ? 'Working on it — tap to clear' : 'Mark as being worked on'}
+                                                        aria-label={task.in_progress ? 'Clear in-progress' : 'Mark as being worked on'}
+                                                    >
+                                                        <i className="fa-solid fa-person-running" />
+                                                    </button>
+                                                )}
                                                 <span
                                                     className={`task-label ${task.is_completed ? 'completed' : ''}`}
                                                     style={{ flex: 1, cursor: subs.length > 0 ? 'pointer' : 'default' }}
@@ -1426,13 +1471,24 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                             {subs.length > 0 && isExpanded && (
                                                 <div style={{ paddingLeft: '22px' }}>
                                                     {subs.map(sub => (
-                                                        <label key={sub.id} className="event-task-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <label key={sub.id} className={`event-task-row ${sub.in_progress && !sub.is_completed ? 'in-progress' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                             <input
                                                                 type="checkbox"
                                                                 className="task-box"
                                                                 checked={sub.is_completed}
                                                                 onChange={() => toggleEventTask(sub.id, sub.is_completed)}
                                                             />
+                                                            {!sub.is_completed && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="event-progress-btn"
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleInProgress(sub.id, sub.in_progress) }}
+                                                                    title={sub.in_progress ? 'Working on it — tap to clear' : 'Mark as being worked on'}
+                                                                    aria-label={sub.in_progress ? 'Clear in-progress' : 'Mark as being worked on'}
+                                                                >
+                                                                    <i className="fa-solid fa-person-running" />
+                                                                </button>
+                                                            )}
                                                             <span className={`task-label ${sub.is_completed ? 'completed' : ''}`} style={{ flex: 1 }}>
                                                                 {sub.description}
                                                             </span>

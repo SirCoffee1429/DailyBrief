@@ -542,3 +542,48 @@ required cook count (FR2.4) deferred per owner.
 - **Verification:** production build clean (128 modules).
 
 ---
+
+### 2026-06-19 — Event Task "Working On It" State + Realtime Sync
+
+**File(s) Changed:**
+`supabase/migrations/20260619000000_event_task_in_progress.sql` (NEW, applied to prod),
+`app/src/pages/EventsBanquetsPage.jsx`, `app/src/index.css`,
+`claudedocs/workflow_event_task_in_progress.md` (NEW, plan)
+**Type:** `feature` + `migration`
+**Summary:** Added an anonymous three-state lifecycle (todo → in progress → done) to
+every event task and subtask on the Events & Banquets page, syncing live across all
+devices. Crew tap a per-row "working on it" control to mark a task amber; the existing
+checkbox still marks done. Brainstorm → design → workflow → implement via /sc commands.
+
+**Details:**
+
+- **Migration (APPLIED TO PROD):** `event_tasks.in_progress boolean NOT NULL DEFAULT
+  false` (95 existing rows backfilled false). Added `event_tasks` to the
+  `supabase_realtime` publication and set `REPLICA IDENTITY FULL` — the table had no
+  realtime before, so the page never live-synced task state. RLS unchanged (open
+  `allow_all` already permits the client UPDATE).
+- **Data model decision:** third state is **derived**, not a separate enum —
+  `is_completed` stays the single source of truth for "done"; a non-null/true
+  `in_progress` is the middle state. The two are never both true. Avoids the
+  enum/`is_completed` drift bug class; fully backward compatible.
+- **`EventsBanquetsPage.jsx`:**
+  - New `toggleInProgress(taskId, current)` — flips `in_progress` for that one row only,
+    **no parent/subtask cascade** (a parent never reflects a subtask's progress, per owner
+    decision). Optimistic local update + realtime confirmation; reloads on write error.
+  - `toggleEventTask` (completion) now also clears `in_progress` on every affected row
+    (clicked task, cascaded subtasks, auto-completed parent) to hold the invariant.
+  - New realtime `useEffect` subscribing to `event_tasks` `postgres_changes` (mirrors the
+    CoverageTemplateSection/SchedulePage pattern), refetching on any change; guarded for
+    FOH / no-BEO.
+  - UI: a compact `fa-person-running` toggle button on each root task and subtask row
+    (hidden once completed); `checkbox = done`, `row button = in progress` (owner-approved
+    interaction). Rows get an `in-progress` class for the amber treatment.
+- **`index.css`:** `.event-progress-btn` (muted → amber) and `.event-task-row.in-progress`
+  (amber tint + inset left bar via box-shadow, no layout shift; amber label).
+- **Anonymous by design:** no names, no attribution, no elapsed time, no timeout jobs
+  (all explicitly de-scoped during brainstorm).
+- **Verification:** production build clean (128 modules); migration checkpoint verified
+  (column present, in publication, replica identity FULL). Cross-device manual test
+  pending owner.
+
+---
