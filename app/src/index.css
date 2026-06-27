@@ -2124,19 +2124,13 @@ tr.beo-completed td .beo-check {
   font-size: 9px;
 }
 
-/* Note Actions (appear on hover at bottom-right) */
+/* Note Actions footer — bottom-right row holding acknowledge + pin/delete */
 .wb-note-actions {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
   display: flex;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.wb-note:hover .wb-note-actions {
-  opacity: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 10px;
 }
 
 .wb-act-btn {
@@ -2152,7 +2146,14 @@ tr.beo-completed td .beo-check {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.7rem;
+  /* Pin/delete stay out of the way until the note is hovered (reserve space to
+     avoid layout shift); the acknowledge button stays visible at all times. */
+  opacity: 0;
   transition: all var(--transition-fast);
+}
+
+.wb-note:hover .wb-act-btn {
+  opacity: 1;
 }
 
 .wb-act-btn:hover {
@@ -2166,6 +2167,51 @@ tr.beo-completed td .beo-check {
 
 .wb-act-delete:hover {
   color: #f87171;
+}
+
+/* Acknowledge ("thumbs up") button — always visible, sits left of pin/delete.
+   Names of who acknowledged are surfaced via the button's title tooltip. */
+.wb-ack-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-family: var(--font-family);
+  transition: all var(--transition-fast);
+}
+
+.wb-ack-btn:hover {
+  color: var(--act-color, var(--orange));
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wb-ack-btn.active {
+  color: var(--act-color, var(--orange));
+}
+
+.wb-ack-count {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* First-time inline name prompt (replaces the message input until confirmed) */
+.wb-name-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wb-name-prompt-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
 }
 
 /* Column Input */
