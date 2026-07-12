@@ -587,3 +587,28 @@ checkbox still marks done. Brainstorm → design → workflow → implement via 
   pending owner.
 
 ---
+
+### 2026-07-11 — Fix: Restore Invisible Delete/Edit Buttons on Events Page
+
+**File(s) Changed:** `app/src/index.css`
+**Type:** `fix`
+**Summary:** The office Events tab lost its BEO delete/edit buttons — the cursor still
+changed on hover but nothing was visible and the target was easy to miss. Regression
+from commit `035e381` (communication board acknowledgements), which moved the
+hover-reveal `opacity: 0` from the `.wb-note-actions` container onto the shared
+`.wb-act-btn` class. Because Events-page buttons use `.wb-act-btn` but are not inside
+a `.wb-note`, the `:hover` reveal never fired and they stayed permanently `opacity: 0`.
+
+**Details:**
+
+- **Root cause:** `.wb-act-btn { opacity: 0 }` hid every action button app-wide, while
+  only `.wb-note:hover .wb-act-btn { opacity: 1 }` revealed them — a scope that excludes
+  the Events page (and any other non-note usage).
+- **Fix:** removed the blanket `opacity: 0` from `.wb-act-btn`; scoped the hidden state
+  to `.wb-note .wb-act-btn { opacity: 0 }`. Communication-board hover-reveal preserved;
+  all other `.wb-act-btn` instances are visible again.
+- **Blast radius restored:** BEO delete + edit, event-task delete, subtask delete, and
+  order-item delete were all affected (all `.wb-act-btn` outside `.wb-note`).
+- **Verification:** production build clean (2.47s).
+
+---

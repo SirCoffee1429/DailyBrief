@@ -188,12 +188,12 @@ At the start of every new session, or whenever a new model is loaded, you MUST:
 
 ## Session End
 
-Ill trigger the end of the session by running /sc:save command. At that point you will :
+Ill trigger the end of the session by runniqng /sc:save command. At that point you will follow the /sc:save command instructions as well as  :
 
 1. Update "CHANGES.md" with a summary of what we worked on and the progress we
    made. Make sure to save the changes and exit the session. Keep under 500 lines. 
 2. Update this file with any changes or new information that we learned and is
    relevant to the project. Make sure to conslidate this file so that it never
    exceeds 200 lines
-3. Update MEMORY.md with what you have learned or discovered during the session.
+3. Update MEMORY.md with what you have learned or discovered during the session. 
 4. Exit

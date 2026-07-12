@@ -2146,10 +2146,15 @@ tr.beo-completed td .beo-check {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.7rem;
-  /* Pin/delete stay out of the way until the note is hovered (reserve space to
-     avoid layout shift); the acknowledge button stays visible at all times. */
-  opacity: 0;
   transition: all var(--transition-fast);
+}
+
+/* On communication-board notes, pin/delete stay out of the way until the note
+   is hovered (reserve space to avoid layout shift); the acknowledge button
+   stays visible at all times. This hover-reveal is scoped to .wb-note so the
+   same .wb-act-btn class stays visible everywhere else (e.g. Events page). */
+.wb-note .wb-act-btn {
+  opacity: 0;
 }
 
 .wb-note:hover .wb-act-btn {
