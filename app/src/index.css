@@ -5858,6 +5858,89 @@ tr.beo-completed td .beo-check {
   margin: 0.75rem 0 0 0.75rem;
 }
 
+/* ============================================
+   FOH Sidebar Layout (foh-v2)
+   ============================================
+   The FOH shell reuses the office-v2 structural classes for the sidebar/main
+   split (parallel to .kitchen-v2). This modifier applies the all-cyan FOH
+   palette — accent, nav hover (outlined + glowing cyan aura), and active
+   state — with no orange, and swaps surfaces to the dark palette. */
+.office-v2-container.foh-v2 {
+  /* Cyan is the whole FOH palette — no orange anywhere. */
+  --accent: #06b6d4;
+  --accent-hover: #0891b2;
+  --accent-glow: rgba(6, 182, 212, 0.3);
+  --accent-subtle: rgba(6, 182, 212, 0.08);
+  --orange: #06b6d4;
+  --orange-bg: rgba(6, 182, 212, 0.12);
+  background-color: #0f1014;
+  background-image: radial-gradient(circle at top left, #1c1917 0%, #0f1014 40%);
+}
+
+/* No office grid-pattern overlay (matches kitchen) */
+.office-v2-container.foh-v2::before {
+  display: none;
+}
+
+.foh-v2 .office-v2-sidebar {
+  background-color: #18181b;
+  border-right: 1px solid #27272a;
+}
+
+.foh-v2 .office-v2-sidebar-header {
+  border-bottom: 1px solid #27272a;
+}
+
+/* Section hover — cyan outline + glowing cyan aura (replaces the office
+   shell's grey-only nav hover). */
+.foh-v2 .office-v2-nav-link:hover {
+  background-color: rgba(6, 182, 212, 0.08);
+  color: #fff;
+  border-left-color: #06b6d4;
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.4), 0 0 16px rgba(6, 182, 212, 0.25);
+}
+
+/* Active nav item — cyan (overrides the office shell's hardcoded orange). */
+.foh-v2 .office-v2-nav-link.active {
+  background-color: rgba(6, 182, 212, 0.2);
+  color: #06b6d4;
+  border-left-color: #06b6d4;
+}
+
+.foh-v2 .office-v2-nav-link.active .office-v2-nav-icon {
+  color: #06b6d4;
+}
+
+/* Dashboard card hover — cyan outline + glow (carried from the old foh-theme). */
+.foh-v2 .dash-card:hover {
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.4), 0 8px 24px rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.35);
+}
+
+/* btn-orange has an explicit background that ignores --accent, so retarget it
+   to cyan inside the FOH shell (carried from the old foh-theme). */
+.foh-v2 .btn-orange {
+  background: var(--accent);
+  color: #ffffff;
+}
+.foh-v2 .btn-orange:hover {
+  background: var(--accent-hover);
+}
+
+/* Scroll wrapper inside the FOH main area — pages keep their centered
+   max-width styling via .main-content (mirrors .kitchen-v2-scroll). */
+.foh-v2-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile hamburger spacing (mirrors kitchen). */
+.foh-v2 .office-v2-hamburger-mobile {
+  margin: 0.75rem 0 0 0.75rem;
+}
+
 /* Briefing + Tasks two-column grid (replaces the old dashboard-grid on the
    kitchen Brief page; weather and features render full-width above it) */
 .kitchen-brief-grid {
