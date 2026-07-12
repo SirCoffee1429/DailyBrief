@@ -47,7 +47,6 @@ export default function App() {
             <Route path="/foh" element={<FOHLayout><FOHDashboard /></FOHLayout>} />
             <Route path="/foh/recipes" element={<FOHLayout><KitchenRecipes /></FOHLayout>} />
             <Route path="/foh/recipes/:id" element={<FOHLayout><WorkbookViewer /></FOHLayout>} />
-            <Route path="/foh/chat" element={<FOHLayout><AiChat /></FOHLayout>} />
             <Route path="/foh/events" element={<FOHLayout><EventsBanquetsPage /></FOHLayout>} />
 
             {/* Office routes */}

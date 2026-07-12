@@ -4917,39 +4917,6 @@ tr.beo-completed td .beo-check {
   border-color: rgba(167, 139, 250, 0.3);
 }
 
-/* ============================================
-   Front of House Theme (cyan variant)
-   ============================================
-   Applied by <FOHLayout> on the app-shell root. Overrides the orange accent
-   variables so every component that reads from them (buttons, highlights,
-   dash-card hover glow, weekly-features calendar, etc.) paints cyan without
-   needing component-level changes.
-*/
-.app-shell.foh-theme {
-  --accent: #06b6d4;
-  --accent-hover: #0891b2;
-  --accent-glow: rgba(6, 182, 212, 0.3);
-  --accent-subtle: rgba(6, 182, 212, 0.08);
-  --orange: #06b6d4;
-  --orange-bg: rgba(6, 182, 212, 0.12);
-}
-
-/* The .btn-orange class has an explicit background rule that doesn't read
-   from --accent, so we have to retarget it inside the FOH theme. */
-.app-shell.foh-theme .btn-orange {
-  background: var(--accent);
-  color: #ffffff;
-}
-.app-shell.foh-theme .btn-orange:hover {
-  background: var(--accent-hover);
-}
-
-/* Kitchen dashboard tile hover uses a hardcoded orange glow; override it. */
-.app-shell.foh-theme .dash-card:hover {
-  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(0, 0, 0, 0.3);
-  border-color: rgba(6, 182, 212, 0.25);
-}
-
 
 /* ===== Time Off Calendar ===== */
 .time-off-calendar-header {
