@@ -13,11 +13,9 @@ import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
 //  - Shifts the Lunch & Dinner Features calendar above the grid for visibility
 export default function FOHDashboard() {
     const navigate = useNavigate()
-    const [stats, setStats] = useState({ workbooks: 0, briefings: 0 })
     const [todaysBriefings, setTodaysBriefings] = useState([])
     const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
-    const [beoCount, setBeoCount] = useState(0)
 
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
@@ -26,29 +24,18 @@ export default function FOHDashboard() {
 
     useEffect(() => {
         async function load() {
-            const [wbRes, brRes, latestDateRes] = await Promise.all([
-                supabase.from('workbooks').select('id', { count: 'exact', head: true }),
-                supabase
-                    .from('briefings')
-                    .select('id', { count: 'exact', head: true })
-                    .in('destination', ['foh', 'both']),
-                supabase
-                    .from('briefings')
-                    .select('date')
-                    .in('destination', ['foh', 'both'])
-                    .order('date', { ascending: false })
-                    .limit(1)
-                    .maybeSingle(),
-            ])
-            setStats({
-                workbooks: wbRes.count || 0,
-                briefings: brRes.count || 0,
-            })
-            if (latestDateRes.data) {
+            const { data: latestDate } = await supabase
+                .from('briefings')
+                .select('date')
+                .in('destination', ['foh', 'both'])
+                .order('date', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+            if (latestDate) {
                 const { data: dayBriefings } = await supabase
                     .from('briefings')
                     .select('*')
-                    .eq('date', latestDateRes.data.date)
+                    .eq('date', latestDate.date)
                     .in('destination', ['foh', 'both'])
                     .order('created_at', { ascending: true })
 
@@ -57,7 +44,6 @@ export default function FOHDashboard() {
             }
         }
         load()
-        supabase.from('banquet_event_orders').select('id', { count: 'exact', head: true }).then(({ count }) => setBeoCount(count || 0))
     }, [])
 
     useEffect(() => {
@@ -200,24 +186,6 @@ export default function FOHDashboard() {
                 </div>
 
                 <EightySixFeed />
-
-                <Link to="/foh/events" className="dash-card events-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="recipes-top-row">
-                        <div className="recipes-icon-box" style={{ background: '#1e3a5f' }}><i className="fa-solid fa-champagne-glasses" /></div>
-                        <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>
-                    </div>
-                    <div className="recipes-number">{beoCount}</div>
-                    <div className="recipes-subtitle">Upcoming Events</div>
-                </Link>
-
-                <Link to="/foh/recipes" className="dash-card active-recipes-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="recipes-top-row">
-                        <div className="recipes-icon-box"><i className="fa-solid fa-book-open" /></div>
-                        <div className="arrow-top-right"><i className="fa-solid fa-arrow-up-right-from-square" /></div>
-                    </div>
-                    <div className="recipes-number">{stats.workbooks}</div>
-                    <div className="recipes-subtitle">Active Recipes</div>
-                </Link>
             </div>
 
         </div>

@@ -612,3 +612,37 @@ a `.wb-note`, the `:hover` reveal never fired and they stayed permanently `opaci
 - **Verification:** production build clean (2.47s).
 
 ---
+
+### 2026-07-12 — FOH Sidebar Layout + Cyan Theme Fix
+
+**File(s) Changed:** `app/src/components/FOHLayout.jsx`, `app/src/index.css`,
+`app/src/App.jsx`, `app/src/pages/FOHDashboard.jsx`
+**Type:** `feature` + `fix`
+**Summary:** Converted the Front of House shell from the floating bottom tab bar to
+the office-style left sidebar (mirrors KitchenLayout) and fixed the FOH theme to be
+fully cyan — including a cyan hover glow and a cyan active nav state (previously the
+office shell's hardcoded orange bled through). Also removed the now-redundant
+"Upcoming Events" and "Active Recipes" tiles from the FOH dashboard, since those
+sections are reachable from the sidebar.
+
+**Details:**
+
+- **`FOHLayout.jsx`:** rewritten to the `office-v2-container foh-v2` sidebar structure
+  with nav Brief · Events · Recipes + Assistant (long-press voice). Bottom tab bar and
+  the mislabeled Tasks→chat tab removed. Assistant active state uses cyan inline colors.
+- **`index.css`:** new `.foh-v2` modifier (parallel to `.kitchen-v2`) with the all-cyan
+  palette, a cyan nav hover (outline + glow), a cyan active nav state overriding the
+  office shell's hardcoded orange, and a cyan dash-card hover. Deleted the orphaned
+  `.app-shell.foh-theme` block.
+- **`App.jsx`:** removed the now-unreachable `/foh/chat` route (AiChat import kept for
+  `/kitchen/chat`).
+- **`FOHDashboard.jsx`:** removed the "Upcoming Events" and "Active Recipes" dash tiles
+  (now sidebar-only) and cleaned up the orphaned `stats`/`beoCount` state and their
+  workbook/briefing-count/`banquet_event_orders` queries; the briefing loader is now a
+  single query instead of a one-item `Promise.all`.
+- **Scope:** Schedule/Availability/Time Off/Sales deliberately left off FOH (owner
+  decision). No data/backend changes.
+- **Verification:** production build clean; visual check of sidebar, cyan hover/active,
+  and mobile hamburger.
+
+---
