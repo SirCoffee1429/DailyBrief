@@ -2,15 +2,19 @@ import { useState, useRef, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import AssistantWidget from './AssistantWidget.jsx'
 
-// Front of House shell — mirrors KitchenLayout but applies the cyan theme
-// variant via the `foh-theme` class on the app-shell root, and drops the
-// Sales tab since FOH dashboards don't expose sales data.
+// Front of House shell — office-style left sidebar layout (reuses the office-v2
+// structural classes with a .foh-v2 modifier that applies the all-cyan FOH
+// palette). Mirrors KitchenLayout; replaces the old floating bottom tab bar.
 export default function FOHLayout({ children }) {
     const [assistantOpen, setAssistantOpen] = useState(false)
     const [voiceMode, setVoiceMode] = useState(false)
     const [longPressActive, setLongPressActive] = useState(false)
+    const [sidebarOpen, setSidebarOpen] = useState(false)
     const longPressTimer = useRef(null)
     const didTriggerVoice = useRef(false)
+
+    const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+    const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), [])
 
     const handlePointerDown = useCallback(() => {
         didTriggerVoice.current = false
@@ -36,10 +40,80 @@ export default function FOHLayout({ children }) {
         setLongPressActive(false)
     }, [])
 
+    const navItems = [
+        { to: '/foh', label: 'Brief', icon: 'fa-solid fa-table-cells-large', end: true },
+        { to: '/foh/events', label: 'Events', icon: 'fa-solid fa-champagne-glasses' },
+        { to: '/foh/recipes', label: 'Recipes', icon: 'fa-solid fa-utensils' },
+    ]
+
     return (
-        <div className="app-shell foh-theme">
-            <main className="main-content">
-                {children}
+        <div className="office-v2-container foh-v2">
+            {/* Sidebar */}
+            <aside className={`office-v2-sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
+                <div className="office-v2-sidebar-header">
+                    <button className="office-v2-nav-link" onClick={toggleSidebar} style={{ padding: '0', marginRight: '1rem', border: 'none' }}>
+                        <i className="fa-solid fa-bars" />
+                    </button>
+                    <h1 className="office-v2-sidebar-title">Front of House</h1>
+                </div>
+
+                <nav className="office-v2-nav custom-scrollbar">
+                    {navItems.map(item => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            end={item.end}
+                            onClick={closeSidebar}
+                            className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}
+                        >
+                            <i className={`${item.icon} office-v2-nav-icon`} />
+                            <span style={{ marginLeft: '0.75rem', fontWeight: 500 }}>{item.label}</span>
+                        </NavLink>
+                    ))}
+
+                    {/* Assistant — bottom of nav, long-press for voice (cyan active state) */}
+                    <div style={{ marginTop: 'auto', marginBottom: '0.5rem', padding: '0 0.5rem' }}>
+                        <button
+                            className={`office-v2-nav-link ${assistantOpen ? 'active' : ''}`}
+                            style={{
+                                width: '100%',
+                                border: 'none',
+                                background: assistantOpen ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                borderRadius: '0.5rem'
+                            }}
+                            onPointerDown={handlePointerDown}
+                            onPointerUp={handlePointerUp}
+                            onPointerLeave={handlePointerLeave}
+                            onContextMenu={e => e.preventDefault()}
+                        >
+                            <i className={`fa-solid ${longPressActive ? 'fa-microphone' : 'fa-brain'} office-v2-nav-icon`} style={{ color: assistantOpen ? '#06b6d4' : '' }} />
+                            <span style={{ marginLeft: '0.75rem', color: assistantOpen ? '#06b6d4' : '' }}>Assistant</span>
+                        </button>
+                    </div>
+                </nav>
+            </aside>
+
+            {/* Overlay — closes sidebar when tapped on mobile */}
+            {sidebarOpen && (
+                <div className="office-v2-sidebar-overlay" onClick={closeSidebar} />
+            )}
+
+            {/* Main Wrapper */}
+            <main className="office-v2-main">
+                {/* Mobile-only hamburger to open sidebar */}
+                <button className="office-v2-hamburger-mobile" onClick={toggleSidebar}>
+                    <i className="fa-solid fa-bars" />
+                </button>
+
+                {/* Sub-routes inject here — main-content keeps FOH pages' centered
+                    max-width page styling */}
+                <div className="foh-v2-scroll custom-scrollbar">
+                    <div className="main-content">
+                        {children}
+                    </div>
+                </div>
             </main>
 
             <AssistantWidget
@@ -48,53 +122,6 @@ export default function FOHLayout({ children }) {
                 voiceMode={voiceMode}
                 onVoiceModeEnd={() => setVoiceMode(false)}
             />
-
-            <nav className="bottom-tab-bar">
-                <NavLink
-                    to="/foh"
-                    end
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-table-cells-large" />
-                    <span className="tab-label">Brief</span>
-                </NavLink>
-
-                <NavLink
-                    to="/foh/events"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-champagne-glasses" />
-                    <span className="tab-label">Events</span>
-                </NavLink>
-
-                <button
-                    className={`bottom-tab-link bottom-tab-center ${assistantOpen ? 'active' : ''} ${longPressActive ? 'long-press-active' : ''}`}
-                    onPointerDown={handlePointerDown}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerLeave}
-                    onContextMenu={e => e.preventDefault()}
-                    aria-label="Toggle Assistant (hold for voice)"
-                >
-                    <i className={`tab-icon fa-solid ${longPressActive ? 'fa-microphone' : 'fa-brain'}`} />
-                    <span className="tab-label">Assistant</span>
-                </button>
-
-                <NavLink
-                    to="/foh/recipes"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-utensils" />
-                    <span className="tab-label">Recipes</span>
-                </NavLink>
-
-                <NavLink
-                    to="/foh/chat"
-                    className={({ isActive }) => `bottom-tab-link ${isActive ? 'active' : ''}`}
-                >
-                    <i className="tab-icon fa-solid fa-list-check" />
-                    <span className="tab-label">Tasks</span>
-                </NavLink>
-            </nav>
         </div>
     )
 }
