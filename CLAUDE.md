@@ -37,7 +37,7 @@ The app is live at: https://brief-club.vercel.app
 - `/kitchen/*` — Crew-facing: briefing, tasks, recipes, sales, AI assistant
 - `/office/*` — Manager-facing (password: chef21): all kitchen features +
   briefing editor, workbook upload, category management, history
-- `/foh/*` — Front of house-facing: briefing, tasks, recipes, AI assistant
+- `/foh/*` — Front of house-facing: brief, events, recipes, AI assistant (cyan sidebar)
 
 ### Key Pages
 
@@ -58,8 +58,8 @@ The app is live at: https://brief-club.vercel.app
 - `ManagementBoardPage.jsx` — Dedicated management whiteboard for coordination
 - `EventsBanquetsPage.jsx` — Banquets & special events dashboard with BEO
   parsing
-- `FohDashboard.jsx` — Front of house dashboard (briefing, tasks, recipes,
-  weather)
+- `FOHDashboard.jsx` — Front of house dashboard (briefing, tasks, weather;
+  cyan sidebar shell via `FOHLayout` + `.foh-v2`)
 
 ### Key Components
 
