@@ -639,7 +639,9 @@ sections are reachable from the sidebar.
 - **`FOHDashboard.jsx`:** removed the "Upcoming Events" and "Active Recipes" dash tiles
   (now sidebar-only) and cleaned up the orphaned `stats`/`beoCount` state and their
   workbook/briefing-count/`banquet_event_orders` queries; the briefing loader is now a
-  single query instead of a one-item `Promise.all`.
+  single query instead of a one-item `Promise.all`. Also removed the now-unused
+  `.active-recipes-card` / `.events-card` grid rules (`index.css`, `mobile.css`)
+  orphaned by the tile removal.
 - **Scope:** Schedule/Availability/Time Off/Sales deliberately left off FOH (owner
   decision). No data/backend changes.
 - **Verification:** production build clean; visual check of sidebar, cyan hover/active,

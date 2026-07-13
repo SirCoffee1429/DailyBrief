@@ -106,12 +106,6 @@
     height: 24px;
   }
 
-  /* ---- Recipes card ---- */
-  .active-recipes-card {
-    min-height: auto;
-  }
-
-
   /* ---- Sales Briefing ---- */
   .sales-briefing-card {
     border-radius: 20px;

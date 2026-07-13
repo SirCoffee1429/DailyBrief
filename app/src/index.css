@@ -658,25 +658,9 @@ a:hover {
   padding: var(--space-4);
 }
 
-/* Active Recipes */
-.active-recipes-card {
-  grid-area: recipes;
-  display: flex;
-  flex-direction: column;
-  min-height: 160px;
-}
-
 /* 86'd Items Card */
 .eightysix-card {
   grid-area: eightysix;
-  display: flex;
-  flex-direction: column;
-  min-height: 160px;
-}
-
-/* Events Card */
-.events-card {
-  grid-area: events;
   display: flex;
   flex-direction: column;
   min-height: 160px;
@@ -4916,7 +4900,6 @@ tr.beo-completed td .beo-check {
   background: rgba(167, 139, 250, 0.1);
   border-color: rgba(167, 139, 250, 0.3);
 }
-
 
 /* ===== Time Off Calendar ===== */
 .time-off-calendar-header {
