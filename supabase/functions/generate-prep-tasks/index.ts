@@ -1,7 +1,8 @@
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-// gemini-3.1-pro-preview used intentionally — better multi-step reasoning for complex prep task inference
+// gemini-3-flash-preview: faster + cheaper than the prior gemini-3.1-pro-preview (which ran ~28s
+// even on small inputs) and matches generate-order-items. Kept after reverting the portion feature.
 const GEMINI_ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,7 +129,7 @@ Return ONLY valid JSON in this exact shape — no markdown, no explanation:
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
           responseMimeType: "application/json",
         },
       }),
