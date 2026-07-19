@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
+import { localDateString, formatBriefingByline } from '../lib/dates.js'
 
 
 // Witty messages shown when no briefing exists for today — rotates by calendar day
@@ -25,57 +26,53 @@ function getDailyNoBriefingMessage() {
 export default function Dashboard() {
     const navigate = useNavigate()
     const [todaysBriefings, setTodaysBriefings] = useState([])
-    const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
 
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
 
-    const latestBriefing = todaysBriefings[activeIndex] || null
-
+    // Load every briefing dated today, newest first — multiple managers post on the same
+    // day and each one's handoff notes need to be readable without hunting for them.
     useEffect(() => {
         async function load() {
-            const { data: latestDate } = await supabase
+            const { data: dayBriefings } = await supabase
                 .from('briefings')
-                .select('date')
+                .select('*')
+                .eq('date', localDateString())
                 .in('destination', ['boh', 'both'])
-                .order('date', { ascending: false })
-                .limit(1)
-                .maybeSingle()
+                .order('created_at', { ascending: false })
 
-            // Only load a briefing if it is dated today — stale entries should not display
-            const todayStr = new Date().toISOString().split('T')[0]
-            if (latestDate && latestDate.date === todayStr) {
-                const { data: dayBriefings } = await supabase
-                    .from('briefings')
-                    .select('*')
-                    .eq('date', todayStr)
-                    .in('destination', ['boh', 'both'])
-                    .order('created_at', { ascending: true })
-
-                setTodaysBriefings(dayBriefings || [])
-                setActiveIndex(0)
-            }
+            setTodaysBriefings(dayBriefings || [])
         }
         load()
     }, [])
 
-    // Load tasks whenever the active briefing changes
+    // Merge the tasks from all of today's briefings into one list
     useEffect(() => {
         async function loadTasks() {
-            if (!latestBriefing) {
+            if (todaysBriefings.length === 0) {
                 setTasks([])
                 return
             }
+            const briefingIds = todaysBriefings.map(b => b.id)
             const { data: taskData } = await supabase
                 .from('briefing_tasks')
                 .select('*')
-                .eq('briefing_id', latestBriefing.id)
-                .order('sort_order')
-            setTasks(taskData || [])
+                .in('briefing_id', briefingIds)
+
+            // sort_order is scoped per briefing, so every briefing restarts at 0 — sorting on
+            // it alone would interleave two managers' lists. Group by parent briefing first
+            // (in the same newest-first order as the stack), then by each list's own order.
+            const briefingRank = new Map(briefingIds.map((id, i) => [id, i]))
+            setTasks(
+                [...(taskData || [])].sort((a, b) =>
+                    briefingRank.get(a.briefing_id) - briefingRank.get(b.briefing_id) ||
+                    a.sort_order - b.sort_order
+                )
+            )
         }
         loadTasks()
-    }, [latestBriefing])
+    }, [todaysBriefings])
 
     // Close settings menu on outside click
     useEffect(() => {
@@ -103,12 +100,7 @@ export default function Dashboard() {
             <header className="dashboard-header">
                 <div className="header-left">
                     <h1 className="header-title"><i className="fa-solid fa-sun title-icon" /> Today's Briefing</h1>
-                    <p className="header-date" style={{ marginTop: 'var(--space-1)' }}>
-                        {latestBriefing
-                            ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-                            : today
-                        }
-                    </p>
+                    <p className="header-date" style={{ marginTop: 'var(--space-1)' }}>{today}</p>
                 </div>
                 <div className="header-actions" ref={menuRef}>
                     <button className="header-icon-btn" aria-label="Settings" onClick={() => setShowMenu(prev => !prev)}>
@@ -132,39 +124,35 @@ export default function Dashboard() {
 
             <div className="kitchen-brief-grid">
                 <div className="dash-card morning-notes-card">
-                    {todaysBriefings.length > 1 && (
-                        <div className="briefing-cycler">
-                            <button className="briefing-cycler-btn" disabled={activeIndex === 0} onClick={() => setActiveIndex(activeIndex - 1)} aria-label="Previous Briefing">
-                                <i className="fa-solid fa-chevron-left" />
-                            </button>
-                            <span className="briefing-cycler-label">
-                                <i className="fa-solid fa-layer-group" style={{ marginRight: '6px', opacity: 0.7 }} />
-                                Briefing {activeIndex + 1} of {todaysBriefings.length}
-                            </span>
-                            <button className="briefing-cycler-btn" disabled={activeIndex >= todaysBriefings.length - 1} onClick={() => setActiveIndex(activeIndex + 1)} aria-label="Next Briefing">
-                                <i className="fa-solid fa-chevron-right" />
-                            </button>
+                    {todaysBriefings.length > 0 ? (
+                        <div className="briefing-stack">
+                            {todaysBriefings.map(briefing => (
+                                <article key={briefing.id} className="briefing-block">
+                                    <div className="briefing-block-head">
+                                        <div>
+                                            {briefing.title && <h3 className="briefing-block-title">{briefing.title}</h3>}
+                                            <div className="briefing-block-byline">{formatBriefingByline(briefing)}</div>
+                                        </div>
+                                        <Link
+                                            to={`/office/briefings/${briefing.id}/edit`}
+                                            className="briefing-block-edit"
+                                            aria-label={`Edit ${briefing.title || 'briefing'}`}
+                                        >
+                                            <i className="fa-solid fa-pen" />
+                                        </Link>
+                                    </div>
+                                    <ul className="notes-list">
+                                        {briefing.body ? (
+                                            briefing.body.split('\n').filter(line => line.trim()).map((line, i) => (
+                                                <li key={i}>{line.replace(/^- /, '')}</li>
+                                            ))
+                                        ) : (
+                                            <li>No notes on this briefing.</li>
+                                        )}
+                                    </ul>
+                                </article>
+                            ))}
                         </div>
-                    )}
-
-                    {latestBriefing ? (
-                        <>
-                            {latestBriefing.title && (
-                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: 'var(--space-3)', paddingBottom: 'var(--space-2)', borderBottom: '1px solid var(--border-color)', fontSize: 'var(--font-size-lg)' }}>
-                                    {latestBriefing.title}
-                                </div>
-                            )}
-                            <ul className="notes-list">
-                                {latestBriefing.body ? (
-                                    latestBriefing.body.split('\n').filter(line => line.trim()).map((line, i) => (
-                                        <li key={i}>{line.replace(/^- /, '')}</li>
-                                    ))
-                                ) : (
-                                    <li>No notes for today.</li>
-                                )}
-                            </ul>
-                            <Link to={`/office/briefings/${latestBriefing.id}/edit`} className="btn btn-primary btn-orange mt-auto inline-flex">Edit Notes</Link>
-                        </>
                     ) : (
                         <div className="notes-list empty" style={{ fontStyle: 'italic', opacity: 0.75 }}>
                             {getDailyNoBriefingMessage()}
@@ -199,7 +187,7 @@ export default function Dashboard() {
                             <div className="empty-task-list">No tasks.</div>
                         )}
                     </div>
-                    {latestBriefing && <div className="updated-text">Updated 5m ago</div>}
+                    {todaysBriefings.length > 0 && <div className="updated-text">Updated 5m ago</div>}
                 </div>
             </div>
 

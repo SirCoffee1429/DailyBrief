@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import { getAuthorName, setAuthorName } from '../lib/identity.js'
+import { localDateString } from '../lib/dates.js'
 
 export default function BriefingEditor() {
     const { id } = useParams()
@@ -9,8 +11,10 @@ export default function BriefingEditor() {
 
     const [title, setTitle] = useState('')
     const [body, setBody] = useState('')
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+    const [date, setDate] = useState(localDateString())
     const [destination, setDestination] = useState('boh')
+    const [author, setAuthor] = useState(() => getAuthorName())
+    const [sameDayCount, setSameDayCount] = useState(0)
     const [tasks, setTasks] = useState([])
     const [newTask, setNewTask] = useState('')
     const [saving, setSaving] = useState(false)
@@ -21,6 +25,23 @@ export default function BriefingEditor() {
             loadBriefing()
         }
     }, [id])
+
+    // Count other briefings already on the chosen date so the author knows a second post
+    // adds to the day rather than replacing what is there.
+    useEffect(() => {
+        async function countSameDay() {
+            if (!date) return
+            let query = supabase
+                .from('briefings')
+                .select('id', { count: 'exact', head: true })
+                .eq('date', date)
+            if (isEditing) query = query.neq('id', id)
+
+            const { count } = await query
+            setSameDayCount(count || 0)
+        }
+        countSameDay()
+    }, [date, id, isEditing])
 
     async function loadBriefing() {
         const { data } = await supabase
@@ -80,9 +101,11 @@ export default function BriefingEditor() {
                 // Delete old tasks and re-insert
                 await supabase.from('briefing_tasks').delete().eq('briefing_id', id)
             } else {
+                // Remember the name on this device so the next post is pre-filled.
+                const postedBy = setAuthorName(author) || 'Manager'
                 const { data, error } = await supabase
                     .from('briefings')
-                    .insert({ title, body, date, destination })
+                    .insert({ title, body, date, destination, author: postedBy })
                     .select()
                     .single()
 
@@ -146,7 +169,28 @@ export default function BriefingEditor() {
                             onChange={e => setDate(e.target.value)}
                             required
                         />
+                        {sameDayCount > 0 && (
+                            <p className="same-day-notice">
+                                <i className="fa-solid fa-circle-info" />
+                                {sameDayCount === 1
+                                    ? '1 other briefing is already posted for this date.'
+                                    : `${sameDayCount} other briefings are already posted for this date.`}
+                                {' '}Yours will be added alongside it, not replace it.
+                            </p>
+                        )}
                     </div>
+
+                    {!isEditing && (
+                        <div className="form-group">
+                            <label className="form-label">Posted by</label>
+                            <input
+                                className="input"
+                                placeholder="Your name"
+                                value={author}
+                                onChange={e => setAuthor(e.target.value)}
+                            />
+                        </div>
+                    )}
 
                     <div className="form-group">
                         <label className="form-label">Post to</label>

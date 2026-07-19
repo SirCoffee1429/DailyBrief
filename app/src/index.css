@@ -479,52 +479,79 @@ a:hover {
   min-height: 340px;
 }
 
-/* Briefing Cycler */
-.briefing-cycler {
+/* Briefing Stack — every briefing posted for the day, newest first. Scrolls within the
+   card so a busy day cannot push the Tasks card off screen. */
+.briefing-stack {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.04));
-  border: 1px solid rgba(249, 115, 22, 0.25);
-  border-radius: var(--radius-md);
-  padding: 10px 16px;
-  margin-bottom: var(--space-4);
-  animation: fadeIn 0.3s ease;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
 }
 
-.briefing-cycler-label {
-  font-size: var(--font-size-sm);
-  font-weight: 700;
+.briefing-block + .briefing-block {
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-5);
+}
+
+.briefing-block-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.briefing-block-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.briefing-block-byline {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
   color: var(--orange);
   letter-spacing: 0.03em;
-  user-select: none;
+  margin-top: 2px;
 }
 
-.briefing-cycler-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  width: 32px;
-  height: 32px;
+.briefing-block-edit {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-primary);
-  cursor: pointer;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
   transition: all var(--transition-fast);
-  font-size: 0.85rem;
 }
 
-.briefing-cycler-btn:hover:not(:disabled) {
-  background: rgba(249, 115, 22, 0.2);
+.briefing-block-edit:hover {
   border-color: var(--orange);
   color: var(--orange);
 }
 
-.briefing-cycler-btn:disabled {
-  opacity: 0.25;
-  cursor: default;
+.briefing-block .notes-list {
+  margin-bottom: 0;
+}
+
+/* Same-day notice in the briefing editor */
+.same-day-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.same-day-notice i {
+  color: var(--orange);
 }
 
 .illustration-icon {

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import EightySixFeed from '../components/EightySixFeed.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
+import { formatBriefingByline } from '../lib/dates.js'
 
 // Front of House dashboard — mirrors the Kitchen layout but:
 //  - Filters briefings to destinations 'foh' or 'both' (no kitchen-only notes)
@@ -14,14 +15,15 @@ import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
 export default function FOHDashboard() {
     const navigate = useNavigate()
     const [todaysBriefings, setTodaysBriefings] = useState([])
-    const [activeIndex, setActiveIndex] = useState(0)
     const [tasks, setTasks] = useState([])
 
     const [showMenu, setShowMenu] = useState(false)
     const menuRef = useRef(null)
 
-    const latestBriefing = todaysBriefings[activeIndex] || null
+    const briefingDate = todaysBriefings[0]?.date || null
 
+    // Load every briefing on the most recent posted date, newest first — several managers
+    // post per day and each one's notes need to be readable without hunting for them.
     useEffect(() => {
         async function load() {
             const { data: latestDate } = await supabase
@@ -37,30 +39,39 @@ export default function FOHDashboard() {
                     .select('*')
                     .eq('date', latestDate.date)
                     .in('destination', ['foh', 'both'])
-                    .order('created_at', { ascending: true })
+                    .order('created_at', { ascending: false })
 
                 setTodaysBriefings(dayBriefings || [])
-                setActiveIndex(0)
             }
         }
         load()
     }, [])
 
+    // Merge the tasks from all of that day's briefings into one list
     useEffect(() => {
         async function loadTasks() {
-            if (!latestBriefing) {
+            if (todaysBriefings.length === 0) {
                 setTasks([])
                 return
             }
+            const briefingIds = todaysBriefings.map(b => b.id)
             const { data: taskData } = await supabase
                 .from('briefing_tasks')
                 .select('*')
-                .eq('briefing_id', latestBriefing.id)
-                .order('sort_order')
-            setTasks(taskData || [])
+                .in('briefing_id', briefingIds)
+
+            // sort_order restarts at 0 for each briefing, so group by parent briefing first
+            // (matching the stack order) before falling back to each list's own order.
+            const briefingRank = new Map(briefingIds.map((id, i) => [id, i]))
+            setTasks(
+                [...(taskData || [])].sort((a, b) =>
+                    briefingRank.get(a.briefing_id) - briefingRank.get(b.briefing_id) ||
+                    a.sort_order - b.sort_order
+                )
+            )
         }
         loadTasks()
-    }, [latestBriefing])
+    }, [todaysBriefings])
 
     useEffect(() => {
         function handleClick(e) {
@@ -86,8 +97,8 @@ export default function FOHDashboard() {
                 <div className="header-left">
                     <h1 className="header-title"><i className="fa-solid fa-utensils title-icon" /> Front of House</h1>
                     <p className="header-date" style={{ marginTop: 'var(--space-1)' }}>
-                        {latestBriefing
-                            ? new Date(latestBriefing.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+                        {briefingDate
+                            ? new Date(briefingDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
                             : today
                         }
                     </p>
@@ -114,39 +125,35 @@ export default function FOHDashboard() {
 
             <div className="dashboard-grid">
                 <div className="dash-card morning-notes-card">
-                    {todaysBriefings.length > 1 && (
-                        <div className="briefing-cycler">
-                            <button className="briefing-cycler-btn" disabled={activeIndex === 0} onClick={() => setActiveIndex(activeIndex - 1)} aria-label="Previous Shift Notes">
-                                <i className="fa-solid fa-chevron-left" />
-                            </button>
-                            <span className="briefing-cycler-label">
-                                <i className="fa-solid fa-layer-group" style={{ marginRight: '6px', opacity: 0.7 }} />
-                                Shift Notes {activeIndex + 1} of {todaysBriefings.length}
-                            </span>
-                            <button className="briefing-cycler-btn" disabled={activeIndex >= todaysBriefings.length - 1} onClick={() => setActiveIndex(activeIndex + 1)} aria-label="Next Shift Notes">
-                                <i className="fa-solid fa-chevron-right" />
-                            </button>
+                    {todaysBriefings.length > 0 ? (
+                        <div className="briefing-stack">
+                            {todaysBriefings.map(briefing => (
+                                <article key={briefing.id} className="briefing-block">
+                                    <div className="briefing-block-head">
+                                        <div>
+                                            {briefing.title && <h3 className="briefing-block-title">{briefing.title}</h3>}
+                                            <div className="briefing-block-byline">{formatBriefingByline(briefing)}</div>
+                                        </div>
+                                        <Link
+                                            to={`/office/briefings/${briefing.id}/edit`}
+                                            className="briefing-block-edit"
+                                            aria-label={`Edit ${briefing.title || 'shift notes'}`}
+                                        >
+                                            <i className="fa-solid fa-pen" />
+                                        </Link>
+                                    </div>
+                                    <ul className="notes-list">
+                                        {briefing.body ? (
+                                            briefing.body.split('\n').filter(line => line.trim()).map((line, i) => (
+                                                <li key={i}>{line.replace(/^- /, '')}</li>
+                                            ))
+                                        ) : (
+                                            <li>No shift notes on this post.</li>
+                                        )}
+                                    </ul>
+                                </article>
+                            ))}
                         </div>
-                    )}
-
-                    {latestBriefing ? (
-                        <>
-                            {latestBriefing.title && (
-                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: 'var(--space-3)', paddingBottom: 'var(--space-2)', borderBottom: '1px solid var(--border-color)', fontSize: 'var(--font-size-lg)' }}>
-                                    {latestBriefing.title}
-                                </div>
-                            )}
-                            <ul className="notes-list">
-                                {latestBriefing.body ? (
-                                    latestBriefing.body.split('\n').filter(line => line.trim()).map((line, i) => (
-                                        <li key={i}>{line.replace(/^- /, '')}</li>
-                                    ))
-                                ) : (
-                                    <li>No shift notes for today.</li>
-                                )}
-                            </ul>
-                            <Link to={`/office/briefings/${latestBriefing.id}/edit`} className="btn btn-primary btn-orange mt-auto inline-flex">Edit Notes</Link>
-                        </>
                     ) : (
                         <>
                             <div className="notes-list empty">Nothing posted for the floor</div>
@@ -182,7 +189,7 @@ export default function FOHDashboard() {
                             <div className="empty-task-list">No tasks.</div>
                         )}
                     </div>
-                    {latestBriefing && <div className="updated-text">Updated 5m ago</div>}
+                    {todaysBriefings.length > 0 && <div className="updated-text">Updated 5m ago</div>}
                 </div>
 
                 <EightySixFeed />

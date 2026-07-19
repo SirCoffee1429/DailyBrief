@@ -213,3 +213,45 @@ has no quantity field) was discussed but **not built**.
   `"Serves N" × Qty = people`. Relevant to any future order-quantity work.
 
 ---
+
+### 2026-07-19 — Stacked Same-Day Briefings + Attribution + Local-Date Fix
+
+**File(s) Changed:** `app/src/pages/Dashboard.jsx`, `app/src/pages/FOHDashboard.jsx`,
+`app/src/pages/BriefingEditor.jsx`, `app/src/lib/dates.js` (new), `app/src/index.css`,
+`app/src/mobile.css`, migration `add_author_to_briefings`
+**Type:** `feature` + `fix`
+**Summary:** When two managers posted briefings on the same day, crew effectively saw only
+one — the second appeared to overwrite the first. The rows were never overwritten; all of
+the day's briefings were loaded but shown one at a time behind a low-salience
+"Briefing 1 of N" pager that nobody noticed. Replaced the pager with a stacked layout that
+renders every briefing for the day at once, added per-briefing attribution, merged the task
+lists, and fixed a UTC date bug in the same code path.
+
+**Details:**
+
+- **Stacked display:** `.briefing-stack` renders every briefing for the day as its own
+  `.briefing-block` (title, byline, notes), newest first. Previously the pager opened on
+  `activeIndex 0` with `created_at` **ascending**, so it showed the *oldest* briefing and hid
+  the newest — the reverse of what was assumed. Cycler markup + CSS removed from both
+  dashboards; `.briefing-cycler*` rules deleted from `index.css` and `mobile.css`.
+- **Attribution:** new nullable `briefings.author` column (no default, so the 70 pre-existing
+  rows stay `NULL` and render with a timestamp only rather than a fabricated name). Editor
+  captures "Posted by" via the existing `lib/identity.js` localStorage helper, shown only when
+  creating; editing leaves the original author untouched.
+- **Merged tasks:** the Tasks card now lists tasks from all of the day's briefings. Ordering
+  groups by parent briefing before `sort_order`, because `sort_order` is scoped per briefing
+  and restarts at 0 — sorting on it alone interleaved two managers' lists. Badge sums the day.
+- **Local-date fix:** new `lib/dates.js` with `localDateString()`. `Dashboard.jsx` derived
+  "today" from `new Date().toISOString()` (UTC), which rolls over at 7pm Central — after that
+  the equality check failed and the card fell through to the "No briefings today" message
+  while briefings existed. Also replaced the editor's UTC date default. The kitchen loader
+  collapsed from two queries to one as a result.
+- **Same-day notice:** the editor shows a non-blocking hint when the chosen date already has
+  briefings ("Yours will be added alongside it, not replace it").
+- **FOH parity:** same stacking, bylines and merged tasks. Kept its existing "most recent
+  posted date" semantics rather than gating to today — that difference predates this work.
+- **Verification:** production build clean (2.29s); visually confirmed on the kitchen
+  dashboard against today's two live briefings (9:34pm + 5:27pm, merged 0/2 task badge).
+  The editor's same-day notice was not visually verified — blocked by the office password gate.
+
+---

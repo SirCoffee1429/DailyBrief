@@ -260,9 +260,9 @@
     font-size: var(--font-size-xl);
   }
 
-  /* ---- Briefing cycler — smaller ---- */
-  .briefing-cycler {
-    padding: 2px 8px !important;
+  /* ---- Briefing stack — shorter scroll window on phones ---- */
+  .briefing-stack {
+    max-height: 320px;
   }
 
   /* ---- Hide scrollbar on forecast ---- */
