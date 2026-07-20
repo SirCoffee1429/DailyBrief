@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import { localDateString } from '../lib/dates.js'
 
 export default function EventsBanquetsPage({ readOnly = false }) {
     const location = useLocation()
@@ -96,7 +97,9 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             const { data } = await supabase
                 .from('upcoming_banquets')
                 .select('*')
-                .gte('event_date', new Date().toISOString().split('T')[0])
+                // Local date, not UTC — toISOString() rolls over at 7pm Central, which dropped
+                // the current day's events from the list five hours before the day was over.
+                .gte('event_date', localDateString())
                 .order('event_date', { ascending: true })
             setBanquets(data || [])
         } catch(err) {

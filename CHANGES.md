@@ -255,3 +255,29 @@ lists, and fixed a UTC date bug in the same code path.
   The editor's same-day notice was not visually verified — blocked by the office password gate.
 
 ---
+
+### 2026-07-19 — Fix: Upcoming Banquets Dropped the Current Day After 7pm
+
+**File(s) Changed:** `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `fix`
+**Summary:** The Upcoming Banquets query filtered `event_date >= today` using a UTC-derived
+date, so from 7pm Central onward it effectively asked for "tomorrow onward" and dropped the
+current day's events from the list five hours before the day was over. Same root cause as the
+briefing blackout fixed earlier today; second instance of the pattern.
+
+**Details:**
+
+- `loadBanquets()` line 99: `new Date().toISOString().split('T')[0]` → `localDateString()`
+  from the `lib/dates.js` helper added in `bce3917`.
+- **Impact:** a chef pulling up Events during evening service would not see the event they
+  were currently working. Milder than the briefing bug (a list clipped its top entry rather
+  than a card blanking entirely), which is likely why it went unreported.
+- **Remaining instances not fixed:** `SchedulePage.jsx:216,984` (todayStr comparisons) and
+  the week-math spots in `WeeklyFeatures.jsx` / `SalesTrendChart.jsx` / `SchedulePage.jsx`.
+  The week-math ones derive week starts rather than comparing "today", so they carry less risk.
+- **Verification:** production build clean (2.43s); Events page loads and renders the banquet
+  list correctly. The evening behavior itself was **not** directly observed — the fix was made
+  at 7:40am, before the rollover threshold, and there are no `upcoming_banquets` rows dated
+  today to serve as a live test case.
+
+---
