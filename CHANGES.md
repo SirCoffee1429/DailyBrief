@@ -281,3 +281,37 @@ briefing blackout fixed earlier today; second instance of the pattern.
   today to serve as a live test case.
 
 ---
+
+### 2026-07-22 — Fix: Evening Briefings Vanished Next Day (smart date default)
+
+**File(s) Changed:** `app/src/lib/dates.js`, `app/src/pages/BriefingEditor.jsx`
+**Type:** `fix`
+**Summary:** A briefing posted Tuesday evening for Wednesday disappeared Wednesday morning.
+Regression from `bce3917`: that commit changed the editor's date **default** from `toISOString()`
+(UTC) to `localDateString()` (local). Evening posts had been *accidentally* defaulting to the next
+day (9pm Central = next day in UTC), which is exactly what the club's night-before closing-notes
+workflow relied on. The local-date default correctly pre-filled *today*, so evening posts left at
+the default were dated the posting day and dropped off the next day's dashboard. No deletion —
+the rows persist; they simply no longer matched `date == today`.
+
+**Details:**
+
+- **Root cause (confirmed via data):** both 07-21 evening briefings had `date = 2026-07-21`, i.e.
+  the field was left at its default. The dashboard filters `date == localDateString()`, so a
+  Tuesday-dated briefing correctly vanishes Wednesday. The dashboard filter is right; the editor
+  *default* was the problem.
+- **Fix:** new `defaultBriefingDate(now)` in `lib/dates.js` — a smart default that pre-fills
+  **today before 5pm local, tomorrow at/after 5pm** (`NEXT_DAY_CUTOFF_HOUR = 17`, one-line tunable).
+  Matches the workflow (owner: briefings are always posted after dinner service, so anything from
+  5pm on is for the next day). On-site devices run Central, so the local-hour check is the CST/CDT
+  hour. Manager can always override in the picker. Stays on the local calendar (never rolls a day
+  early via UTC).
+- `BriefingEditor.jsx`: initial `date` state now `defaultBriefingDate()` instead of
+  `localDateString()`. Only affects NEW briefings (editing still loads the stored date).
+- **Verification:** helper logic checked via node across the 2pm boundary + month/year rollover
+  (9:12pm → next day ✓, 1:59pm → today ✓, Dec 31 → Jan 1 ✓); production build clean (2.59s). The
+  editor UI itself is behind the office password gate and was not visually confirmed.
+- **Note:** the two stuck 07-21 briefings were left as-is (still in DB, reachable via History /
+  editable) — owner to re-date whichever was intended to persist.
+
+---

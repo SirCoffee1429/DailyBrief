@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { getAuthorName, setAuthorName } from '../lib/identity.js'
-import { localDateString } from '../lib/dates.js'
+import { defaultBriefingDate } from '../lib/dates.js'
 
 export default function BriefingEditor() {
     const { id } = useParams()
@@ -11,7 +11,7 @@ export default function BriefingEditor() {
 
     const [title, setTitle] = useState('')
     const [body, setBody] = useState('')
-    const [date, setDate] = useState(localDateString())
+    const [date, setDate] = useState(defaultBriefingDate())
     const [destination, setDestination] = useState('boh')
     const [author, setAuthor] = useState(() => getAuthorName())
     const [sameDayCount, setSameDayCount] = useState(0)

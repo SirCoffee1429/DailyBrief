@@ -14,6 +14,24 @@ export function localDateString(d = new Date()) {
     return `${year}-${month}-${day}`
 }
 
+// Local hour (24h) at/after which a NEW briefing defaults to the NEXT day instead of today.
+// Rationale: briefings are always posted after dinner service, so anything from 5pm onward is
+// for the next service day and should pre-fill tomorrow; earlier posts default to today. The
+// on-site devices run on Central time, so this local-hour check is effectively the CST/CDT hour.
+// Tune this one number to move the boundary; the manager can always override in the picker.
+const NEXT_DAY_CUTOFF_HOUR = 17 // 5pm
+
+// The date a NEW briefing should default to: today before the cutoff, tomorrow at/after it.
+// Stays on the local calendar (setDate handles month/year rollover) so it never jumps a day
+// early via UTC the way toISOString() did.
+export function defaultBriefingDate(now = new Date()) {
+    const d = new Date(now)
+    if (d.getHours() >= NEXT_DAY_CUTOFF_HOUR) {
+        d.setDate(d.getDate() + 1)
+    }
+    return localDateString(d)
+}
+
 // Formats a briefing's created_at into a compact local post time, e.g. "9:34pm".
 export function formatPostTime(timestamp) {
     if (!timestamp) return ''
