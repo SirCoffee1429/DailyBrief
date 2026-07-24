@@ -41,7 +41,8 @@ The app is live at: https://brief-club.vercel.app
 
 ### Key Pages
 
-- `Dashboard.jsx` — Kitchen dashboard (briefing, tasks, recipes count, sales,
+- `Dashboard.jsx` — Kitchen dashboard; stacks ALL of today's briefings (newest
+  first, author+time byline) with a merged task list (briefing, tasks, sales,
   weather)
 - `OfficeDashboard.jsx` — Office dashboard (stats, tiles, sales)
 - `KitchenRecipes.jsx` — Recipe browser with category filter and search
@@ -53,7 +54,9 @@ The app is live at: https://brief-club.vercel.app
 - `SalesReports.jsx` — Sales report date list
 - `SalesReportDetail.jsx` — Top sellers for a specific date
 - `Briefings.jsx` — Office briefing list
-- `BriefingEditor.jsx` — Create/edit briefings and tasks
+- `BriefingEditor.jsx` — Create/edit briefings and tasks; date defaults via
+  `defaultBriefingDate()` (today before 5pm local, tomorrow after — posts are
+  after dinner service)
 - `History.jsx` — 30-day briefing and task completion log
 - `ManagementBoardPage.jsx` — Dedicated management whiteboard for coordination
 - `EventsBanquetsPage.jsx` — Banquets & special events dashboard with BEO
@@ -80,7 +83,7 @@ The app is live at: https://brief-club.vercel.app
 | `workbook_sheets`      | Parsed sheet rows stored as JSON arrays                                            |
 | `workbook_chunks`      | Text chunks with vector embeddings for RAG                                         |
 | `recipe_categories`    | User-managed category list                                                         |
-| `briefings`            | Daily shift notes (title, body, date)                                              |
+| `briefings`            | Daily shift notes (title, body, date, author, destination boh/foh/both); `date` = day it shows on the dashboard; multiple per day allowed |
 | `briefing_tasks`       | Tasks attached to briefings with completion + sort order                           |
 | `sales_data`           | Parsed nightly sales (item_name, units_sold, category, report_date)                |
 | `management_notes`     | Internal management communications and event coordination                          |
@@ -110,18 +113,14 @@ The app is live at: https://brief-club.vercel.app
 
 ## RAG Pipeline (Vector Search)
 
-The kitchen assistant uses RAG instead of dumping all chunks into the prompt:
+Kitchen assistant uses RAG, not full-context dumps:
 
-1. Recipe uploaded → text parsed into chunks → `embed-chunks` called → each
-   chunk embedded via `embedding-001` → stored in `workbook_chunks.embedding`
-   (vector(768))
-2. Question asked → question embedded → `match_chunks` Postgres function finds
-   top 15 similar chunks → only those sent to Gemini
-3. Gemini answers from relevant context only
-
-**Postgres function:**
-`match_chunks(query_embedding vector(768), match_count int)` **Vector index:**
-ivfflat on `workbook_chunks.embedding`
+1. Recipe upload → chunked → `embed-chunks` embeds each via `embedding-001` →
+   stored in `workbook_chunks.embedding` (vector(768))
+2. Question embedded → `match_chunks(query_embedding vector(768), match_count int)`
+   Postgres fn returns top 15 similar chunks → only those sent to Gemini
+3. Gemini answers from relevant context only. Vector index: ivfflat on
+   `workbook_chunks.embedding`
 
 ---
 
@@ -137,6 +136,8 @@ ivfflat on `workbook_chunks.embedding`
   denied
 - Embedding model: `embedding-001` via `v1beta` endpoint
 - Generation model: `gemini-3-flash-preview` via `v1beta` endpoint
+- Dates: use `lib/dates.js` for a local "today", never `toISOString().split()`
+  — UTC rolls over at 7pm Central and drops the current day from queries
 
 ---
 
