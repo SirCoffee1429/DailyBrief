@@ -186,10 +186,11 @@ At the start of every new session, or whenever a new model is loaded, you MUST:
 11. Never cut corners just for the sake of saving time, tokens, or to get
     something "working" just for the sake of pleasing me.
 12. Never store JWT locally.
+13. Use the tools, commands, agents, loops, scripts, plugins etc. from the C:\Old Hawthorne Projects\DailyBrief\SuperClaude_Framework folder
 
 ## Session End
 
-Ill trigger the end of the session by runniqng /sc:save command. At that point you will follow the /sc:save command instructions as well as  :
+Ill trigger the end of the session by running /sc:save command. At that point you will follow the /sc:save command instructions as well as  :
 
 1. Update "CHANGES.md" with a summary of what we worked on and the progress we
    made. Make sure to save the changes and exit the session. Keep under 500 lines. 
