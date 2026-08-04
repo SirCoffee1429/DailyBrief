@@ -315,3 +315,45 @@ the rows persist; they simply no longer matched `date == today`.
   editable) — owner to re-date whichever was intended to persist.
 
 ---
+
+### 2026-08-03 — Claude Code health check: extension cleanup + CLAUDE.md trim
+
+**File(s) Changed:** `CLAUDE.md`, `.claude/settings.local.json`,
+`.claude/agents/*` (13 deleted)
+**Type:** `chore` + `config`
+**Summary:** Ran `/doctor`. The install itself was healthy (native 2.1.220 = latest,
+all config parses, auto mode already default, no duplicate installs, no slow hooks,
+no read-only commands worth pre-approving). The finding was extension bloat: an
+`everything-claude-code` bundle (37 skills / 31 commands / 13 agents) checked into
+`.claude/`, unused for 49 days, competing with SuperClaude. Cleaned it up and made
+SuperClaude the project's designated toolset.
+
+**Details:**
+
+- **Scan window:** all 31 transcripts across 3 project dirs, 14,822 lines,
+  2026-06-11 → 2026-07-30 (48.9 days). Zero dispatches of any bundle skill/command in
+  that window; lifetime totals were 3 and 2, all from Feb–Apr 2026.
+- **Disabled 68 bundle entries** via `skillOverrides` in `.claude/settings.local.json`
+  (37 skills + 31 commands). **Caveat:** `skillOverrides` is documented for skills;
+  whether it also suppresses `.claude/commands/*.md` is UNVERIFIED — confirm next
+  session that those 31 commands are gone from the skill listing, else delete the files.
+- **Deleted 13 bundle agents** from `.claude/agents/` (agents have no disable
+  mechanism, so deletion is the only way to stop them loading). Kept
+  `feature-prioritizer.md`, the one DailyBrief-custom agent.
+- **Disabled the `sequential-thinking` MCP server** (0 calls in 49 days) at the user
+  level; server config + OAuth preserved.
+- **`CLAUDE.md` 201 → 155 lines.** Cut sections a session can derive from the repo
+  (tech stack, repo URL, key pages/components, the Supabase tables and edge-function
+  tables); kept the Supabase project ref. Lifted the non-derivable rationale that was
+  buried in those lists into Key Design Decisions: briefing date semantics +
+  `defaultBriefingDate()`, the FOH `.foh-v2` cyan shell, and the `.wb-act-btn`
+  shared-class trap. Added a **Global Rule Overrides** section (no test runner on
+  `main`; never auto-spawn sub-agents; SuperClaude is the primary toolset; no
+  `Co-Authored-By` trailer).
+- **Context saved: ~2,600 est tokens/session.** The skill listing now sits under its
+  ~1% budget, so skill routing should be more accurate, not just cheaper.
+- **Flagged, not fixed:** both `settings.local.json` files are committed to git though
+  `*.local.json` is meant to be personal/gitignored — local permission grants are
+  shared with the repo.
+
+---

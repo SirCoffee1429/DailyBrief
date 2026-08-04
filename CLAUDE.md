@@ -10,22 +10,13 @@ The app is live at: https://brief-club.vercel.app
 
 ---
 
-## Tech Stack
+## Key IDs
 
-- **Frontend:** React 19 + Vite, React Router v7
-- **Backend:** Supabase (Postgres + Edge Functions + Storage)
-- **AI:** Google Gemini Flash (chat + categorization + sales parsing), Google
-  embedding-001 (RAG vector search)
-- **Weather:** Google Weather API
-- **Email Ingestion:** Postmark (inbound webhook → sales PDF parsing)
-- **Deployment:** Vercel
 - **Supabase Project Ref:** chajwmoohmiugdgvqjyo
 
----
-
-## Repository
-
-- **DailyBrief:** https://github.com/SirCoffee1429/DailyBrief
+Stack, dependencies, routes, pages, components, tables, and edge functions are
+all derivable from the repo — read `package.json`, `app/src/`, and
+`supabase/functions/`. Only the non-obvious bits are recorded below.
 
 ---
 
@@ -38,76 +29,6 @@ The app is live at: https://brief-club.vercel.app
 - `/office/*` — Manager-facing (password: chef21): all kitchen features +
   briefing editor, workbook upload, category management, history
 - `/foh/*` — Front of house-facing: brief, events, recipes, AI assistant (cyan sidebar)
-
-### Key Pages
-
-- `Dashboard.jsx` — Kitchen dashboard; stacks ALL of today's briefings (newest
-  first, author+time byline) with a merged task list (briefing, tasks, sales,
-  weather)
-- `OfficeDashboard.jsx` — Office dashboard (stats, tiles, sales)
-- `KitchenRecipes.jsx` — Recipe browser with category filter and search
-- `WorkbookLibrary.jsx` — Office recipe management (upload, edit, delete,
-  categorize)
-- `WorkbookUpload.jsx` — Excel file upload with AI categorization + chunk
-  embedding
-- `AiChat.jsx` — Full page AI knowledge base chat
-- `SalesReports.jsx` — Sales report date list
-- `SalesReportDetail.jsx` — Top sellers for a specific date
-- `Briefings.jsx` — Office briefing list
-- `BriefingEditor.jsx` — Create/edit briefings and tasks; date defaults via
-  `defaultBriefingDate()` (today before 5pm local, tomorrow after — posts are
-  after dinner service)
-- `History.jsx` — 30-day briefing and task completion log
-- `ManagementBoardPage.jsx` — Dedicated management whiteboard for coordination
-- `EventsBanquetsPage.jsx` — Banquets & special events dashboard with BEO
-  parsing
-- `FOHDashboard.jsx` — Front of house dashboard (briefing, tasks, weather;
-  cyan sidebar shell via `FOHLayout` + `.foh-v2`)
-
-### Key Components
-
-- `AssistantWidget.jsx` — Floating AI assistant with voice input (long-press for
-  voice)
-- `WeatherWidget.jsx` — 5-day forecast via Google Weather API
-- `SalesBriefing.jsx` — Sales summary card on dashboard
-- `KitchenLayout.jsx` / `OfficeLayout.jsx` — Shell with bottom tab nav
-- `OfficeGate.jsx` — Password gate for office routes
-
----
-
-## Supabase Tables
-
-| Table                  | Purpose                                                                            |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `workbooks`            | Uploaded Excel recipe files, category as text[]                                    |
-| `workbook_sheets`      | Parsed sheet rows stored as JSON arrays                                            |
-| `workbook_chunks`      | Text chunks with vector embeddings for RAG                                         |
-| `recipe_categories`    | User-managed category list                                                         |
-| `briefings`            | Daily shift notes (title, body, date, author, destination boh/foh/both); `date` = day it shows on the dashboard; multiple per day allowed |
-| `briefing_tasks`       | Tasks attached to briefings with completion + sort order                           |
-| `sales_data`           | Parsed nightly sales (item_name, units_sold, category, report_date)                |
-| `management_notes`     | Internal management communications and event coordination                          |
-| `upcoming_banquets`    | Parsed upcoming event summaries scraped from ReserveCloud links                    |
-| `banquet_event_orders` | Structured BEOs detailing event date, food items, and quantities                   |
-| `weekly_features`      | Scheduled lunch and dinner features displayed on whiteboard                        |
-| `event_tasks`          | Tasks per BEO event with completion tracking and sort order                        |
-| `event_order_items`    | Per-event food ingredient order list; AI-generated + manual, with ordered checkoff |
-| `time_off_requests`    | Staff time off requests with date range, time type, and crew name                  |
-
----
-
-## Edge Functions
-
-| Function               | Purpose                                                                 |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `kitchen-assistant`    | RAG-powered recipe Q&A using vector similarity search                   |
-| `categorize-recipe`    | Classifies uploaded recipe into up to 3 categories                      |
-| `embed-chunks`         | Generates vector embeddings for recipe chunks via Gemini                |
-| `get-weather`          | Proxies Google Weather API for 5-day forecast                           |
-| `process-sales-data`   | Postmark webhook — parses sales PDF via Gemini, inserts into sales_data |
-| `process-banquets`     | Postmark webhook — scrapes ReserveCloud PDFs and logs upcoming banquets |
-| `process-beo`          | Parses BEO PDFs via dashboard upload and dynamically extracts food data |
-| `generate-order-items` | Parses event order items from BEOs and generates order list for chefs   |
 
 ---
 
@@ -138,6 +59,17 @@ Kitchen assistant uses RAG, not full-context dumps:
 - Generation model: `gemini-3-flash-preview` via `v1beta` endpoint
 - Dates: use `lib/dates.js` for a local "today", never `toISOString().split()`
   — UTC rolls over at 7pm Central and drops the current day from queries
+- Briefings: `briefings.date` is the day it SHOWS on the dashboard, not when it
+  was written; multiple per day are allowed and all render stacked (newest
+  first, author + time byline). `BriefingEditor` defaults the date via
+  `defaultBriefingDate()` — today before 5pm local, tomorrow after, because
+  posts are written after dinner service
+- FOH shell is the cyan sidebar (`FOHLayout` + the `.foh-v2` class), not the
+  office orange — the office shell's hardcoded orange will bleed through
+  otherwise
+- `.wb-act-btn` is shared beyond the communication board — scope hover-reveal
+  rules to `.wb-note .wb-act-btn`, never the bare class, or action buttons go
+  invisible app-wide
 
 ---
 
@@ -149,6 +81,28 @@ Kitchen assistant uses RAG, not full-context dumps:
   DailyBrief validates with paying customers
 - Add real authentication to replace the hardcoded office password
 - Universal file ingestion: PDF, DOCX, CSV, plain text in addition to XLSX
+
+---
+
+## Global Rule Overrides
+
+The global `~/.claude/rules/` files assume conventions this repo does not
+follow. For DailyBrief, the rules below win:
+
+- **Testing:** there is no test runner installed on `main` — the quality gate is
+  `npm run build` plus browser verification. Do not demand 80% coverage,
+  integration tests, or E2E tests; adding a test framework is the owner's call.
+  (The `auto-scheduler` branch does have a real Deno suite for the solver.)
+- **Agents:** never spawn sub-agents automatically — the developer orchestrates.
+  Use an agent only when explicitly asked. The agents named in the global agents
+  table are NOT installed; the available set is SuperClaude's 20 in
+  `~/.claude/agents/` plus this repo's own `feature-prioritizer`.
+- **Toolset:** SuperClaude is this project's primary command/agent/skill set —
+  the `/sc:*` commands in `~/.claude/commands/sc/` and the 20 agents in
+  `~/.claude/agents/`. The `everything-claude-code` bundle checked in under
+  `.claude/skills` and `.claude/commands` is disabled in
+  `.claude/settings.local.json`; prefer the SuperClaude equivalent.
+- **Commits:** no `Co-Authored-By` trailer — no commit in this repo has one.
 
 ---
 
