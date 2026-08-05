@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import AssistantWidget from './AssistantWidget.jsx'
+import NotificationBell from './NotificationBell.jsx'
 import { useNavigate } from 'react-router-dom'
 
 export default function OfficeLayout({ children }) {
@@ -142,6 +143,7 @@ export default function OfficeLayout({ children }) {
                     <button className="office-v2-hamburger-mobile" onClick={toggleSidebar}>
                         <i className="fa-solid fa-bars" />
                     </button>
+                    <NotificationBell />
                     <button
                         style={{
                             color: '#e66b35',

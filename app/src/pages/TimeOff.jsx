@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import { notifyOffice, NOTIFICATION_KINDS } from '../lib/notifications.js'
 
 // Time off request calendar. Crew members can submit requests by typing their
 // name + day(s) + time. Office mode enables deletion. No approval workflow —
@@ -43,9 +44,21 @@ export default function TimeOff({ officeMode = false }) {
         setLoading(false)
     }
 
-    async function deleteRequest(id) {
+    // Takes the whole request, not just the id, so the notification can record
+    // who and when after the row is gone.
+    async function deleteRequest(request) {
         if (!confirm('Delete this time off request?')) return
-        await supabase.from('time_off_requests').delete().eq('id', id)
+        await supabase.from('time_off_requests').delete().eq('id', request.id)
+
+        // Cancellations are logged whoever does them. The trash button is office-only
+        // (crew have no cancel path), but several managers share the one office login,
+        // so one manager removing a request is still news to the others.
+        notifyOffice({
+            kind: NOTIFICATION_KINDS.TIME_OFF_CANCELLED,
+            actorName: request.employee_name,
+            summary: formatDateRange(request.start_date, request.end_date),
+            link: '/office/time-off',
+        })
     }
 
     // Build the month grid (6 weeks * 7 days) starting from Sunday-before the 1st
@@ -206,7 +219,7 @@ export default function TimeOff({ officeMode = false }) {
                                 {officeMode && (
                                     <button
                                         className="btn-icon-danger"
-                                        onClick={() => deleteRequest(r.id)}
+                                        onClick={() => deleteRequest(r)}
                                         title="Delete request"
                                     >
                                         <i className="fa-solid fa-trash" />
@@ -222,9 +235,20 @@ export default function TimeOff({ officeMode = false }) {
                 <RequestFormModal
                     defaultDate={selectedDay}
                     onClose={() => setFormOpen(false)}
-                    onSaved={() => {
+                    onSaved={request => {
                         setFormOpen(false)
                         loadRequests()
+                        // Only crew submissions are news. This same page runs in the
+                        // office with officeMode, where a manager entering a request
+                        // on someone's behalf would just be notifying themselves.
+                        if (!officeMode) {
+                            notifyOffice({
+                                kind: NOTIFICATION_KINDS.TIME_OFF_CREATED,
+                                actorName: request.employee_name,
+                                summary: `${formatDateRange(request.start_date, request.end_date)} · ${formatRequestLabel(request)}`,
+                                link: '/office/time-off',
+                            })
+                        }
                     }}
                 />
             )}
@@ -319,7 +343,7 @@ function RequestFormModal({ defaultDate, onClose, onSaved }) {
             setError(insertError.message)
             return
         }
-        onSaved()
+        onSaved(payload)
     }
 
     return (

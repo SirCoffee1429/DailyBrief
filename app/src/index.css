@@ -6489,3 +6489,158 @@ tr.beo-completed td .beo-check {
 
 
 
+
+/* ── Office Notification Bell ─────────────────────────
+   Bell + unread count in the office topbar, with a dropdown of recent crew
+   activity (time off requests, cancellations, availability changes). Scoped to
+   .notif-* rather than reusing .office-v2-* so the FOH shell, which shares the
+   office structural classes, never inherits the orange accent. */
+
+.notif-bell-wrapper {
+  position: relative;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Matches the neighbouring user button in the topbar so the pair reads as one control set */
+.notif-bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid #e66b35;
+  background: transparent;
+  color: #e66b35;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notif-bell-btn:hover {
+  background: rgba(230, 107, 53, 0.15);
+}
+
+/* Count sits on the rim of the bell so it reads at a glance without widening the topbar */
+.notif-bell-count {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #e66b35;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.05rem;
+  text-align: center;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 20rem;
+  /* Never wider than the viewport on a phone, where the topbar is near the edge */
+  max-width: calc(100vw - 2rem);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  z-index: 400;
+  overflow: hidden;
+}
+
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.notif-panel-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e4e4e7;
+}
+
+.notif-mark-read {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #e66b35;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.notif-mark-read:hover {
+  text-decoration: underline;
+}
+
+.notif-empty {
+  margin: 0;
+  padding: 1.25rem 0.85rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #a1a1aa;
+}
+
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  background: transparent;
+  border: none;
+  /* Transparent placeholder so the unread accent below does not shift the text */
+  border-left: 3px solid transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notif-item:hover {
+  background: rgba(230, 107, 53, 0.08);
+}
+
+.notif-item.unread {
+  border-left-color: #e66b35;
+  background: rgba(230, 107, 53, 0.05);
+}
+
+.notif-item-icon {
+  margin-top: 0.15rem;
+  width: 0.9rem;
+  color: #e66b35;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.notif-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.notif-item-label {
+  font-size: 0.8rem;
+  color: #e4e4e7;
+}
+
+.notif-item-meta {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+}

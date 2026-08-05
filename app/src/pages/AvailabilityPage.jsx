@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import AvailabilityWeekEditor from '../components/AvailabilityWeekEditor.jsx'
 import { upcomingMondays } from '../lib/rosterConstants.js'
+import { notifyOffice, NOTIFICATION_KINDS } from '../lib/notifications.js'
 
 // Crew-facing availability page. Same identity pattern as Time Off: pick your
 // name, no auth (v1 — revisit when real auth lands). Edits reflect live to the
@@ -50,6 +51,20 @@ export default function AvailabilityPage() {
         } catch (err) {
             console.error('Failed to flag availability for review:', err)
         }
+
+        // This page is crew-only (there is no /office/availability route), so every
+        // save here is a crew action worth telling the office about. Notifying from
+        // the page rather than a DB trigger on employee_availability also avoids a
+        // burst: AvailabilityWeekEditor saves by deleting and re-inserting every day
+        // of the week, which would fire up to 14 row events for one submission.
+        notifyOffice({
+            kind: NOTIFICATION_KINDS.AVAILABILITY_CHANGED,
+            actorName: selected?.name || 'A crew member',
+            summary: availWeek === 'default'
+                ? 'normal week'
+                : `week of ${new Date(availWeek + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+            link: '/office/roster-coverage',
+        })
     }
 
     return (

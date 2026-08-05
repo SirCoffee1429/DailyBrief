@@ -387,3 +387,47 @@ housekeeping lands on `main` and the scheduler work stays local.
   at the start of the next scheduler session to keep the conflict small.
 
 ---
+
+### 2026-08-05 — Office Notification Bell (time off + availability)
+
+**File(s) Changed:** `app/src/components/NotificationBell.jsx` (new),
+`app/src/lib/notifications.js` (new), `app/src/lib/useOfficeNotifications.js` (new),
+`app/src/components/OfficeLayout.jsx`, `app/src/pages/TimeOff.jsx`,
+`app/src/pages/AvailabilityPage.jsx`, `app/src/index.css`,
+`supabase/migrations/20260804000000_create_office_notifications.sql` (new)
+**Type:** `feature` + `migration`
+**Summary:** Bell + unread count in the office topbar, opening a dropdown of recent crew
+activity: new time off requests, cancellations, and availability changes. Backed by a new
+`office_notifications` table; realtime so the badge increments without a refresh.
+
+**Details:**
+
+- **New table `office_notifications`** (`kind`, `actor_name`, `summary`, `link`, `created_at`),
+  RLS allow-all to match `employees` / `time_off_requests`, added to the `supabase_realtime`
+  publication. `actor_name` + `summary` are **denormalized at write time** so a notification
+  survives its source row being deleted — which is exactly the cancellation case.
+- **Written client-side, not by DB triggers.** There is no auth, so every write reaches
+  Postgres as the anon role and the database cannot distinguish a crew submission from an
+  office one. The app can (`/kitchen/time-off` renders `TimeOff` plain, `/office/time-off`
+  renders it with `officeMode`), so client writes are what allow suppressing office self-noise.
+- **Availability is detected via `AvailabilityPage.handleSaved`, not `employee_availability`.**
+  `AvailabilityWeekEditor.save()` is a delete-all-then-insert, so one crew save fires up to 7
+  DELETEs + 7 INSERTs — a trigger there would emit ~14 notifications per submission.
+- **Read state is per-device** (`localStorage` key `officeNotificationsLastSeen`). The office
+  shares one password, so there is no identity to attach a read flag to; a shared server-side
+  cursor would let the first manager to open the bell clear it for everyone. First visit on a
+  device seeds the cursor at *now* so a new phone doesn't open to handled history.
+- `deleteRequest(id)` → `deleteRequest(request)` and `onSaved()` → `onSaved(payload)` so the
+  notification can record who/what. Bell query is capped to a 30-day window.
+- **Deviation from plan, flagged:** cancellations are logged regardless of who performs them.
+  The trash button is office-only (crew have no cancel path at all), so the original
+  "skip office-initiated actions" rule would have made this event dead code. Several managers
+  share the office login, so one manager's deletion is still news to the others.
+- **Verification:** `npm run build` clean (3.19s). End-to-end against production Supabase with
+  a disposable request: all three kinds fired and arrived live via realtime on an un-reloaded
+  office tab; badge count, per-item unread accent, Mark read, and click-to-navigate all
+  confirmed. Test rows deleted; the borrowed employee's availability round-tripped byte-for-byte
+  and their `availability_status` was restored to `approved`. The office-suppression branch
+  (`if (!officeMode)`) is verified by inspection only, not at runtime.
+
+---
