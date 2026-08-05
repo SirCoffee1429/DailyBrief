@@ -357,3 +357,33 @@ SuperClaude the project's designated toolset.
   shared with the repo.
 
 ---
+
+### 2026-08-04 — Separate the auto-scheduler branch from main's housekeeping
+
+**File(s) Changed:** `CLAUDE.md` **Type:** `chore`
+**Summary:** The `/doctor` cleanup had been applied while `auto-scheduler` was checked
+out, stranding non-scheduler work on a side branch. Split the two change sets so the
+housekeeping lands on `main` and the scheduler work stays local.
+
+**Details:**
+
+- **Confirmed production was never at risk:** `auto-scheduler` has never been pushed
+  (`git ls-remote` shows no such branch on origin), and Vercel's production branch is
+  `main`. Pushing the branch would only produce a preview deployment.
+- **`auto-scheduler`** (local, unpushed) got two commits: `16318f6` the solver
+  one-shift-per-day + fairness fix (50/50 tests), `61d3430` the extension cleanup.
+- **`main`** got `84c1366` — the equivalent cleanup applied against main's own file
+  versions, then pushed. Production deploy verified READY. Sanity-checked that the
+  commit touches no `app/src` and no `generate-schedule` code.
+- **Trimmed main's `CLAUDE.md` more carefully than the branch's:** main's version had
+  rationale buried inside the derivable lists, so three gotchas were lifted into Key
+  Design Decisions instead of deleted — briefing date semantics +
+  `defaultBriefingDate()`, the FOH `.foh-v2` cyan shell, and the `.wb-act-btn`
+  shared-class trap behind the 07-11 invisible-buttons regression.
+- **Added a Branches section** recording that `main` is the primary workspace and
+  `auto-scheduler` is a deliberately-unpushed side feature.
+- **Drift flagged:** `auto-scheduler` is now 18 commits behind `main`, with
+  `CHANGES.md`/`CLAUDE.md` already diverging ~1,000 lines. Merge `main` into the branch
+  at the start of the next scheduler session to keep the conflict small.
+
+---

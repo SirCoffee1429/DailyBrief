@@ -84,6 +84,18 @@ Kitchen assistant uses RAG, not full-context dumps:
 
 ---
 
+## Branches
+
+- **`main`** — the primary day-to-day workspace and Vercel's production branch
+  (deploys to brief-club.vercel.app). Non-scheduler work belongs here.
+- **`auto-scheduler`** — a slow-moving side feature (BOH weekly schedule
+  generator) worked on in occasional bursts. **Local only, never pushed**, and
+  deliberately so; its edge function is not deployed. Do not merge or push it
+  without the owner asking. It drifts behind `main` between bursts — merge
+  `main` into it at the START of a scheduler session, not at ship time.
+
+---
+
 ## Global Rule Overrides
 
 The global `~/.claude/rules/` files assume conventions this repo does not
