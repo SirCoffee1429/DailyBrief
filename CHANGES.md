@@ -431,3 +431,51 @@ activity: new time off requests, cancellations, and availability changes. Backed
   (`if (!officeMode)`) is verified by inspection only, not at runtime.
 
 ---
+
+### 2026-08-06 — Time Off Approval Workflow + Sidebar Approval Badges
+
+**File(s) Changed:** `app/src/lib/useOfficeApprovalCounts.js` (new),
+`app/src/components/OfficeLayout.jsx`, `app/src/pages/TimeOff.jsx`, `app/src/index.css`,
+`supabase/migrations/20260806000000_add_status_to_time_off_requests.sql` (new),
+`supabase/migrations/20260806000001_allow_update_on_time_off_requests.sql` (new)
+**Type:** `feature` + `migration`
+**Summary:** Count badges on the office sidebar's Time Off and Roster & Coverage links showing
+work still awaiting approval. Roster already had a real approval workflow; Time Off did not, so
+one was built (`pending` / `approved` / `denied`) to give its badge something to mean.
+
+**Details:**
+
+- **Badges are shared outstanding-work counts, NOT unread counts.** Deliberately not derived
+  from the notification feed: they clear only when someone approves, never when a manager reads
+  the bell, so two managers always see the same number. `useOfficeApprovalCounts` queries
+  head-only counts and refetches on realtime changes to `time_off_requests` / `employees`.
+  Roster reuses the exact predicate already at `RosterManager.jsx:185`.
+- **New `time_off_requests.status`.** Added with default `'approved'` so the 148 pre-existing
+  rows backfill in place, then the default flips to `'pending'` for new submissions — otherwise
+  the office would have opened to a badge of 148. Reverse by targeting `created_at` before the
+  migration.
+- **Semantics (owner's calls):** pending still holds a slot against the 3-person daily cap, so
+  nobody is told a day is open while three people await an answer; only a denial frees it.
+  Denied requests drop off the shared calendar (the person is not off, so their name must not
+  imply it) but stay in the office's Upcoming list with a Denied pill as a record. Approved is
+  the resting state and gets no pill. Pending sorts to the top of Upcoming.
+- **BUG FOUND IN TESTING — silent RLS no-op.** Approve/Deny did nothing at all on first run.
+  `time_off_requests` had RLS enabled with policies for select/insert/delete only; nothing had
+  ever UPDATEd the table. With no UPDATE policy Postgres matches zero rows and returns **no
+  error**, so the write vanished silently. Added `time_off_requests_update_all`, and hardened
+  `setRequestStatus` to `.select()` and treat zero returned rows as a failure — the failure mode
+  produces no error object, so checking `error` alone is not enough.
+- **Crew vs office:** crew see no approve/deny controls and no denied rows; the calendar and the
+  3-person cap both exclude denied for everyone.
+- **Verification:** `npm run build` clean (3.27s). Full loop exercised live against production:
+  crew submit → Time Off badge 0→1 and bell 0→1 on an un-reloaded office tab → Pending pill with
+  Approve/Deny → Deny → off the December calendar, hidden from crew, kept in office list, badge
+  →0 → Approve reverses it back onto the calendar. Roster loop: crew availability save → badge
+  3→4 → Approve that one employee → badge →3, with the three genuinely-pending crew (Etta Bybee,
+  Everett Dobbs, Matt Cone) untouched. All test rows removed; borrowed employee's availability
+  round-tripped byte-for-byte and their status returned to `approved`; 148 requests all still
+  `approved`.
+- **Note:** CHANGES.md is now ~475 lines, near the 500-line cap — condense the oldest detailed
+  entries into the Archive next session.
+
+---

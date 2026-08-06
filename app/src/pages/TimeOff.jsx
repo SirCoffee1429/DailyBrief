@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabase.js'
 import { notifyOffice, NOTIFICATION_KINDS } from '../lib/notifications.js'
 
 // Time off request calendar. Crew members can submit requests by typing their
-// name + day(s) + time. Office mode enables deletion. No approval workflow —
-// this is purely a visibility tool.
+// name + day(s) + time. Requests land as 'pending' and the office approves or
+// denies them; office mode also enables deletion. Denied requests drop off the
+// calendar (the person is not off) but stay in the office's Upcoming list as a
+// record. Pending still holds a slot against the 3-person daily cap.
 export default function TimeOff({ officeMode = false }) {
     const [requests, setRequests] = useState([])
     const [loading, setLoading] = useState(true)
@@ -44,6 +46,24 @@ export default function TimeOff({ officeMode = false }) {
         setLoading(false)
     }
 
+    // Office approve / deny. No notification is written: this is an office
+    // action, and the office is the only audience the bell has.
+    async function setRequestStatus(request, status) {
+        // .select() so we can tell an applied update from a silent no-op: a
+        // missing RLS UPDATE policy blocks the write by matching zero rows and
+        // returns NO error, which is exactly how this shipped broken once.
+        const { data, error } = await supabase
+            .from('time_off_requests')
+            .update({ status })
+            .eq('id', request.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('Failed to update request status:', error || 'no rows updated')
+            alert('Could not update that request. Please try again.')
+        }
+    }
+
     // Takes the whole request, not just the id, so the notification can record
     // who and when after the row is gone.
     async function deleteRequest(request) {
@@ -68,6 +88,10 @@ export default function TimeOff({ officeMode = false }) {
     const requestsByDate = useMemo(() => {
         const map = new Map()
         for (const req of requests) {
+            // A denied request means the person is NOT off, so their name must
+            // not appear on the calendar implying otherwise. It stays in the
+            // office list below as a record of what was turned down.
+            if (req.status === 'denied') continue
             const start = new Date(req.start_date + 'T00:00:00')
             const end = new Date(req.end_date + 'T00:00:00')
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -79,13 +103,22 @@ export default function TimeOff({ officeMode = false }) {
         return map
     }, [requests])
 
-    // Upcoming = requests with end_date >= today, next 60 days, sorted
+    // Upcoming = requests with end_date >= today, next 60 days, sorted.
+    // Pending first so the office sees what needs a decision without hunting.
     const upcoming = useMemo(() => {
         const today = isoDate(new Date())
         return requests
             .filter(r => r.end_date >= today)
-            .sort((a, b) => a.start_date.localeCompare(b.start_date))
-    }, [requests])
+            // Denied requests are kept for the office as a record; crew read this
+            // list as "who is off", so a denial should simply drop out for them.
+            .filter(r => officeMode || r.status !== 'denied')
+            .sort((a, b) => {
+                const aPending = a.status === 'pending' ? 0 : 1
+                const bPending = b.status === 'pending' ? 0 : 1
+                if (aPending !== bPending) return aPending - bPending
+                return a.start_date.localeCompare(b.start_date)
+            })
+    }, [requests, officeMode])
 
     function prevMonth() {
         setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
@@ -215,15 +248,47 @@ export default function TimeOff({ officeMode = false }) {
                                     <span className="time-off-upcoming-time">
                                         {formatRequestLabel(r)}
                                     </span>
+                                    {/* Approved is the resting state, so only the two
+                                        states that need attention get a pill */}
+                                    {r.status === 'pending' && (
+                                        <span className="time-off-status-pill time-off-status-pending">
+                                            <i className="fa-solid fa-hourglass-half" /> Pending
+                                        </span>
+                                    )}
+                                    {r.status === 'denied' && (
+                                        <span className="time-off-status-pill time-off-status-denied">
+                                            <i className="fa-solid fa-ban" /> Denied
+                                        </span>
+                                    )}
                                 </div>
                                 {officeMode && (
-                                    <button
-                                        className="btn-icon-danger"
-                                        onClick={() => deleteRequest(r)}
-                                        title="Delete request"
-                                    >
-                                        <i className="fa-solid fa-trash" />
-                                    </button>
+                                    <div className="time-off-upcoming-actions">
+                                        {r.status !== 'approved' && (
+                                            <button
+                                                className="btn btn-orange btn-sm"
+                                                onClick={() => setRequestStatus(r, 'approved')}
+                                                title={r.status === 'denied' ? 'Reverse this denial' : 'Approve request'}
+                                            >
+                                                <i className="fa-solid fa-check" /> Approve
+                                            </button>
+                                        )}
+                                        {r.status === 'pending' && (
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => setRequestStatus(r, 'denied')}
+                                                title="Deny request"
+                                            >
+                                                <i className="fa-solid fa-xmark" /> Deny
+                                            </button>
+                                        )}
+                                        <button
+                                            className="btn-icon-danger"
+                                            onClick={() => deleteRequest(r)}
+                                            title="Delete request"
+                                        >
+                                            <i className="fa-solid fa-trash" />
+                                        </button>
+                                    </div>
                                 )}
                             </li>
                         ))}
@@ -289,9 +354,13 @@ function RequestFormModal({ defaultDate, onClose, onSaved }) {
         setSubmitting(true)
 
         // Query database directly to check for overlapping requests and enforce the 2-person limit
+        // Pending requests still hold their slot — nobody should be told a day is
+        // open while three people are waiting on an answer for it. Only a denial
+        // gives the slot back.
         const { data: overlapping, error: fetchError } = await supabase
             .from('time_off_requests')
             .select('id, employee_name, start_date, end_date')
+            .neq('status', 'denied')
             .gte('end_date', startDate)
             .lte('start_date', endDate)
 

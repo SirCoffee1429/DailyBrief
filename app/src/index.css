@@ -6644,3 +6644,55 @@ tr.beo-completed td .beo-check {
   font-size: 0.72rem;
   color: #a1a1aa;
 }
+
+/* Count of outstanding approvals on a sidebar nav link (Time Off, Roster &
+   Coverage). Distinct from the bell badge: this reflects shared work still to
+   be done, so it clears only when someone approves, not when the bell is read.
+   Only OfficeLayout renders these — the kitchen and FOH shells reuse the
+   .office-v2-* structural classes but not this element, so the orange here
+   cannot bleed into the cyan FOH palette. */
+.office-v2-nav-badge {
+  margin-left: auto;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #e66b35;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Status pill + office actions on an Upcoming time off row. Approved is the
+   resting state and gets no pill, so the eye lands on what still needs a
+   decision. */
+.time-off-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.time-off-status-pending {
+  background: rgba(230, 107, 53, 0.18);
+  color: #e66b35;
+}
+
+.time-off-status-denied {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.time-off-upcoming-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import AssistantWidget from './AssistantWidget.jsx'
 import NotificationBell from './NotificationBell.jsx'
+import { useOfficeApprovalCounts } from '../lib/useOfficeApprovalCounts.js'
 import { useNavigate } from 'react-router-dom'
 
 export default function OfficeLayout({ children }) {
@@ -11,6 +12,8 @@ export default function OfficeLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const longPressTimer = useRef(null)
     const didTriggerVoice = useRef(false)
+    // Outstanding work waiting on the office, shown as counts on the nav links
+    const approvalCounts = useOfficeApprovalCounts()
 
     const closeSidebar = useCallback(() => setSidebarOpen(false), [])
     const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), [])
@@ -86,6 +89,11 @@ export default function OfficeLayout({ children }) {
                     <NavLink to="/office/time-off" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-regular fa-calendar office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Time Off</span>
+                        {approvalCounts.timeOff > 0 && (
+                            <span className="office-v2-nav-badge" title={`${approvalCounts.timeOff} awaiting approval`}>
+                                {approvalCounts.timeOff}
+                            </span>
+                        )}
                     </NavLink>
                     <NavLink to="/office/schedule" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-calendar-days office-v2-nav-icon" />
@@ -94,6 +102,11 @@ export default function OfficeLayout({ children }) {
                     <NavLink to="/office/roster-coverage" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-layer-group office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Roster &amp; Coverage</span>
+                        {approvalCounts.availability > 0 && (
+                            <span className="office-v2-nav-badge" title={`${approvalCounts.availability} awaiting approval`}>
+                                {approvalCounts.availability}
+                            </span>
+                        )}
                     </NavLink>
                     <NavLink to="/office/chat" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-comments office-v2-nav-icon" />
