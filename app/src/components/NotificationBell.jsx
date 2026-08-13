@@ -18,6 +18,14 @@ const KIND_DISPLAY = {
         icon: 'fa-solid fa-clock',
         label: name => `${name} changed availability`,
     },
+    [NOTIFICATION_KINDS.BEO_EMAIL_RECEIVED]: {
+        icon: 'fa-solid fa-calendar-alt',
+        label: name => `${name} emailed an updated BEO`,
+    },
+    [NOTIFICATION_KINDS.BEO_EMAIL_FAILED]: {
+        icon: 'fa-solid fa-triangle-exclamation',
+        label: name => `${name} — BEO could not be read`,
+    },
 }
 
 // Bell + unread count in the office topbar, opening a dropdown of recent crew

@@ -14,6 +14,11 @@ export const NOTIFICATION_KINDS = {
     TIME_OFF_CREATED: 'time_off_created',
     TIME_OFF_CANCELLED: 'time_off_cancelled',
     AVAILABILITY_CHANGED: 'availability_changed',
+    // Emailed BEOs. Unlike the kinds above these are written by the
+    // receive-beo-email edge function, not the client — there is no browser
+    // involved when an email arrives.
+    BEO_EMAIL_RECEIVED: 'beo_email_received',
+    BEO_EMAIL_FAILED: 'beo_email_failed',
 }
 
 // How far back the bell looks. Old rows stay in the table but never load, so the

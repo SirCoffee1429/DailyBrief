@@ -327,6 +327,18 @@ RULES:
 
     console.log(`Parsed ${parsedEvents.length} event(s) from BEO PDF`);
 
+    // --- Mode C: parse only, write nothing ---
+    // Used by receive-beo-email, which queues the result in pending_beo_imports
+    // for office review instead of touching banquet_event_orders. Returns the
+    // same shape Mode B accepts as `parsedEvents`, so approving a queued import
+    // is a replay rather than a second Gemini call.
+    if (payload.parseOnly === true) {
+      return new Response(
+        JSON.stringify({ parsedEvents }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Check for conflicts before inserting
     const conflicts = await findConflicts(db, parsedEvents);
 

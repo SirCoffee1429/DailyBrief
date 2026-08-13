@@ -24,3 +24,10 @@ verify_jwt = false
 [functions.process-schedule]
 enabled = true
 verify_jwt = false
+
+# Postmark cannot send a Supabase JWT, so this endpoint authenticates on its own
+# via HTTP Basic credentials on the webhook URL, checked against
+# BEO_WEBHOOK_SECRET. verify_jwt = false is what makes that check load-bearing.
+[functions.receive-beo-email]
+enabled = true
+verify_jwt = false
