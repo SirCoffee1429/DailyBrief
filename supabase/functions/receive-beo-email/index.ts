@@ -21,13 +21,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const WEBHOOK_SECRET = Deno.env.get("BEO_WEBHOOK_SECRET") || "";
 
-const ALLOWED_SENDER = "rhi@oldhawthorne.com";
-const SUBJECT_KEYWORDS = ["beo", "addition"];
 const PDF_BUCKET = "beo-emails";
-
-// Headers that still carry the original sender when a forwarding rule rewrites
-// From. Checked as a fallback so ingestion survives either mail-server behavior.
-const ORIGINAL_SENDER_HEADERS = ["reply-to", "return-path", "x-forwarded-for", "x-original-from"];
 
 interface PostmarkAttachment {
   Name?: string;
@@ -40,10 +34,8 @@ interface PostmarkInbound {
   MessageID?: string;
   From?: string;
   FromFull?: { Email?: string };
-  ReplyTo?: string;
   Subject?: string;
   Attachments?: PostmarkAttachment[];
-  Headers?: { Name?: string; Value?: string }[];
 }
 
 // Optional, and unset by default. With no BEO_WEBHOOK_SECRET this returns true
@@ -54,8 +46,7 @@ interface PostmarkInbound {
 // Requiring it was a deliberate trade that turned out badly: the secret had to
 // ride in the webhook URL as HTTP Basic credentials, which made setup fragile
 // for no real gain. What actually protects live event data is the review queue —
-// nothing reaches a real event without someone pressing Approve — backed by the
-// sender, subject and PDF checks below.
+// nothing reaches a real event without someone pressing Approve.
 //
 // Plain equality when enabled: it travels over TLS and the realistic threat is
 // guessing or spraying, not timing analysis.
@@ -72,32 +63,6 @@ function secretMatches(req: Request): boolean {
   } catch {
     return false;
   }
-}
-
-// With the secret optional and normally off, this is the gate that matters.
-// The mail arrives through an Outlook *redirect* rule, which preserves the
-// original sender, so the From check below is the branch that should fire.
-// The header fallback covers a plain forward, which can rewrite From to the
-// forwarding mailbox — if that is what fires, this check is weaker than it
-// looks and this comment should say so. Confirm against a real message.
-function senderAllowed(payload: PostmarkInbound): boolean {
-  const from = (payload.FromFull?.Email || payload.From || "").toLowerCase();
-  if (from.includes(ALLOWED_SENDER)) return true;
-
-  if ((payload.ReplyTo || "").toLowerCase().includes(ALLOWED_SENDER)) return true;
-
-  return (payload.Headers || []).some((h) =>
-    ORIGINAL_SENDER_HEADERS.includes((h.Name || "").toLowerCase()) &&
-    (h.Value || "").toLowerCase().includes(ALLOWED_SENDER)
-  );
-}
-
-// Matches every subject variant in use ("BEO", "BEOs", "UPDATED BEO!",
-// "ADDITION...", "ADDITIONS...") without an exact-string list that breaks the
-// first time the wording shifts.
-function subjectMatches(subject: string): boolean {
-  const s = (subject || "").toLowerCase();
-  return SUBJECT_KEYWORDS.some((keyword) => s.includes(keyword));
 }
 
 // ContentType is checked first but the filename is a necessary fallback: some
@@ -219,9 +184,13 @@ Deno.serve(async (req) => {
     return refuse("body is not JSON");
   }
 
-  if (!senderAllowed(payload)) return refuse(`sender not allowed: ${payload.From || "unknown"}`);
-  if (!subjectMatches(payload.Subject || "")) return refuse(`subject not matched: ${payload.Subject || ""}`);
-
+  // No sender allowlist and no subject filter, deliberately. Mail can only get
+  // here by being redirected to a Postmark inbound address that is a random
+  // hash and is known only to the one person who redirects to it, so filtering
+  // by sender was checking a property of mail that is already ours. Anything
+  // that is not a BEO parses to nothing and lands as parse_failed, which is
+  // visible and discardable rather than damaging. from_email is still recorded
+  // and shown on the review card — visibility without a gate.
   const pdf = findPdf(payload.Attachments || []);
   if (!pdf?.Content) return refuse("no PDF attachment");
 

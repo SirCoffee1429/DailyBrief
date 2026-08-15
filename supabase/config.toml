@@ -26,10 +26,13 @@ enabled = true
 verify_jwt = false
 
 # Postmark cannot send a Supabase JWT, so this is false for the same reason
-# process-sales-data and process-banquets are. The endpoint is gated by a sender
-# allowlist, a subject keyword and a PDF requirement — and, decisively, by the
-# review queue: an emailed BEO never reaches a live event without someone
-# pressing Approve. BEO_WEBHOOK_SECRET layers HTTP Basic on top if ever set.
+# process-sales-data and process-banquets are. The endpoint accepts any message
+# carrying a PDF: its Postmark inbound address is a random hash known only to
+# the one person who redirects mail to it, so a sender or subject filter was
+# only ever checking a property of mail that is already ours. What protects
+# live event data is the review queue — an emailed BEO never reaches an event
+# without someone pressing Approve. BEO_WEBHOOK_SECRET layers HTTP Basic on top
+# if it is ever set.
 [functions.receive-beo-email]
 enabled = true
 verify_jwt = false

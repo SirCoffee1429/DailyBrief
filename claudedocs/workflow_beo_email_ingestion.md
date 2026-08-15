@@ -5,10 +5,10 @@ synthetic mail (2026-08-12/15). Awaiting the first real BEO.
 **Created:** 2026-08-10
 **Branch:** `main`
 
-**Mail path, as actually configured:** an Outlook **redirect** rule (not forward —
-redirect preserves the original sender, which is what the allowlist checks) sends
-Rhi's BEOs to the Upcoming Banquets Postmark server, whose webhook is the plain URL
-`https://<ref>.supabase.co/functions/v1/receive-beo-email` — no credentials.
+**Mail path, as actually configured:** an Outlook **redirect** rule sends Rhi's BEOs
+to the Upcoming Banquets Postmark server, whose webhook is the plain URL
+`https://<ref>.supabase.co/functions/v1/receive-beo-email` — no credentials. The
+endpoint accepts any message carrying a PDF attachment.
 
 Updated BEOs emailed by Rhi land in DailyBrief as a *reviewable queue item*, never as a
 silent overwrite of an event the crew is already working from.
@@ -19,11 +19,11 @@ silent overwrite of an event the crew is already working from.
 
 | Decision | Choice |
 |---|---|
-| Mail routing | Conditional forward rule on `ryan@oldhawthorne.com` → `e6bb2a95fb0aa62b5279e162083bdcea@inbound.postmarkapp.com` |
+| Mail routing | Outlook **redirect** rule on `ryan@oldhawthorne.com` → `e6bb2a95fb0aa62b5279e162083bdcea@inbound.postmarkapp.com` |
 | Update policy | Queue for review; approve applies it |
-| Filtering | Sender allowlist + subject keyword + PDF attachment required |
-| Allowlist | `Rhi@oldhawthorne.com` — Rhi originates the mail; checked on `FromFull.Email` with an original-sender header fallback |
-| Subject rule | Case-insensitive: contains `beo` **or** contains `addition` |
+| Filtering | PDF attachment required, nothing else — **revised 2026-08-15**, see below |
+| ~~Allowlist~~ | ~~`Rhi@oldhawthorne.com`~~ — **removed.** The inbound address is a random hash known only to the one person redirecting mail to it, so the check only ever confirmed mail was already ours. `from_email` is still stored and shown on the review card: visibility without a gate. |
+| ~~Subject rule~~ | ~~contains `beo` or `addition`~~ — **removed** with the allowlist. A non-BEO PDF parses to nothing and lands as `parse_failed`, which is visible and discardable rather than damaging. |
 | Original PDF | Stored in Supabase Storage |
 | Queue UI | "Pending from email" panel atop `/office/events` |
 | Review depth | Diff vs. the current BEO |
@@ -50,10 +50,11 @@ not deleted as part of this work.
 
 **Consistent with house style, after a detour:** the two existing handlers accept raw
 Postmark payloads with no shared secret and no sender allowlist. `receive-beo-email`
-briefly required a secret as well; that was reversed (see Phase 2's auth note) and it now
-matches them, adding only a sender allowlist, a subject keyword and a PDF requirement —
-none of which sit in the URL. All three functions being unauthenticated is a pre-existing
-exposure worth its own pass.
+briefly required both; both were reversed (2026-08-15) and it now behaves exactly like
+them, requiring only a PDF attachment. All three functions being unauthenticated is a
+pre-existing exposure worth its own pass — and one the review queue mitigates here in a
+way it does not for the other two, since nothing this function accepts reaches a live
+event without an explicit Approve.
 
 ## Verified constraints
 
@@ -71,36 +72,21 @@ exposure worth its own pass.
 
 ---
 
-## Phase 0 — Recon (confirms Phase 2's allowlist; run before deploying)
+## Phase 0 — Recon — **obsolete, never run**
 
-Rhi originates the mail, so the message landing in Ryan's inbox is
-`From: Rhi@oldhawthorne.com`. The open question is the **second** hop — whether Ryan's
-forward rule preserves that `From` or replaces it with `ryan@oldhawthorne.com`. That is a
-property of the mail server, not of the sender.
+This phase existed to answer one question: does the forwarding hop preserve
+`From: Rhi@oldhawthorne.com`, or rewrite it to `ryan@oldhawthorne.com`? The answer
+mattered only because the sender allowlist depended on it.
 
-Expected: preserved. Google Workspace and Microsoft 365 both leave the `From` header
-intact on server-side forwarding rules and rewrite only the envelope sender
-(`Return-Path`) for SPF. Expected, not verified — hence this phase.
+The allowlist is gone, so the question is moot and the phase was dropped without ever
+being carried out. Kept here rather than deleted because it records a real cost: two
+sessions of design — a header-fallback branch, a "verify which branch fires" caveat, and
+a blocked Phase 4 item — spent on a check that turned out not to be worth having.
 
-1. Ryan creates the conditional forward rule (subject contains `BEO` or `ADDITION`) to the
-   Postmark inbound address.
-2. One real BEO goes through it.
-3. Read the message in Postmark's Activity view and record: `From`, `FromFull.Email`,
-   `Subject`, `Attachments[].ContentType` / `.Name` / `.ContentLength`, and the raw
-   `Headers` array.
-
-**The allowlist is written to tolerate both outcomes**, so this does not block Phase 2:
-
-- Primary — `FromFull.Email` equals `Rhi@oldhawthorne.com` (the expected case).
-- Fallback — Rhi's address appears in the original-sender headers (`Reply-To`,
-  `X-Forwarded-For`, `Return-Path`) when the server rewrote `From`.
-
-If the fallback is what fires, **say so in the code comment**: with `From` rewritten to
-Ryan's own address, the real gate is the forward rule plus the endpoint secret, and the
-allowlist should not be described as if it were doing more than it is.
-
-**Output:** confirmation of which branch fires, plus the observed attachment `ContentType`
-(so the PDF check matches reality rather than an assumed `application/pdf`).
+One thing it would have told us is still unconfirmed and still worth a glance at the
+first real message: the actual `Attachments[].ContentType`. `findPdf` accepts anything
+containing `pdf` **or** a `.pdf` filename, so an `application/octet-stream` attachment
+still matches — but seeing the real value once is cheap.
 
 ---
 
@@ -171,12 +157,15 @@ URL gotcha above comes back with it.
 
 | Condition | Response | Why |
 |---|---|---|
-| Bad/missing secret | 403 | Only when `BEO_WEBHOOK_SECRET` is set; off by default |
-| Sender not allowlisted | 403 | Not our mail; stop retries |
-| Subject doesn't match | 403 | Same |
-| No PDF attachment | 403 | Same |
+| Bad/missing secret | 403 | Only when `BEO_WEBHOOK_SECRET` is set; unset by default, so normally skipped |
+| No PDF attachment | 403 | Nothing to parse; retrying won't help |
+| No `MessageID` | 403 | Same — no idempotency key to dedupe on |
 | Duplicate `MessageID` | 200 | Already handled — ack cleanly |
 | DB or storage failure | **500** | Transient; *let* Postmark retry |
+
+Sender and subject gates were here and were removed on 2026-08-15; see the Locked
+decisions table. Verified after removal: a message from an arbitrary address with an
+unrelated subject now falls straight through to the PDF check.
 
 Then: insert the row as `processing` → upload the PDF to `beo-emails` →
 `EdgeRuntime.waitUntil(parse(...))` → **return 200 immediately**.
@@ -226,22 +215,35 @@ the actual PDF; approve preserves crew notes and tasks on the target event.
 
 Live, against production, mirroring the August 6 approach:
 
-1. Real BEO forwarded from Rhi → panel appears without a refresh; bell increments; Events badge increments.
-2. Diff matches the PDF. Approve → event updates; tasks/notes/order items survive; badge clears.
-3. Second email for the same event supersedes rather than stacks.
-4. Rejections: wrong sender, no PDF, junk subject → 403, no queue row, no notification.
-5. **Dedupe:** manually retry a delivered message from the Postmark UI → no second row.
-6. Parse failure: forward a non-BEO PDF from the allowlisted sender → `parse_failed` row, visible, not silent.
-7. Clean up every test row and confirm the `beo-emails` bucket is not public.
+Done except item 1, which needs a real message:
+
+1. ⬜ Real BEO redirected from Rhi → panel appears without a refresh; bell increments;
+   Events badge increments. **The only step left.** Also note the observed
+   `Attachments[].ContentType` while looking (see Phase 0).
+2. ✅ Diff matches the source. Verified 2026-08-15 against a planted match: field
+   changes, added line, removed line and quantity change all render.
+3. ⬜ Two emails naming the same event — **rule changed**: both are kept and the overlap
+   is flagged, rather than the older being auto-discarded. Untested; needs two real emails.
+4. ✅ Rejections. Now only "no PDF" and "no MessageID" — sender and subject gates were
+   removed. Verified an arbitrary sender with an unrelated subject falls through to the
+   PDF check.
+5. ✅ **Dedupe:** duplicate `MessageID` acked with 200 and no second row.
+6. ✅ Parse failure: a non-BEO PDF produced a `parse_failed` row plus a bell
+   notification, in 17s.
+7. ✅ Bucket confirmed private — signed URL returns the file byte-identical, unsigned
+   public access returns 400. Two test PDFs remain in the bucket to delete by hand.
 
 ---
 
 ## Risks
 
-- **From-header rewrite on the forward hop** — handled in code by checking `FromFull.Email`
-  first and the original-sender headers second, so either behavior works. Phase 0 confirms
-  which one fires; if it's the fallback, the allowlist is weaker than it looks and the
-  comment must say so.
+- **~~From-header rewrite on the forward hop~~** — gone with the allowlist. Nothing now
+  depends on which address the redirect presents.
+- **The endpoint accepts anything with a PDF** — this is the deliberate trade for a setup
+  as simple as `process-sales-data`. The realistic cost of a stray or forged POST is a junk
+  card to discard and one wasted Gemini call, not damaged event data, because the review
+  queue stands between every submission and any live event. If junk ever actually arrives,
+  the cheapest fix is to set `BEO_WEBHOOK_SECRET` — the check is still in the code.
 - **`process-beo` is already `verify_jwt = false`** — publicly callable *today*, before this
   feature. Pre-existing, not introduced here. Worth fixing while we're in the file.
 - **2s CPU limit** — base64-decoding a multi-MB PDF is real CPU work, and it applies to
