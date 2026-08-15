@@ -9,7 +9,7 @@ import { localDateString } from './dates.js'
 // when a manager glances at the bell. Two managers therefore always see the
 // same numbers, unlike the per-device unread count on the bell itself.
 export function useOfficeApprovalCounts() {
-    const [counts, setCounts] = useState({ timeOff: 0, availability: 0 })
+    const [counts, setCounts] = useState({ timeOff: 0, availability: 0, beoImports: 0 })
 
     const load = useCallback(async () => {
         try {
@@ -18,7 +18,7 @@ export function useOfficeApprovalCounts() {
             // the UTC date rolls over at 7pm Central and would drop today.
             const today = localDateString()
 
-            const [timeOffRes, availabilityRes] = await Promise.all([
+            const [timeOffRes, availabilityRes, beoImportsRes] = await Promise.all([
                 supabase
                     .from('time_off_requests')
                     .select('id', { count: 'exact', head: true })
@@ -30,14 +30,23 @@ export function useOfficeApprovalCounts() {
                     .select('id', { count: 'exact', head: true })
                     .eq('active', true)
                     .eq('availability_status', 'pending'),
+                // 'processing' is deliberately excluded: the parse is still
+                // running and there is nothing for anyone to do about it yet, so
+                // badging it would send someone to a card with no buttons.
+                supabase
+                    .from('pending_beo_imports')
+                    .select('id', { count: 'exact', head: true })
+                    .in('status', ['pending', 'parse_failed']),
             ])
 
             if (timeOffRes.error) throw timeOffRes.error
             if (availabilityRes.error) throw availabilityRes.error
+            if (beoImportsRes.error) throw beoImportsRes.error
 
             setCounts({
                 timeOff: timeOffRes.count || 0,
                 availability: availabilityRes.count || 0,
+                beoImports: beoImportsRes.count || 0,
             })
         } catch (err) {
             console.error('Failed to load office approval counts:', err)
@@ -55,6 +64,7 @@ export function useOfficeApprovalCounts() {
             .channel('office_approval_counts')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'time_off_requests' }, load)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, load)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_beo_imports' }, load)
             .subscribe()
 
         return () => {

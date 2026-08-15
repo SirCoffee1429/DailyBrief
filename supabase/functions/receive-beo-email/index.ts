@@ -46,13 +46,21 @@ interface PostmarkInbound {
   Headers?: { Name?: string; Value?: string }[];
 }
 
-// Plain equality is adequate here: the secret travels over TLS and the realistic
-// threat is guessing or spraying, not timing analysis.
+// Optional, and unset by default. With no BEO_WEBHOOK_SECRET this returns true
+// and the endpoint is a plain URL, exactly like process-sales-data and
+// process-banquets. Setting the variable makes the check load-bearing again
+// with no code change.
+//
+// Requiring it was a deliberate trade that turned out badly: the secret had to
+// ride in the webhook URL as HTTP Basic credentials, which made setup fragile
+// for no real gain. What actually protects live event data is the review queue —
+// nothing reaches a real event without someone pressing Approve — backed by the
+// sender, subject and PDF checks below.
+//
+// Plain equality when enabled: it travels over TLS and the realistic threat is
+// guessing or spraying, not timing analysis.
 function secretMatches(req: Request): boolean {
-  if (!WEBHOOK_SECRET) {
-    console.error("BEO_WEBHOOK_SECRET is not set — refusing every request.");
-    return false;
-  }
+  if (!WEBHOOK_SECRET) return true;
 
   const header = req.headers.get("authorization") || "";
   if (!header.startsWith("Basic ")) return false;
@@ -66,10 +74,12 @@ function secretMatches(req: Request): boolean {
   }
 }
 
-// Primary check is the From address. The fallback exists because a forwarding
-// rule may rewrite From to the forwarding mailbox's own address — in which case
-// the real gate is the mail rule plus the secret above, and this check is
-// weaker than it looks. Verify which branch fires before trusting it.
+// With the secret optional and normally off, this is the gate that matters.
+// The mail arrives through an Outlook *redirect* rule, which preserves the
+// original sender, so the From check below is the branch that should fire.
+// The header fallback covers a plain forward, which can rewrite From to the
+// forwarding mailbox — if that is what fires, this check is weaker than it
+// looks and this comment should say so. Confirm against a real message.
 function senderAllowed(payload: PostmarkInbound): boolean {
   const from = (payload.FromFull?.Email || payload.From || "").toLowerCase();
   if (from.includes(ALLOWED_SENDER)) return true;

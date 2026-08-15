@@ -1,12 +1,14 @@
 # Workflow — BEO Email Ingestion via Postmark
 
-**Status:** Phases 1 + 2 built, deployed and verified (2026-08-12). Phase 3 not started.
+**Status:** Phases 1, 2 and 3 built and deployed. Verified end to end against
+synthetic mail (2026-08-12/15). Awaiting the first real BEO.
 **Created:** 2026-08-10
 **Branch:** `main`
 
-**Blocking before real mail flows:** the Postmark webhook URL must carry the secret
-in the *password* half — `https://postmark:SECRET@<ref>.supabase.co/functions/v1/receive-beo-email`.
-See Phase 2's auth note.
+**Mail path, as actually configured:** an Outlook **redirect** rule (not forward —
+redirect preserves the original sender, which is what the allowlist checks) sends
+Rhi's BEOs to the Upcoming Banquets Postmark server, whose webhook is the plain URL
+`https://<ref>.supabase.co/functions/v1/receive-beo-email` — no credentials.
 
 Updated BEOs emailed by Rhi land in DailyBrief as a *reviewable queue item*, never as a
 silent overwrite of an event the crew is already working from.
@@ -46,10 +48,12 @@ not assumed.
 output table feeds a UI section that shows nothing. Flagged for the owner to decide on;
 not deleted as part of this work.
 
-**Divergence from house style, deliberate:** the two existing handlers accept raw Postmark
-payloads with no shared secret and no sender allowlist. `receive-beo-email` gates on both,
-because an emailed BEO overwrites live event data the crew is working from. Those two
-functions being unauthenticated is a pre-existing exposure worth its own pass.
+**Consistent with house style, after a detour:** the two existing handlers accept raw
+Postmark payloads with no shared secret and no sender allowlist. `receive-beo-email`
+briefly required a secret as well; that was reversed (see Phase 2's auth note) and it now
+matches them, adding only a sender allowlist, a subject keyword and a PDF requirement —
+none of which sit in the URL. All three functions being unauthenticated is a pre-existing
+exposure worth its own pass.
 
 ## Verified constraints
 
@@ -143,20 +147,31 @@ must move together.
 
 `config.toml`: `enabled = true`, `verify_jwt = false` (Postmark can't send a Supabase JWT).
 
-**Auth:** HTTP Basic credentials on the Postmark webhook URL, compared against a
-`BEO_WEBHOOK_SECRET` Supabase secret. Preferred over a `?secret=` query param — query
-strings land in logs more readily than an `Authorization` header.
+**Auth: none, deliberately — reversed on 2026-08-15.**
 
-**The URL must name a user before the secret.** `secretMatches` reads the half *after*
-the first colon, so `https://SECRET@host` — which sends the secret as the username and
-an empty password — is refused with `bad or missing secret`. Verified empirically both
-ways on 2026-08-12; write it as `https://postmark:SECRET@host`.
+This originally required HTTP Basic credentials against a `BEO_WEBHOOK_SECRET`
+Supabase secret. That was dropped. The reasoning, recorded because it reverses a
+locked decision:
+
+- The secret could only reach the endpoint inside the webhook URL, as
+  `https://user:SECRET@host`. Written the natural way, `https://SECRET@host`, the
+  secret lands in the *username* half and the password is empty — so every message
+  was refused with `bad or missing secret`. That cost a full debugging cycle and
+  made setup materially harder than the two existing Postmark pipelines.
+- It bought little. `process-sales-data` and `process-banquets` have no secret and
+  never have. What actually protects live event data here is the **review queue**:
+  a forged submission queues a card for someone to discard, and reaches no real
+  event without an explicit Approve.
+
+`secretMatches` is kept but returns `true` when the variable is unset, so the check
+can be switched back on by setting `BEO_WEBHOOK_SECRET` — no code change, but the
+URL gotcha above comes back with it.
 
 **Gate order and responses** — status codes are load-bearing here:
 
 | Condition | Response | Why |
 |---|---|---|
-| Bad/missing secret | 403 | Retrying won't help; log loudly |
+| Bad/missing secret | 403 | Only when `BEO_WEBHOOK_SECRET` is set; off by default |
 | Sender not allowlisted | 403 | Not our mail; stop retries |
 | Subject doesn't match | 403 | Same |
 | No PDF attachment | 403 | Same |

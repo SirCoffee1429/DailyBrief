@@ -25,9 +25,11 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
-# Postmark cannot send a Supabase JWT, so this endpoint authenticates on its own
-# via HTTP Basic credentials on the webhook URL, checked against
-# BEO_WEBHOOK_SECRET. verify_jwt = false is what makes that check load-bearing.
+# Postmark cannot send a Supabase JWT, so this is false for the same reason
+# process-sales-data and process-banquets are. The endpoint is gated by a sender
+# allowlist, a subject keyword and a PDF requirement — and, decisively, by the
+# review queue: an emailed BEO never reaches a live event without someone
+# pressing Approve. BEO_WEBHOOK_SECRET layers HTTP Basic on top if ever set.
 [functions.receive-beo-email]
 enabled = true
 verify_jwt = false

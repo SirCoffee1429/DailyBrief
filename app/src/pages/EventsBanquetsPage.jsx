@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { localDateString } from '../lib/dates.js'
+import PendingBeoPanel from '../components/PendingBeoPanel.jsx'
 
 export default function EventsBanquetsPage({ readOnly = false }) {
     const location = useLocation()
@@ -1819,6 +1820,10 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     <Link to={isOffice ? '/office' : isFOH ? '/foh' : '/kitchen'} className="btn btn-secondary btn-sm"><i className="fa-solid fa-arrow-left" /> Back</Link>
                 </div>
             </header>
+
+            {/* BEOs that arrived by email, waiting on review. Office only: the
+                crew and FOH read this page but approving rewrites live events. */}
+            {isOffice && <PendingBeoPanel beos={beos} onApplied={loadBEOS} />}
 
             {/* Duplicate BEO confirmation banner */}
             {beoConflicts.length > 0 && (

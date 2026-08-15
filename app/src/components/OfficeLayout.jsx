@@ -85,6 +85,11 @@ export default function OfficeLayout({ children }) {
                     <NavLink to="/office/events" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-calendar-alt office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Events</span>
+                        {approvalCounts.beoImports > 0 && (
+                            <span className="office-v2-nav-badge" title={`${approvalCounts.beoImports} emailed BEO awaiting review`}>
+                                {approvalCounts.beoImports}
+                            </span>
+                        )}
                     </NavLink>
                     <NavLink to="/office/time-off" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-regular fa-calendar office-v2-nav-icon" />

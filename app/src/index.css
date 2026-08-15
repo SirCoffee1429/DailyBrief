@@ -6696,3 +6696,225 @@ tr.beo-completed td .beo-check {
   gap: 0.4rem;
   flex-shrink: 0;
 }
+
+/* Review queue for BEOs that arrived by email, above the BEO list on the Events
+   page. Amber rather than the office orange: this is unreviewed inbound data,
+   not a normal part of the page, and it should read as something to clear. */
+.beo-queue {
+  margin: 0 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.beo-queue-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.beo-queue-card {
+  padding: var(--space-4) var(--space-5);
+  background: rgba(251, 191, 36, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.beo-queue-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.beo-queue-from {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: #e4e4e7;
+  margin-right: 0.5rem;
+}
+
+.beo-queue-subject {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.beo-queue-time,
+.beo-queue-summary {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.beo-queue-status {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.beo-queue-status.failed {
+  color: #f87171;
+}
+
+.beo-queue-events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.beo-queue-event {
+  padding: 0.5rem 0.7rem;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-sm);
+}
+
+.beo-queue-event-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.beo-queue-event-name {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: #e4e4e7;
+}
+
+.beo-queue-event-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.beo-queue-tag.new {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* One changed field or line item. Kept dense: a packet can carry a dozen
+   events and the point is to scan them, not read them. */
+.beo-queue-change {
+  margin: 0.2rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.beo-queue-change s {
+  color: var(--text-muted);
+}
+
+.beo-queue-change.added {
+  color: #4ade80;
+}
+
+.beo-queue-change.removed {
+  color: #f87171;
+}
+
+/* An event two waiting emails both touch. Nothing is auto-discarded, so this
+   warning is the only thing standing between approving the older packet and
+   silently undoing the newer one. */
+.beo-queue-overlap {
+  margin: 0.3rem 0 0;
+  font-size: var(--font-size-xs);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.beo-queue-toggle {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.beo-queue-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.beo-queue-unchanged {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.beo-queue-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.beo-queue-link {
+  margin-right: auto;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.beo-queue-link:hover {
+  color: var(--text-secondary);
+}
+
+.beo-queue-approve,
+.beo-queue-discard {
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.beo-queue-approve {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #1c1917;
+}
+
+.beo-queue-approve:disabled,
+.beo-queue-discard:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.beo-queue-discard {
+  background: transparent;
+  border-color: rgba(161, 161, 170, 0.4);
+  color: var(--text-secondary);
+}
+
+.beo-queue-discard:hover:not(:disabled) {
+  border-color: #f87171;
+  color: #f87171;
+}
