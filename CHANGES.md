@@ -119,100 +119,15 @@
 - 06-14 — Auto-Scheduler Phase 2: Coverage Template + Roster & Coverage Hub
 - 06-19 — Event Task "Working On It" State + Realtime Sync
 
+### July 2026
+
+- 07-11 — Fix: Restore Invisible Delete/Edit Buttons on Events Page (`.wb-act-btn` scoped to `.wb-note`)
+- 07-12 — FOH Sidebar Layout + Cyan Theme Fix (`.foh-v2`)
+- 07-17 — Prep List Portion Scaling: built, deployed, then scrapped; only the flash-model swap kept (`23332a2`)
+
 ---
 
 ## Detailed Entries
-
-### 2026-07-11 — Fix: Restore Invisible Delete/Edit Buttons on Events Page
-
-**File(s) Changed:** `app/src/index.css`
-**Type:** `fix`
-**Summary:** The office Events tab lost its BEO delete/edit buttons — the cursor still
-changed on hover but nothing was visible and the target was easy to miss. Regression
-from commit `035e381` (communication board acknowledgements), which moved the
-hover-reveal `opacity: 0` from the `.wb-note-actions` container onto the shared
-`.wb-act-btn` class. Because Events-page buttons use `.wb-act-btn` but are not inside
-a `.wb-note`, the `:hover` reveal never fired and they stayed permanently `opacity: 0`.
-
-**Details:**
-
-- **Root cause:** `.wb-act-btn { opacity: 0 }` hid every action button app-wide, while
-  only `.wb-note:hover .wb-act-btn { opacity: 1 }` revealed them — a scope that excludes
-  the Events page (and any other non-note usage).
-- **Fix:** removed the blanket `opacity: 0` from `.wb-act-btn`; scoped the hidden state
-  to `.wb-note .wb-act-btn { opacity: 0 }`. Communication-board hover-reveal preserved;
-  all other `.wb-act-btn` instances are visible again.
-- **Blast radius restored:** BEO delete + edit, event-task delete, subtask delete, and
-  order-item delete were all affected (all `.wb-act-btn` outside `.wb-note`).
-- **Verification:** production build clean (2.47s).
-
----
-
-### 2026-07-12 — FOH Sidebar Layout + Cyan Theme Fix
-
-**File(s) Changed:** `app/src/components/FOHLayout.jsx`, `app/src/index.css`,
-`app/src/App.jsx`, `app/src/pages/FOHDashboard.jsx`
-**Type:** `feature` + `fix`
-**Summary:** Converted the Front of House shell from the floating bottom tab bar to
-the office-style left sidebar (mirrors KitchenLayout) and fixed the FOH theme to be
-fully cyan — including a cyan hover glow and a cyan active nav state (previously the
-office shell's hardcoded orange bled through). Also removed the now-redundant
-"Upcoming Events" and "Active Recipes" tiles from the FOH dashboard, since those
-sections are reachable from the sidebar.
-
-**Details:**
-
-- **`FOHLayout.jsx`:** rewritten to the `office-v2-container foh-v2` sidebar structure
-  with nav Brief · Events · Recipes + Assistant (long-press voice). Bottom tab bar and
-  the mislabeled Tasks→chat tab removed. Assistant active state uses cyan inline colors.
-- **`index.css`:** new `.foh-v2` modifier (parallel to `.kitchen-v2`) with the all-cyan
-  palette, a cyan nav hover (outline + glow), a cyan active nav state overriding the
-  office shell's hardcoded orange, and a cyan dash-card hover. Deleted the orphaned
-  `.app-shell.foh-theme` block.
-- **`App.jsx`:** removed the now-unreachable `/foh/chat` route (AiChat import kept for
-  `/kitchen/chat`).
-- **`FOHDashboard.jsx`:** removed the "Upcoming Events" and "Active Recipes" dash tiles
-  (now sidebar-only) and cleaned up the orphaned `stats`/`beoCount` state and their
-  workbook/briefing-count/`banquet_event_orders` queries; the briefing loader is now a
-  single query instead of a one-item `Promise.all`. Also removed the now-unused
-  `.active-recipes-card` / `.events-card` grid rules (`index.css`, `mobile.css`)
-  orphaned by the tile removal.
-- **Scope:** Schedule/Availability/Time Off/Sales deliberately left off FOH (owner
-  decision). No data/backend changes.
-- **Verification:** production build clean; visual check of sidebar, cyan hover/active,
-  and mobile hamburger.
-
----
-
-### 2026-07-17 — Prep List Portion Scaling: Built, Deployed, then Scrapped (perf change kept)
-
-**File(s) Changed:** `supabase/functions/generate-prep-tasks/index.ts` (committed `23332a2`, deployed)
-**Type:** `perf` (net) — feature work reverted
-**Summary:** Explored an AI-inferred "portion scaling" feature that computed order-basis-aware
-quantities (finished + raw, via yield) for every event prep task/subtask, stored in a new
-`event_tasks.portion jsonb` column and shown as badges. Fully built via
-`/sc:research` → `/sc:workflow` → `/sc:implement` (migration + edge fn v4/v5 + client + CSS) and
-verified working, but the owner **scrapped it** — not accurate/valuable enough for the effort. A
-follow-on idea to move the quantity math to the **Event Order List** (`event_order_items`, which
-has no quantity field) was discussed but **not built**.
-
-**Details:**
-
-- **Reverted:** the `event_tasks.portion` column was **dropped** from prod; `generate-prep-tasks`
-  was restored to its original plain-tasks behavior (subtasks back to `string[]`); all client
-  changes (badges, `guest_count`, portion inserts) and the migration/workflow docs were removed.
-  No trace of the feature remains in prod or on `main`.
-- **Kept (the one net change):** switched `generate-prep-tasks` from `gemini-3.1-pro-preview`
-  (~28s even on trivial input, caused 500s under the heavier prompt) to **`gemini-3-flash-preview`
-  + `maxOutputTokens` 8192** — now ~8.5s on a real BEO, matching `generate-order-items`. Plain
-  prep-list output unchanged; `verify_jwt: true` preserved. Committed `23332a2`, pushed to `main`.
-- **Kept for reference:** `claudedocs/research_prep_list_portion_scaling_2026-07-17.md` (the
-  `/sc:research` output — culinary portion standards, scaling math, data-model options).
-- **Reusable knowledge captured this session:** BEO items encode their order **basis** in the item
-  text with the Qty column as a multiplier — `"N pieces" × Qty = count`, `"each" + Qty = count`,
-  `"Serves N" × Qty = people`. Relevant to any future order-quantity work.
-
----
 
 ### 2026-07-19 — Stacked Same-Day Briefings + Attribution + Local-Date Fix
 
@@ -479,3 +394,65 @@ one was built (`pending` / `approved` / `denied`) to give its badge something to
   entries into the Archive next session.
 
 ---
+
+---
+
+### 2026-08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
+
+**File(s) Changed:** `supabase/functions/receive-beo-email/index.ts` (new, v5 deployed),
+`supabase/functions/process-beo/index.ts` (Mode C), `supabase/config.toml`,
+migrations `create_pending_beo_imports` + `add_beo_notification_kinds`,
+`app/src/lib/beoDiff.js` (new), `app/src/lib/usePendingBeoImports.js` (new),
+`app/src/components/PendingBeoPanel.jsx` (new), `app/src/pages/EventsBanquetsPage.jsx`,
+`app/src/lib/useOfficeApprovalCounts.js`, `app/src/components/OfficeLayout.jsx`,
+`app/src/lib/notifications.js`, `app/src/components/NotificationBell.jsx`, `app/src/index.css`
+**Type:** `feature`
+**Commits:** `a60f440`, `61a5f2e`, `60ac183`, `2fe81eb` — all pushed
+**Summary:** BEOs emailed by Rhi now arrive in DailyBrief automatically instead of being
+downloaded and re-uploaded by hand. They are never applied silently: each email becomes a
+reviewable card above the BEO list on `/office/events` showing a diff against the live event,
+with Approve and Discard. Proven end to end in production — a real forwarded BEO updated
+Meadley Pool Party from 50 to 150 guests.
+
+**Details:**
+
+- **Pipeline:** Outlook redirect rule → Postmark inbound (the dormant `process-banquets`
+  server, reused; verified dormant against the data, not assumed) → `receive-beo-email` →
+  row in `pending_beo_imports` as `processing` → PDF stored in the private `beo-emails`
+  bucket → 200 returned immediately → Gemini parse under `EdgeRuntime.waitUntil` → row
+  becomes `pending` with `parsed_events`, or `parse_failed` with `error_text`. Bell
+  notification on both paths.
+- **No prompt duplication:** `process-beo` gained a `parseOnly` early return (Mode C)
+  returning the same shape Mode B accepts, so the 50-line Gemini prompt has one home and
+  Approve is a replay rather than a second parse.
+- **Approve applies the whole email.** A packet carries up to a dozen events; Mode B updates
+  in place, so re-applying an unchanged event costs nothing. The panel shows only what
+  differs and collapses the rest behind a count.
+- **Overlap is flagged, not auto-resolved.** The plan called for a newer email to supersede
+  an older one naming the same event; that assumed one event per email. With multi-event
+  packets the older can carry an event the newer lacks, so both are kept and the overlap is
+  warned about in whichever direction it runs.
+- **Auth reversed mid-build — the main lesson.** The endpoint originally required an HTTP
+  Basic secret and gated on a sender allowlist plus a subject keyword. All three were
+  removed. The secret could only reach the endpoint inside the URL as
+  `https://user:SECRET@host`; written naturally as `https://SECRET@host` it lands in the
+  username half with an empty password, and every message was refused — a full debugging
+  cycle lost to a URL format. The allowlist would have refused the first real BEO outright,
+  because forwarding rewrote `From` to `ryan@oldhawthorne.com`. The inbound address is a
+  random hash only one person sends to, so the gates were checking a property of mail that
+  was already ours. What actually protects live event data is the review queue. Setup is now
+  a plain URL and one mail rule, matching `process-sales-data`. `secretMatches` remains and
+  returns `true` when `BEO_WEBHOOK_SECRET` is unset, so it can be switched back on.
+- **Stuck-parse sweep:** a worker killed mid-parse leaves its row at `processing` with
+  nothing running to correct it — uncounted, unnotified, and reading as still working.
+  `sweepStuckBeoImports()` retires anything over 10 minutes to `parse_failed` and writes the
+  bell notification. Runs from `useOfficeApprovalCounts` (mounted by `OfficeLayout`, so every
+  office page triggers it) rather than `pg_cron`; the `.select()` zero-rows check doubles as
+  the multi-manager concurrency guard.
+- **Verification:** all refusal gates by curl; duplicate `MessageID` acked with no second row;
+  a real BEO through to `pending` in 86s and a second in 31s; a non-BEO PDF to `parse_failed`
+  in 17s; signed-URL retrieval byte-identical with unsigned access refused; the panel
+  rendering field/added/removed/quantity diffs against a planted match; the sweep firing from
+  the office dashboard. Phase 0 recon was retired unrun — its only question died with the
+  allowlist.
+- **Leftovers:** two `manual-test-*.pdf` files to delete from the `beo-emails` bucket.

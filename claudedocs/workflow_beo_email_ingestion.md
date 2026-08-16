@@ -1,7 +1,7 @@
 # Workflow — BEO Email Ingestion via Postmark
 
-**Status:** Phases 1, 2 and 3 built and deployed. Verified end to end against
-synthetic mail (2026-08-12/15). Awaiting the first real BEO.
+**Status:** **Shipped and live (2026-08-16).** Phases 1-3 deployed, Phase 0 retired
+unrun. Proven with a real BEO: Meadley Pool Party updated 50 → 150 guests via Approve.
 **Created:** 2026-08-10
 **Branch:** `main`
 
@@ -215,11 +215,11 @@ the actual PDF; approve preserves crew notes and tasks on the target event.
 
 Live, against production, mirroring the August 6 approach:
 
-Done except item 1, which needs a real message:
+Done except item 3, which needs two overlapping emails to occur naturally:
 
-1. ⬜ Real BEO redirected from Rhi → panel appears without a refresh; bell increments;
-   Events badge increments. **The only step left.** Also note the observed
-   `Attachments[].ContentType` while looking (see Phase 0).
+1. ✅ Real BEO through the live path (2026-08-16): queued in 31s, card rendered, badge
+   and bell fired, Approve updated the event 50 → 150 guests. The PDF arrived as a
+   proper top-level attachment — a forward did not wrap it.
 2. ✅ Diff matches the source. Verified 2026-08-15 against a planted match: field
    changes, added line, removed line and quantity change all render.
 3. ⬜ Two emails naming the same event — **rule changed**: both are kept and the overlap
