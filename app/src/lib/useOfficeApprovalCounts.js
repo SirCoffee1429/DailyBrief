@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase.js'
 import { localDateString } from './dates.js'
+import { sweepStuckBeoImports } from './usePendingBeoImports.js'
 
 // Counts of work actually waiting on the office, for the sidebar badges.
 //
@@ -17,6 +18,12 @@ export function useOfficeApprovalCounts() {
             // whose last day is still ahead. localDateString, not toISOString —
             // the UTC date rolls over at 7pm Central and would drop today.
             const today = localDateString()
+
+            // Retire anything abandoned mid-parse before counting, so a dead
+            // import shows up in the badge on this pass rather than the next.
+            // This hook is mounted by OfficeLayout, so it runs on every office
+            // page — the widest net available without a scheduled job.
+            await sweepStuckBeoImports()
 
             const [timeOffRes, availabilityRes, beoImportsRes] = await Promise.all([
                 supabase

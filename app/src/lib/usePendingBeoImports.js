@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase.js'
+import { NOTIFICATION_KINDS } from './notifications.js'
 
 // BEOs that arrived by email and still need someone. Resolved rows drop out of
 // the query entirely rather than being filtered in the panel, so the queue only
@@ -64,6 +65,59 @@ export async function approveBeoImport(row) {
 
 export async function discardBeoImport(row) {
     await resolveRow(row.id, 'discarded')
+}
+
+// A parse can die mid-flight — the worker hitting a wall-clock or memory ceiling,
+// or a deploy landing at the wrong moment. Its row is left at 'processing' with
+// nothing still running to correct it: uncounted, unnotified, and reading on
+// screen as though it were still working. That is the precise silent failure
+// this whole feature exists to avoid, and receive-beo-email cannot cover it,
+// because the code that would report the failure is the code that died.
+//
+// Real parses finish in 30-90s, and the function's own ceilings — a 130s Gemini
+// timeout inside a 400s wall clock — put the hard limit near seven minutes.
+// Ten is clear of both without leaving a corpse on screen for long.
+const STUCK_AFTER_MINUTES = 10
+
+// Deliberately swept from the office shell rather than by a scheduled job: a
+// stuck import only matters to someone looking at the office app, and this runs
+// the moment anyone opens any page of it. That is a real trade — nothing happens
+// while the app is closed — but it avoids standing up pg_cron for a case that
+// resolves itself the instant a human arrives.
+//
+// The .select() doubles as the concurrency guard. With two managers open at
+// once both fire this, but only the update that actually matched rows gets any
+// back, so exactly one of them writes the notifications.
+export async function sweepStuckBeoImports() {
+    const cutoff = new Date(Date.now() - STUCK_AFTER_MINUTES * 60_000).toISOString()
+
+    const { data, error } = await supabase
+        .from('pending_beo_imports')
+        .update({
+            status: 'parse_failed',
+            error_text: 'Parse never finished — the reader stopped before it could report back. '
+                + 'Re-send the email, or upload the PDF by hand.',
+        })
+        .eq('status', 'processing')
+        .lt('created_at', cutoff)
+        .select('id, from_email, subject')
+
+    if (error) {
+        console.error('Failed to sweep stuck BEO imports:', error)
+        return
+    }
+    if (!data?.length) return
+
+    const { error: notifyErr } = await supabase.from('office_notifications').insert(
+        data.map(row => ({
+            kind: NOTIFICATION_KINDS.BEO_EMAIL_FAILED,
+            actor_name: row.from_email,
+            summary: row.subject || 'Emailed BEO stopped part-way through',
+            link: '/office/events',
+        }))
+    )
+
+    if (notifyErr) console.error('Swept stuck BEO imports but could not notify:', notifyErr)
 }
 
 // Selects the updated row and treats zero rows as failure. Checking `error`
