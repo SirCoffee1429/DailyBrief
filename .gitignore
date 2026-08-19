@@ -27,3 +27,11 @@ Thumbs.db
 
 # External framework clone (separate repo, not part of DailyBrief)
 SuperClaude_Framework/
+
+# Codex / ChatGPT tooling — local only, never part of the repo.
+# AGENTS.md is Codex's converted copy of CLAUDE.md and is deliberately kept on
+# disk: it carries the "advisory only, make no changes" instruction. Codex
+# regenerates all of this, so it stays ignored rather than tracked.
+AGENTS.md
+.codex/
+.agents/skills/

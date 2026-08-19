@@ -510,3 +510,33 @@ wrong numbers rather than errors.
   path re-checked, unchanged.
 - **Note:** CHANGES.md is now ~505 lines, past the 500-line cap — condense the
   oldest detailed entries into the Archive next session.
+
+---
+
+### 2026-08-18 — Codex/ChatGPT Tooling Quarantined
+
+**File(s) Changed:** `.gitignore`, `CLAUDE.md`
+**Type:** `config`
+**Summary:** Connecting the repo to Codex/ChatGPT added `AGENTS.md`, `.codex/`
+and `.agents/skills/`. None were ever committed or pushed. The bundle was
+removed and all three are now gitignored.
+
+**Details:**
+
+- **It copied config, not the project.** `AGENTS.md` is a converted copy of
+  `CLAUDE.md`; `.codex/agents/feature-prioritizer.toml` ports this repo's own
+  agent; `.agents/skills/` was 188 files / 3.4 MB of the everything-claude-code
+  bundle — the same bundle deliberately disabled on 2026-07-31. Source files
+  untouched.
+- **`.agents/skills/` and `.codex/` removed** (moved to session scratchpad, not
+  hard-deleted; Codex regenerates them anyway). `.agents/rules/` is the owner's
+  own tracked content and was left alone.
+- **`AGENTS.md` deliberately kept on disk.** It carries "do not make any changes
+  or create any files or folders" — Codex is advisory only, Claude Code does the
+  editing and deploying. Deleting it would have removed the one instruction
+  restraining Codex.
+- **Known defect, left as-is by owner's call:** AGENTS.md's conversion did a
+  literal find-and-replace producing `~/.Codex/...` paths that do not exist. Noted
+  in CLAUDE.md so a future session isn't misled.
+- Real production risk is a push to `main` (Vercel auto-deploys it), not these
+  files on disk.

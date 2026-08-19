@@ -128,6 +128,13 @@ follow. For DailyBrief, the rules below win:
   `.claude/skills` and `.claude/commands` is disabled in
   `.claude/settings.local.json`; prefer the SuperClaude equivalent.
 - **Commits:** no `Co-Authored-By` trailer — no commit in this repo has one.
+- **Codex is advisory only.** The repo is also connected to Codex/ChatGPT, which
+  added `AGENTS.md`, `.codex/`, and `.agents/skills/` (all untracked). `AGENTS.md`
+  is a converted copy of this file and ends with "do not make any changes or
+  create any files or folders" — deliberate: Codex explains and hands over
+  copy-ready code, Claude Code does the editing and deploying. That instruction
+  does NOT apply here. Its `~/.Codex/...` paths are a bad find-and-replace and do
+  not exist; the real ones are `~/.claude/...`.
 
 ---
 
