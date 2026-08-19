@@ -16,7 +16,52 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 //      to 130s. Parsing inline would risk a timeout being read as failure and
 //      redelivering the same email. So we ack immediately and parse in a
 //      background task.
+// ReserveCloud sends a daily packet of every BEO, including the recurring club
+// events the kitchen does not cook for. Those are dropped here so the review
+// queue only ever shows work that matters.
+//
+// The WHOLE name must match. Deliberately strict: a name that merely starts with
+// or contains one of these ("Bridgewater Wedding") is a different event, and
+// wrongly dropping a real BEO is far worse than leaving one extra card to
+// discard. If ReserveCloud ever starts appending dates or suffixes, widen this
+// rather than guessing here.
+const EXCLUDED_EVENT_NAMES = new Set([
+  "bridge",
+  "canasta",
+  "ladies' league",
+  "mahjong monday club",
+  "midday mahjong",
+  "pops golf",
+  "pops poker",
+  "stag night",
+].map(normalizeEventName));
 
+// Case, padding and apostrophes are all noise. Apostrophes are dropped rather
+// than standardised because the parser does not reliably return one at all:
+// a test BEO reading "Ladies’ League" came back as "Ladies League", so matching
+// on any single spelling would silently miss the event. Removing them makes
+// "Ladies' League", "Ladies’ League" and "Ladies League" the same key.
+//
+// This does not widen matching — the whole name must still match end to end.
+function normalizeEventName(name: string): string {
+  return name
+    .replace(/['‘’ʼ´`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function shouldImportEvent(event: { event_name?: unknown }): boolean {
+  // A nameless event is never silently dropped — it goes to review, where a
+  // human can see whatever the parser did produce.
+  if (typeof event.event_name !== "string") return true;
+
+  return !EXCLUDED_EVENT_NAMES.has(normalizeEventName(event.event_name));
+}
+
+function eventNameOf(event: { event_name?: unknown }): string {
+  return typeof event.event_name === "string" ? event.event_name : "(unnamed)";
+}
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const WEBHOOK_SECRET = Deno.env.get("BEO_WEBHOOK_SECRET") || "";
@@ -108,9 +153,38 @@ async function parseInBackground(
 
     if (!res.ok) throw new Error(`process-beo returned ${res.status}: ${await res.text()}`);
 
-    const { parsedEvents } = await res.json();
-    if (!Array.isArray(parsedEvents) || parsedEvents.length === 0) {
+    const { parsedEvents: allParsedEvents } = await res.json();
+
+    if (!Array.isArray(allParsedEvents) || allParsedEvents.length === 0) {
       throw new Error("Parser returned no events");
+    }
+
+    // Drop the recurring club events before anything reaches the review queue.
+    const parsedEvents = allParsedEvents.filter(shouldImportEvent);
+    const excludedNames = allParsedEvents.filter((e) => !shouldImportEvent(e)).map(eventNameOf);
+
+    // Named, not just counted. The excluded events are about to be discarded, so
+    // if the list ever matches a real BEO this line and the excluded_events
+    // column are the only way anyone finds out which one went missing.
+    console.log(
+      `BEO filtering: ${allParsedEvents.length} parsed, ${parsedEvents.length} kept, ` +
+      `${excludedNames.length} excluded${excludedNames.length ? ` — ${excludedNames.join(", ")}` : ""}`,
+    );
+
+    if (parsedEvents.length === 0) {
+      // Every event in the packet was excluded, so there is nothing to review.
+      // The original PDF and the excluded names both stay on the row.
+      const { data: discarded, error: discardErr } = await db
+        .from("pending_beo_imports")
+        .update({ status: "discarded", parsed_events: [], excluded_events: excludedNames })
+        .eq("id", rowId)
+        .select("id");
+
+      if (discardErr) throw discardErr;
+      if (!discarded?.length) throw new Error(`Discard update matched no rows for ${rowId}`);
+
+      console.log(`Row ${rowId} discarded — all ${excludedNames.length} event(s) excluded.`);
+      return;
     }
 
     // A Supabase update resolves with { error } instead of throwing, and a write
@@ -119,7 +193,7 @@ async function parseInBackground(
     // still announces the BEO as received and waiting.
     const { data: updated, error: updateErr } = await db
       .from("pending_beo_imports")
-      .update({ status: "pending", parsed_events: parsedEvents })
+      .update({ status: "pending", parsed_events: parsedEvents, excluded_events: excludedNames })
       .eq("id", rowId)
       .select("id");
 

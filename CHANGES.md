@@ -540,3 +540,54 @@ removed and all three are now gitignored.
   in CLAUDE.md so a future session isn't misled.
 - Real production risk is a push to `main` (Vercel auto-deploys it), not these
   files on disk.
+
+---
+
+### 2026-08-19 — BEO Exclusion Filter for ReserveCloud Daily Packets
+
+**File(s) Changed:** `supabase/functions/receive-beo-email/index.ts` (v5 → v7),
+migration `20260819000000_add_excluded_events_to_pending_beo_imports.sql`
+**Type:** `feature` + `migration`
+**Summary:** ReserveCloud now sends a daily packet of every BEO directly, rather
+than Rhi emailing one and it being forwarded. Owner added an exclusion list for
+recurring club events the kitchen does not cook for. Reviewed, hardened and
+tested end to end against production.
+
+**Details:**
+
+- **The owner's filter was correct but not deployed.** Live was still v5 with no
+  filtering at all, so the first ReserveCloud packet would have imported every
+  excluded event.
+- **Exact whole-name matching kept, by owner's call.** ReserveCloud uses fixed
+  recurring names, and the risk is asymmetric: an extra card costs one click,
+  while a wrongly-excluded BEO never reaches the kitchen. `"Bridge Group"` and
+  `"Bridgewater Wedding"` both still reach review, deliberately.
+- **Apostrophes are stripped, not standardised.** Found by testing, not
+  inspection: a BEO reading `Ladies’ League` came back from the parser as
+  `Ladies League` with no apostrophe at all when the glyph did not render, and as
+  `Ladies' League` with an ASCII one when it did. Matching on any single spelling
+  would silently miss the event. Normalisation now removes `' ' ' ʼ ´` and
+  collapses whitespace, so all three spellings are one key. This does not widen
+  matching.
+- **New `excluded_events jsonb` column.** Excluded events were being dropped with
+  only a count in the logs, and a fully-excluded packet had `parsed_events` set to
+  `[]` — so an over-broad rule would have made a real BEO vanish with nothing to
+  find it by. Edge logs expire in days, so the record lives on the row. Excluded
+  names are also logged by name, not just counted.
+- **Discard path now checks `.select()`** for zero matched rows, matching the
+  pattern the rest of this function already uses. A nameless event is never
+  excluded — it goes to review where a human can see it.
+- **Verification:** 20 unit cases on the matcher, all passing. Five synthetic BEO
+  packets sent through the live webhook: a mixed packet kept
+  "Thompson Rehearsal Dinner" and excluded "Bridge"; an all-excluded packet went
+  to `discarded` with "Canasta, Stag Night" recorded and correctly wrote no bell
+  notification; a real WinAnsi curly apostrophe and a bare "Ladies League" both
+  excluded. `npm run build` clean (4.71s). All 5 test rows and 2 test
+  notifications deleted; 17 live BEOs untouched.
+- **Leftover:** 5 `claude-test-*.pdf` files in the `beo-emails` bucket. There is
+  no DELETE policy on that bucket (the function writes with the service role), and
+  direct deletion from `storage.objects` is blocked, so they need removing from
+  the Supabase dashboard.
+- **Not addressed:** a daily packet re-sends events already approved, so expect
+  repeat review cards; the diff panel shows unchanged events collapsed. Packet
+  size vs the 130s parse budget is untested with a real full-day packet.
