@@ -591,3 +591,52 @@ tested end to end against production.
 - **Not addressed:** a daily packet re-sends events already approved, so expect
   repeat review cards; the diff panel shows unchanged events collapsed. Packet
   size vs the 130s parse budget is untested with a real full-day packet.
+
+---
+
+### 2026-08-19 — Fetch BEO Packets from ReserveCloud Links
+
+**File(s) Changed:** `supabase/functions/receive-beo-email/index.ts` (v7 → v8)
+**Type:** `feature`
+**Summary:** The first real ReserveCloud packet was refused with "no PDF
+attachment". ReserveCloud's scheduled task emails a LINK, not an attachment, so
+the function now fetches the packet when no attachment is present.
+
+**Details:**
+
+- **Not a sender or subject problem.** The refusal was `no PDF attachment` at
+  07:33:23 — the mail reached the function fine. There are no sender or subject
+  gates to fail. `noreply@noreply.reservecloud.com` and the subject were never
+  examined.
+- **Two hops, traced against the real link, not guessed:**
+  `/web/token/process/<a>/<b>` 303s to
+  `/pub/selfService/viewBatchDocumentResults/<c>/<d>` (139KB HTML), which carries
+  exactly one href — the same path with `view` → `download` — returning
+  `application/pdf`. Neither hop needs a login.
+- **Attachment still wins when present**, so if ReserveCloud's "attach" option
+  ever starts saving (it currently will not save for the owner), this path stops
+  being used with no code change. That remains the better long-term fix: a link
+  fetch breaks if their page layout changes or the link expires.
+- **The fetch runs in the background task, not the handler.** The webhook acks in
+  ~1.8s, and a dead or expired link fails into `parse_failed` — the same visible
+  path a bad parse uses — rather than holding the webhook open.
+- **Guards:** the download is verified to start with `%PDF-` so an HTML error
+  page served with a 200 fails loudly instead of reaching Gemini as a "PDF".
+  Base64 conversion is chunked; spreading a 270KB packet into
+  `String.fromCharCode` blows the call stack.
+- **Exclusion list validated against real data at last.** The live packet held 24
+  pages / 22 events. All 8 exclusion entries matched real events; 11 events
+  excluded, 11 kept, zero false positives. Two findings worth keeping:
+  ReserveCloud writes `POPs Golf` and `POPs Poker` with a capital "POP" (4 pages
+  would have been missed by case-sensitive matching), and the same packet
+  contains `Ladies' League` (excluded) alongside `Ladies Night Out` and
+  `Ladies' Night League` (both correctly kept) — which is why exact whole-name
+  matching was the right call over any fuzzy match.
+- **Verification:** 11 unit cases on link extraction, all passing. A real
+  24-page/274KB packet parsed in 83s directly and the full webhook path resolved
+  in 42s: link fetched, PDF stored, 22 parsed, 11 kept, 11 excluded.
+  `npm run build` clean.
+- **Open:** link expiry is unknown, so a packet that fails after the link dies
+  cannot be re-fetched — though `pdf_path` preserves the original. The daily
+  packet re-sends every event each day, deduped only by Postmark MessageID, so
+  expect ~11 review cards daily with most unchanged.

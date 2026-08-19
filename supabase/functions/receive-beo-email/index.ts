@@ -81,6 +81,82 @@ interface PostmarkInbound {
   FromFull?: { Email?: string };
   Subject?: string;
   Attachments?: PostmarkAttachment[];
+  TextBody?: string;
+  HtmlBody?: string;
+}
+
+// ReserveCloud's scheduled task does not attach the packet, it emails a link to
+// it, so the PDF has to be fetched in two hops:
+//
+//   1. the emailed link          /web/token/process/<a>/<b>
+//      303s to a landing page    /pub/selfService/viewBatchDocumentResults/<c>/<d>
+//   2. that page carries exactly one download href, differing from its own URL
+//      only by view -> download  /pub/selfService/downloadBatchDocumentResults/<c>/<d>
+//      which returns application/pdf
+//
+// Neither hop needs a login. Attachments are still preferred when present: if
+// ReserveCloud's "attach" option ever starts saving, this path stops being used
+// without a code change.
+const RESERVECLOUD_HOST = /^https?:\/\/(?:www\.)?reservecloud\.com\//i;
+const DOWNLOAD_HREF = /href="([^"]*downloadBatchDocumentResults[^"]*)"/i;
+
+// Trailing punctuation is stripped because the URL is being pulled out of prose
+// or markup, where it is commonly followed by a quote, bracket or full stop.
+function findDocumentLink(payload: PostmarkInbound): string | undefined {
+  const body = `${payload.TextBody || ""}\n${payload.HtmlBody || ""}`
+    .replace(/&amp;/gi, "&");
+
+  const urls = (body.match(/https?:\/\/[^\s"'<>]+/gi) || [])
+    .map((u) => u.replace(/[.,;:)\]}>"']+$/, ""))
+    .filter((u) => RESERVECLOUD_HOST.test(u));
+
+  // The token link is the one the scheduled task sends; anything else on
+  // reservecloud.com is footer chrome, so only fall back to it if no token
+  // link is present.
+  return urls.find((u) => /\/web\/token\/process\//i.test(u)) || urls[0];
+}
+
+// btoa needs a binary string, and spreading a 270KB packet into
+// String.fromCharCode blows the call stack, so convert in chunks.
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+async function fetchPdfFromLink(link: string): Promise<Uint8Array> {
+  const landing = await fetch(link, { redirect: "follow" });
+  if (!landing.ok) throw new Error(`ReserveCloud link returned ${landing.status}`);
+
+  // If they ever serve the PDF directly, take it and skip the second hop.
+  const contentType = landing.headers.get("content-type") || "";
+  if (contentType.toLowerCase().includes("pdf")) {
+    return new Uint8Array(await landing.arrayBuffer());
+  }
+
+  const html = await landing.text();
+  const match = html.match(DOWNLOAD_HREF);
+  if (!match) {
+    // Most likely the link expired and this is an error page, which would
+    // otherwise reach Gemini as a "PDF" and fail confusingly further along.
+    throw new Error("No download link on the ReserveCloud page (expired link, or the page changed)");
+  }
+
+  const pdfUrl = new URL(match[1], landing.url).toString();
+  const res = await fetch(pdfUrl, { redirect: "follow" });
+  if (!res.ok) throw new Error(`ReserveCloud download returned ${res.status}`);
+
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Verify it really is a PDF rather than an HTML error page with a 200.
+  if (bytes.length < 5 || String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") {
+    throw new Error(`ReserveCloud download was not a PDF (${bytes.length} bytes)`);
+  }
+
+  console.log(`Fetched ${bytes.length} byte packet from ${pdfUrl}`);
+  return bytes;
 }
 
 // Optional, and unset by default. With no BEO_WEBHOOK_SECRET this returns true
@@ -119,6 +195,30 @@ function findPdf(attachments: PostmarkAttachment[]): PostmarkAttachment | undefi
   );
 }
 
+// Postmark truncates stored messages over 1MB and never hosts attachments, and
+// a ReserveCloud link expires, so this upload is the only lasting copy of the
+// original. A missing original is not worth discarding a real BEO over, so a
+// failure here is logged and the parse continues.
+async function storePdf(
+  db: ReturnType<typeof createClient>,
+  rowId: string,
+  messageId: string,
+  bytes: Uint8Array,
+) {
+  const pdfPath = `${messageId.replace(/[^a-zA-Z0-9._-]/g, "_")}.pdf`;
+
+  const { error: uploadErr } = await db.storage
+    .from(PDF_BUCKET)
+    .upload(pdfPath, bytes, { contentType: "application/pdf", upsert: true });
+
+  if (uploadErr) {
+    console.error(`Failed to store original PDF for ${messageId}:`, uploadErr);
+    return;
+  }
+
+  await db.from("pending_beo_imports").update({ pdf_path: pdfPath }).eq("id", rowId);
+}
+
 function refuse(reason: string): Response {
   // 403 specifically: it tells Postmark to stop retrying. Any other status would
   // make it redeliver this same message 10 times over the next ~10 hours.
@@ -135,11 +235,23 @@ function refuse(reason: string): Response {
 async function parseInBackground(
   db: ReturnType<typeof createClient>,
   rowId: string,
-  pdfBase64: string,
+  messageId: string,
+  attachmentBase64: string | undefined,
+  documentLink: string | undefined,
   fromEmail: string,
   subject: string,
 ) {
   try {
+    // Resolving the link happens here rather than in the handler so a dead or
+    // expired link fails the same visible way a bad parse does, instead of
+    // holding the webhook open or vanishing.
+    let pdfBase64 = attachmentBase64;
+    if (!pdfBase64) {
+      const bytes = await fetchPdfFromLink(documentLink!);
+      await storePdf(db, rowId, messageId, bytes);
+      pdfBase64 = toBase64(bytes);
+    }
+
     // Reuses process-beo's Gemini prompt via its parseOnly mode rather than
     // copying it, so the two call sites cannot drift apart.
     const res = await fetch(`${SUPABASE_URL}/functions/v1/process-beo`, {
@@ -265,8 +377,12 @@ Deno.serve(async (req) => {
   // that is not a BEO parses to nothing and lands as parse_failed, which is
   // visible and discardable rather than damaging. from_email is still recorded
   // and shown on the review card — visibility without a gate.
+  // An attachment is preferred; the link is the fallback ReserveCloud forces on
+  // us. Refusing only when neither is present keeps genuine junk out while
+  // still accepting both shapes of real BEO mail.
   const pdf = findPdf(payload.Attachments || []);
-  if (!pdf?.Content) return refuse("no PDF attachment");
+  const documentLink = pdf?.Content ? undefined : findDocumentLink(payload);
+  if (!pdf?.Content && !documentLink) return refuse("no PDF attachment and no ReserveCloud link");
 
   const messageId = payload.MessageID;
   if (!messageId) return refuse("no MessageID");
@@ -304,26 +420,17 @@ Deno.serve(async (req) => {
       throw insertErr;
     }
 
-    // Postmark truncates stored messages over 1MB and never hosts attachments,
-    // so this upload is the only lasting copy of the original.
-    const safeName = messageId.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const pdfPath = `${safeName}.pdf`;
-    const bytes = Uint8Array.from(atob(pdf.Content), (c) => c.charCodeAt(0));
-
-    const { error: uploadErr } = await db.storage
-      .from(PDF_BUCKET)
-      .upload(pdfPath, bytes, { contentType: "application/pdf", upsert: true });
-
-    // A missing original is not worth discarding a real BEO over — record the
-    // row without it and let the parse continue.
-    if (uploadErr) {
-      console.error(`Failed to store original PDF for ${messageId}:`, uploadErr);
+    // An attached PDF is already in hand, so store it before acking. A linked
+    // one is fetched in the background task instead, which is what keeps the
+    // webhook response fast.
+    if (pdf?.Content) {
+      await storePdf(db, row.id, messageId, Uint8Array.from(atob(pdf.Content), (c) => c.charCodeAt(0)));
     } else {
-      await db.from("pending_beo_imports").update({ pdf_path: pdfPath }).eq("id", row.id);
+      console.log(`No attachment; will fetch packet from ${documentLink}`);
     }
 
     EdgeRuntime.waitUntil(
-      parseInBackground(db, row.id, pdf.Content, fromEmail, subject)
+      parseInBackground(db, row.id, messageId, pdf?.Content, documentLink, fromEmail, subject)
     );
 
     return new Response(JSON.stringify({ queued: true, id: row.id }), {
