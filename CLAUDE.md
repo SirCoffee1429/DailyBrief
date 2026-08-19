@@ -79,6 +79,19 @@ Kitchen assistant uses RAG, not full-context dumps:
   secret can only ride in the URL as `https://user:SECRET@host` — written
   `https://SECRET@host` it lands in the username half and every message is
   refused
+- BEOs now arrive as a **daily ReserveCloud packet emailed as a LINK, not an
+  attachment** (their "attach" option will not save). `receive-beo-email` fetches
+  it in two hops: `/web/token/process/<a>/<b>` 303s to a `viewBatchDocumentResults`
+  page whose single href is that path with `view` → `download`; no login on either.
+  Attachments still win, so fixing their attach option retires this path with no
+  code change. The fetch runs in the background task, so the webhook acks in ~2s
+- `EXCLUDED_EVENT_NAMES` drops recurring club events (Bridge, Canasta, POPs Golf
+  etc): WHOLE name, lowercased, apostrophes stripped — the parser returns
+  `Ladies League` when the glyph fails, `Ladies' League` when it does not. Do NOT
+  loosen to contains/startsWith — a real packet holds `Ladies' League` (excluded)
+  beside `Ladies' Night League` and `Ladies Night Out` (both kept). Dropped names
+  land in `pending_beo_imports.excluded_events`; an all-excluded packet ends
+  `discarded`
 - An emailed BEO that dies mid-parse is caught by `sweepStuckBeoImports()`
   (`lib/usePendingBeoImports.js`), called from `useOfficeApprovalCounts` so any
   office page triggers it. Deliberately not `pg_cron` — a stuck import only
