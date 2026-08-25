@@ -261,6 +261,9 @@ RULES:
 - ALWAYS return a JSON ARRAY of event objects, even if there is only one event.
 - Use null for missing strings, 0 for missing guest_count, [] for missing arrays.
 - Parse dates strictly to YYYY-MM-DD. Convert "04/25/2026" → "2026-04-25".
+- The "Event Date(s)" row ALWAYS prints a range, e.g. "08/21/2026 - 08/21/2026".
+  event_date is the first date. event_end_date is the second date ONLY when it
+  differs from the first — when the two are identical, return null.
 - Preserve original capitalization and punctuation in descriptions.
 - Do NOT wrap in markdown code fences. Return ONLY the JSON array.
 `;
@@ -324,6 +327,14 @@ RULES:
 
     let parsedEvents: BeoEvent[] = JSON.parse(rawOutput);
     if (!Array.isArray(parsedEvents)) parsedEvents = [parsedEvents];
+
+    // The BEO's "Event Date(s)" row always prints a range, so a single-day event
+    // arrives as "08/21/2026 - 08/21/2026". Collapse that to null here rather than
+    // relying on the prompt, which is asking the model to contradict the page.
+    // Runs before every mode so insert, approve-replay and parseOnly all agree.
+    for (const event of parsedEvents) {
+      if (event.event_end_date === event.event_date) event.event_end_date = null;
+    }
 
     console.log(`Parsed ${parsedEvents.length} event(s) from BEO PDF`);
 

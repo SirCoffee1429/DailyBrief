@@ -132,54 +132,11 @@
 
 - 08-03 — Claude Code health check: extension cleanup + CLAUDE.md trim
 - 08-04 — Separate the auto-scheduler branch from main's housekeeping
+- 08-05 — Office Notification Bell (time off + availability)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-05 — Office Notification Bell (time off + availability)
-
-**File(s) Changed:** `app/src/components/NotificationBell.jsx` (new),
-`app/src/lib/notifications.js` (new), `app/src/lib/useOfficeNotifications.js` (new),
-`app/src/components/OfficeLayout.jsx`, `app/src/pages/TimeOff.jsx`,
-`app/src/pages/AvailabilityPage.jsx`, `app/src/index.css`,
-`supabase/migrations/20260804000000_create_office_notifications.sql` (new)
-**Type:** `feature` + `migration`
-**Summary:** Bell + unread count in the office topbar, opening a dropdown of recent crew
-activity: new time off requests, cancellations, and availability changes. Backed by a new
-`office_notifications` table; realtime so the badge increments without a refresh.
-
-**Details:**
-
-- **New table `office_notifications`** (`kind`, `actor_name`, `summary`, `link`, `created_at`),
-  RLS allow-all to match `employees` / `time_off_requests`, added to the `supabase_realtime`
-  publication. `actor_name` + `summary` are **denormalized at write time** so a notification
-  survives its source row being deleted — which is exactly the cancellation case.
-- **Written client-side, not by DB triggers.** There is no auth, so every write reaches
-  Postgres as the anon role and the database cannot distinguish a crew submission from an
-  office one. The app can (`/kitchen/time-off` renders `TimeOff` plain, `/office/time-off`
-  renders it with `officeMode`), so client writes are what allow suppressing office self-noise.
-- **Availability is detected via `AvailabilityPage.handleSaved`, not `employee_availability`.**
-  `AvailabilityWeekEditor.save()` is a delete-all-then-insert, so one crew save fires up to 7
-  DELETEs + 7 INSERTs — a trigger there would emit ~14 notifications per submission.
-- **Read state is per-device** (`localStorage` key `officeNotificationsLastSeen`). The office
-  shares one password, so there is no identity to attach a read flag to; a shared server-side
-  cursor would let the first manager to open the bell clear it for everyone. First visit on a
-  device seeds the cursor at *now* so a new phone doesn't open to handled history.
-- `deleteRequest(id)` → `deleteRequest(request)` and `onSaved()` → `onSaved(payload)` so the
-  notification can record who/what. Bell query is capped to a 30-day window.
-- **Deviation from plan, flagged:** cancellations are logged regardless of who performs them.
-  The trash button is office-only (crew have no cancel path at all), so the original
-  "skip office-initiated actions" rule would have made this event dead code. Several managers
-  share the office login, so one manager's deletion is still news to the others.
-- **Verification:** `npm run build` clean (3.19s). End-to-end against production Supabase with
-  a disposable request: all three kinds fired and arrived live via realtime on an un-reloaded
-  office tab; badge count, per-item unread accent, Mark read, and click-to-navigate all
-  confirmed. Test rows deleted; the borrowed employee's availability round-tripped byte-for-byte
-  and their `availability_status` was restored to `approved`. The office-suppression branch
-  (`if (!officeMode)`) is verified by inspection only, not at runtime.
-
----
 
 ### 2026-08-06 — Time Off Approval Workflow + Sidebar Approval Badges
 
@@ -474,3 +431,51 @@ the function now fetches the packet when no attachment is present.
   cannot be re-fetched — though `pdf_path` preserves the original. The daily
   packet re-sends every event each day, deduped only by Postmark MessageID, so
   expect ~11 review cards daily with most unchanged.
+
+---
+
+### 2026-08-24 — BEO Single-Day Events Stop Reporting a Phantom End Date
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts` (v16 → v17),
+`.gitignore`
+**Type:** `fix`
+**Summary:** A BEO's "Event Date(s)" row always prints a range, so a single-day
+event reads `08/21/2026 - 08/21/2026`. Gemini echoed both halves, giving
+single-day events an `event_end_date` equal to `event_date` and making every
+unchanged event report an "End date" change in the review queue.
+
+**Details:**
+
+- **Not model drift — the model was reading the page correctly.** The prompt's
+  `// last day if multi-day, else null` asked Gemini to contradict the document on
+  24 of the packet's 27 pages. It complied on the 08-21/08-23/08-24 packets and did
+  not on 08-22, which is why the symptom looked intermittent.
+- **Prompt rule rewritten to describe what the model actually sees** — it names the
+  "Event Date(s)" row and its range format instead of stating the convention abstractly.
+- **Deterministic guard added after `JSON.parse(rawOutput)`**, so compliance stops
+  mattering. Placed before the mode split so Mode A (insert), Mode B (approve-replay)
+  and Mode C (`parseOnly`) all agree. `parseOnly` was the load-bearing one: it
+  returns `parsedEvents` raw, so `pending_beo_imports` was storing the same-day date
+  and `beoDiff.js` (which diffs `event_end_date` as a scalar) reported a phantom
+  change on every otherwise-unchanged event.
+- **No user-visible damage in the events list.** `EventsBanquetsPage.jsx:714` and
+  `:962` already guard with `event_end_date !== event_date`, so no bogus
+  "Aug 22 – Aug 22" range ever rendered. `banquet_event_orders` was also clean at
+  the time of the fix — 12 rows, 11 null, 1 genuine range — because the daily
+  re-send healed the 08-22 damage via Mode B in-place updates.
+- **Verification:** the real 27-page/289KB packet (the same one that produced the
+  bug) run through deployed v17 with `parseOnly`: HTTP 200 in 87.8s, 23 events,
+  22 `null`, 1 genuine range (The Eliminator, 08-28 → 08-30), zero `end === start`.
+  Cross-checked against a direct pdfjs text extraction of every `Event Date(s)` row:
+  24 same-date pages, 3 multi-day pages, one event. They match exactly.
+  `npm run build` was not run — no frontend file changed and it does not compile
+  Deno functions; the production parse against real data is the stronger gate.
+- **`BEOs/` gitignored.** The reference packet had been staged for commit. Page 1
+  alone carries a member's home address, personal email, two phone numbers and
+  member number, and every page repeats the club contact's direct line. Unstaged
+  and ignored; the file stays on disk for parser work.
+- **Pre-existing, not addressed:** `app/sample-data/test_beos/Event-documents (1.pdf`
+  is already tracked and in git history with the same class of data. Scrubbing it
+  needs a history rewrite — owner's call.
+- **Note:** `supabase functions deploy` returned 401 (CLI not logged in); deployed
+  via the Supabase MCP instead. `verify_jwt` left at `false`, matching config.toml.

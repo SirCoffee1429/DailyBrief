@@ -35,3 +35,7 @@ SuperClaude_Framework/
 AGENTS.md
 .codex/
 .agents/skills/
+
+# Real BEO packets kept on disk for parser reference. Never committed — they
+# carry member names, home addresses, phone numbers, emails and member numbers.
+BEOs/
