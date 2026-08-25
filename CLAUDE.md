@@ -70,15 +70,12 @@ Kitchen assistant uses RAG, not full-context dumps:
 - `.wb-act-btn` is shared beyond the communication board — scope hover-reveal
   rules to `.wb-note .wb-act-btn`, never the bare class, or action buttons go
   invisible app-wide
-- `receive-beo-email` is deliberately wide open — no secret, no sender or
-  subject filter — matching `process-sales-data`. Its Postmark address is a
-  random hash only Ryan redirects to, and the review queue is what protects live
-  events: nothing reaches one without an Approve. Do not "harden" it back. Two
-  facts killed the earlier gates: mail forwarding rewrites `From` to
-  `ryan@oldhawthorne.com` (so a sender allowlist refuses real BEOs), and a
-  secret can only ride in the URL as `https://user:SECRET@host` — written
-  `https://SECRET@host` it lands in the username half and every message is
-  refused
+- `receive-beo-email` is deliberately wide open — no secret, no sender/subject
+  filter, matching `process-sales-data`; its Postmark address is a random hash and
+  the review queue protects live events. Do not "harden" it back: forwarding
+  rewrites `From` to `ryan@oldhawthorne.com` (a sender allowlist refuses real
+  BEOs), and a secret rides the URL only as `https://user:SECRET@host` — written
+  `https://SECRET@host` it lands in the username half and all mail is refused
 - BEOs now arrive as a **daily ReserveCloud packet emailed as a LINK, not an
   attachment** (their "attach" option will not save). `receive-beo-email` fetches
   it in two hops: `/web/token/process/<a>/<b>` 303s to a `viewBatchDocumentResults`
@@ -90,8 +87,11 @@ Kitchen assistant uses RAG, not full-context dumps:
   `Ladies League` when the glyph fails, `Ladies' League` when it does not. Do NOT
   loosen to contains/startsWith — a real packet holds `Ladies' League` (excluded)
   beside `Ladies' Night League` and `Ladies Night Out` (both kept). Dropped names
-  land in `pending_beo_imports.excluded_events`; an all-excluded packet ends
-  `discarded`
+  land in `pending_beo_imports.excluded_events`; all-excluded ends `discarded`
+- A BEO's `Event Date(s)` row ALWAYS prints a range — a one-day event reads
+  `08/21/2026 - 08/21/2026`. `process-beo` collapses a same-day end date to null
+  after `JSON.parse`, before the mode split, so insert/approve-replay/parseOnly
+  agree. Prompt wording alone is not enough — it asks Gemini to contradict the page
 - An emailed BEO that dies mid-parse is caught by `sweepStuckBeoImports()`
   (`lib/usePendingBeoImports.js`), called from `useOfficeApprovalCounts` so any
   office page triggers it. Deliberately not `pg_cron` — a stuck import only
