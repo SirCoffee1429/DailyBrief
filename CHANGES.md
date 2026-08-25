@@ -133,60 +133,11 @@
 - 08-03 — Claude Code health check: extension cleanup + CLAUDE.md trim
 - 08-04 — Separate the auto-scheduler branch from main's housekeeping
 - 08-05 — Office Notification Bell (time off + availability)
+- 08-06 — Time Off Approval Workflow + Sidebar Approval Badges
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-06 — Time Off Approval Workflow + Sidebar Approval Badges
-
-**File(s) Changed:** `app/src/lib/useOfficeApprovalCounts.js` (new),
-`app/src/components/OfficeLayout.jsx`, `app/src/pages/TimeOff.jsx`, `app/src/index.css`,
-`supabase/migrations/20260806000000_add_status_to_time_off_requests.sql` (new),
-`supabase/migrations/20260806000001_allow_update_on_time_off_requests.sql` (new)
-**Type:** `feature` + `migration`
-**Summary:** Count badges on the office sidebar's Time Off and Roster & Coverage links showing
-work still awaiting approval. Roster already had a real approval workflow; Time Off did not, so
-one was built (`pending` / `approved` / `denied`) to give its badge something to mean.
-
-**Details:**
-
-- **Badges are shared outstanding-work counts, NOT unread counts.** Deliberately not derived
-  from the notification feed: they clear only when someone approves, never when a manager reads
-  the bell, so two managers always see the same number. `useOfficeApprovalCounts` queries
-  head-only counts and refetches on realtime changes to `time_off_requests` / `employees`.
-  Roster reuses the exact predicate already at `RosterManager.jsx:185`.
-- **New `time_off_requests.status`.** Added with default `'approved'` so the 148 pre-existing
-  rows backfill in place, then the default flips to `'pending'` for new submissions — otherwise
-  the office would have opened to a badge of 148. Reverse by targeting `created_at` before the
-  migration.
-- **Semantics (owner's calls):** pending still holds a slot against the 3-person daily cap, so
-  nobody is told a day is open while three people await an answer; only a denial frees it.
-  Denied requests drop off the shared calendar (the person is not off, so their name must not
-  imply it) but stay in the office's Upcoming list with a Denied pill as a record. Approved is
-  the resting state and gets no pill. Pending sorts to the top of Upcoming.
-- **BUG FOUND IN TESTING — silent RLS no-op.** Approve/Deny did nothing at all on first run.
-  `time_off_requests` had RLS enabled with policies for select/insert/delete only; nothing had
-  ever UPDATEd the table. With no UPDATE policy Postgres matches zero rows and returns **no
-  error**, so the write vanished silently. Added `time_off_requests_update_all`, and hardened
-  `setRequestStatus` to `.select()` and treat zero returned rows as a failure — the failure mode
-  produces no error object, so checking `error` alone is not enough.
-- **Crew vs office:** crew see no approve/deny controls and no denied rows; the calendar and the
-  3-person cap both exclude denied for everyone.
-- **Verification:** `npm run build` clean (3.27s). Full loop exercised live against production:
-  crew submit → Time Off badge 0→1 and bell 0→1 on an un-reloaded office tab → Pending pill with
-  Approve/Deny → Deny → off the December calendar, hidden from crew, kept in office list, badge
-  →0 → Approve reverses it back onto the calendar. Roster loop: crew availability save → badge
-  3→4 → Approve that one employee → badge →3, with the three genuinely-pending crew (Etta Bybee,
-  Everett Dobbs, Matt Cone) untouched. All test rows removed; borrowed employee's availability
-  round-tripped byte-for-byte and their status returned to `approved`; 148 requests all still
-  `approved`.
-- **Note:** CHANGES.md is now ~475 lines, near the 500-line cap — condense the oldest detailed
-  entries into the Archive next session.
-
----
-
----
 
 ### 2026-08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
 
@@ -479,3 +430,53 @@ unchanged event report an "End date" change in the review queue.
   needs a history rewrite — owner's call.
 - **Note:** `supabase functions deploy` returned 401 (CLI not logged in); deployed
   via the Supabase MCP instead. `verify_jwt` left at `false`, matching config.toml.
+
+---
+
+### 2026-08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts` (v17 → v21)
+**Type:** `fix`
+**Summary:** Owner reported the morning's packet "changed the format/layout again."
+The BEO had not changed — the parse had. The same PDF was being re-grouped
+differently every day, producing between 43 and 91 items for the same ~12 events.
+
+**Details:**
+
+- **Not caused by the v17 end-date change.** The identical failure — buffet dishes
+  exploded into one item each, descriptions empty — had already happened on **08-23**,
+  two days earlier. Verified by counting items per packet-day in `pending_beo_imports`:
+  3, 3, 1, 7, 3, 8 items for the same Club Car Wash buffet on six consecutive days.
+- **Root cause was sampling.** `generationConfig` set only `response_mime_type`, so
+  temperature defaulted to **1.0**. Where the layout is ambiguous the model re-decided
+  the grouping on every run. Now `temperature: 0`.
+- **The layout genuinely is ambiguous, and the prompt described it wrongly.** Confirmed
+  by extracting x/y text positions from the real packet: on the Club Car Wash page the
+  left column holds a TIME RANGE (`6:15pm-8:30pm`), not a label, and the whole centre
+  block — buffet name, rolls, six dishes, `$48/person +25% grat` — is one cell against
+  qty 26. The prompt's "label = left-column label" did not describe that page.
+- **Three prompt rules added:** one row = one item (a qty-bearing line plus every centre
+  line beneath it); `label` is always the left-column row-TYPE word (`Buffet`,
+  `Services`, `A La Carte Ordering`, `Custom Buffets`…) and never a dish name; a qty is
+  never copied onto the lines beneath the row that carries it.
+- **A contradiction I introduced was caught by the verification run**, not by review:
+  "an item runs until the next qty" versus "if the left cell is a time range, reuse the
+  nearest label" — the second implies a time-range row starts a new item, so the buffet
+  split again and one run copied `qty=26` onto all seven dishes, which would have
+  ordered seven times the food. Fixed by stating that a time range or blank left cell
+  never starts a new item.
+- **Label carry-forward done in CODE, not the prompt.** The BEO prints the label cell
+  once and leaves it blank on rows beneath that carry their own qty (The Eliminator's
+  buffet: `Custom Buffets` against Chicken Caprese, then five dishes at qty 50 with an
+  empty cell). 30 of 68 items came back with a blank label. Now carried forward within
+  the category, falling back to the category name — which is what the left column prints
+  in the one category (of 39) that has no leading label.
+- **Verification — the test that should have existed already:** the same packet parsed
+  twice through the deployed function, item structure fingerprinted and diffed. v18: 63
+  vs 69 items, every row different. v19: 74 vs 69, 60 rows matching. v21: **identical
+  fingerprint `2d7e6069b527`, 68 items, 0 blank labels, 0 items without qty, 0 empty
+  descriptions.** Club Car Wash's buffet is one item at qty 26 with the full dish list.
+- **Open:** `$30/Person` still comes through as an item where the BEO prints it as a
+  real row with its own qty — faithful to the document, but junk in a food order list.
+  Filtering belongs downstream, not in the parser. Rows approved from the 08-25 packet
+  still hold the bad structure until re-approved or overwritten by the next packet.

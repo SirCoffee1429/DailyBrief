@@ -264,6 +264,22 @@ RULES:
 - The "Event Date(s)" row ALWAYS prints a range, e.g. "08/21/2026 - 08/21/2026".
   event_date is the first date. event_end_date is the second date ONLY when it
   differs from the first — when the two are identical, return null.
+- ONE ROW = ONE ITEM. An item is a qty-bearing line plus EVERY center-column line
+  beneath it, up to the next qty or the next section header. Put all of those lines
+  in "description", joined with \\n. NEVER split a multi-line block into one item
+  per line, and never leave "description" empty in order to promote a line to "label".
+- "label" is ALWAYS the LEFT-column cell of the qty-bearing row — the row-TYPE word,
+  e.g. "Buffet", "Custom Buffet", "Custom Plated", "Plated Food", "A La Carte Ordering",
+  "Services", "Beverages", "Golf Shop". NEVER put a dish or service NAME in "label".
+  The entire center column, ITS FIRST LINE INCLUDED, belongs in "description" — do not
+  promote that first line into "label" and do not repeat it in both fields.
+- A left-column TIME RANGE ("6:15pm-8:30pm") or an empty left cell does NOT start a new
+  item. Keep appending the center-column lines to the CURRENT item's description. ONLY a
+  new qty value or a new category/section header starts a new item.
+- The qty belongs to the ONE item whose row carries it. NEVER copy a qty onto the lines
+  beneath it — those lines are part of that same item's description, not items of their own.
+- Price and gratuity lines ("$48/person +25% grat") belong in the "description" of
+  the item they price. They are NEVER an item of their own.
 - Preserve original capitalization and punctuation in descriptions.
 - Do NOT wrap in markdown code fences. Return ONLY the JSON array.
 `;
@@ -297,6 +313,11 @@ RULES:
           ],
           generationConfig: {
             response_mime_type: "application/json",
+            // Unset, this defaults to 1.0 and the model re-decides how to group an
+            // ambiguous table on every run — the same packet produced 43 items one
+            // day and 91 the next. Greedy decoding is not a determinism guarantee
+            // from Gemini, but it removes the sampling that drove the churn.
+            temperature: 0,
           },
         }),
       });
@@ -334,6 +355,24 @@ RULES:
     // Runs before every mode so insert, approve-replay and parseOnly all agree.
     for (const event of parsedEvents) {
       if (event.event_end_date === event.event_date) event.event_end_date = null;
+    }
+
+    // The BEO prints the left-hand label cell once and leaves it blank on the rows
+    // beneath, even when those rows carry their own qty — The Eliminator's buffet
+    // prints "Custom Buffets" against Chicken Caprese, then five more dishes at qty
+    // 50 with an empty label cell. Carry the last label forward within the category
+    // so the card's label column is never blank; a category that never had one falls
+    // back to its own name, which is what the left column prints in that case.
+    for (const event of parsedEvents) {
+      for (const section of ((event.sections as any[]) || [])) {
+        for (const cat of (section.categories || [])) {
+          let lastLabel = "";
+          for (const item of (cat.items || [])) {
+            if ((item.label || "").trim()) lastLabel = item.label;
+            else item.label = lastLabel || cat.name || "";
+          }
+        }
+      }
     }
 
     console.log(`Parsed ${parsedEvents.length} event(s) from BEO PDF`);
