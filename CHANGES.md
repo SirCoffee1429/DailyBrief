@@ -135,64 +135,11 @@
 - 08-05 — Office Notification Bell (time off + availability)
 - 08-06 — Time Off Approval Workflow + Sidebar Approval Badges
 - 08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
+- 08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
-
-**File(s) Changed:** `supabase/functions/kitchen-assistant/index.ts`
-(deployed v34 → v39)
-**Type:** `fix`
-**Summary:** Every sales question to the assistant returned "Sorry, I couldn't
-complete the calculation." Root cause was a column renamed four months ago.
-Fixing it exposed three further defects, each of which produced confidently
-wrong numbers rather than errors.
-
-**Details:**
-
-- **Root cause: `total_revenue` does not exist.** PR #6 (2026-04-09) shipped the
-  sales path reading `total_revenue`. Two days later `a201c19` replaced that
-  column with `total_net_sales` / `net_sales` and the assistant was never
-  updated. PostgREST rejected every query with 400 `column sales_data.total_revenue
-  does not exist`. **The sales assistant had been dead since 2026-04-11.**
-- **The error was destructured and never checked.** `const { data, error } = ...`
-  with no `if (error)`, so a hard 400 became `data: null` → "No data found for
-  this range." Same silent-failure shape as the `time_off_requests` RLS no-op on
-  2026-08-06. Now returns an explicit message instead of inventing an empty set.
-- **Repo/prod drift reconciled.** Deployed v34 was an agentic tool-calling rewrite
-  that existed nowhere in git; the repo still held PR #6's keyword/aggregate
-  version. Owner chose to keep the agentic design — it is now committed, so git
-  and prod match.
-- **Single tool round → bounded loop (`MAX_TOOL_ROUNDS = 4`).** When a requested
-  day has no rows, Gemini asks again with a wider range. The old code had nowhere
-  to put that second call, so the follow-up response was a `functionCall`, not
-  text, and fell through to the error string. Also switched `parts[0]` to a search
-  across parts — a thinking model puts reasoning in `parts[0]`.
-- **PostgREST 1000-row cap — the worst of the four.** A month-wide query returned
-  `Content-Range: 0-999/1947`: only the 13 most recent of 25 days, silently. Totals
-  built from that slice were reported as the full month, understating by ~50%.
-  `fetchAllSales()` now pages until a short page arrives.
-- **Arithmetic moved out of the model.** Asked to total ~100 rows/day by hand,
-  Gemini was consistently wrong (a week came back 1,718.00 light) while unit counts
-  were exact. `summariseSales()` computes totals by day, category and item in code
-  and marks them authoritative; raw rows are dropped above `RAW_ROW_LIMIT = 1200`.
-- `maxOutputTokens` 2048 → 8192 (sales path only) — answers were truncating
-  mid-sentence because the budget covers thinking across every tool round.
-- **Left alone deliberately:** the `toISOString()` "Today is" line. Flagged as a
-  UTC rollover, owner kept it.
-- **Verification:** `npm run build` clean (4.78s). All four originally-failing
-  questions answered against production, then every figure cross-checked by SQL:
-  July 58,993.50 / 7,360 units / 25 days and August-to-18 35,526.00 / 4,163 / 15
-  all matched exactly, as did the top-3 July categories and Aug 16's
-  3,704.50 / 425 units / 36 handhelds. "Last Friday" (2026-08-14, a genuine data
-  gap) now says the report was not uploaded instead of reporting zero. Recipe RAG
-  path re-checked, unchanged.
-- **Note:** CHANGES.md is now ~505 lines, past the 500-line cap — condense the
-  oldest detailed entries into the Archive next session.
-
----
 
 ### 2026-08-18 — Codex/ChatGPT Tooling Quarantined
 
@@ -473,3 +420,48 @@ parser that reads the table from the PDF's own coordinates instead of inferring 
   from the dashboard (MCP can deploy but not delete). The 3 BEO packets added to
   `app/sample-data/test_beos/` are untracked and carry member PII, as does the
   `process-beo upload diff/` screenshot folder.
+
+---
+
+### 2026-08-30 — Geometric Parser Wired Into process-beo
+
+**File(s) Changed:** `supabase/functions/process-beo/index.ts`,
+`supabase/functions/process-beo/beoGeometricParser.ts` (new) — **v21 → v22**
+**Type:** `feature`
+**Summary:** The BEO table is now read from the PDF's own coordinates instead of being
+inferred by Gemini. Gemini is kept as a fallback, taken only when the geometric result
+fails to reconcile.
+
+**Details:**
+
+- **Geometric first, model second — not a blend.** `parseGeometric()` runs on every
+  upload. Its result is accepted ONLY if it reconciles against an independent count of
+  qty-bearing rows taken straight from the coordinates. If it does not, or if it throws,
+  or if no BEO footer is found, the request falls through to the existing Gemini path.
+  An unfamiliar layout therefore degrades to the old behaviour rather than silently
+  writing a wrong order list.
+- **The reconciliation counter shares no logic with the assembler** — that is what makes
+  it a real check rather than a restatement.
+- **Caught a wrong assumption while building.** Scoping that counter to pages carrying a
+  BEO footer was necessary: `test_beos (46)` is not a daily packet at all but a 92-page
+  EVENT CONTRACT with BEO pages embedded at 39-53, 65-69 and 84-87. Counting the contract
+  pages reported 40 items against 75 rows and would have pushed a good parse to the model
+  every time. The earlier "5 packets, same template" claim was wrong — it is 4 daily
+  packets plus one contract bundle.
+- **Two real defects fixed while typing the parser:** `getTextContent()` returns
+  `TextItem | TextMarkedContent`, and marked-content items have no `.str` — an unguarded
+  `.trim()` would have thrown. And `midText(row)` was being called with one argument
+  against a two-argument signature; it worked by accident, and now says so.
+- **Type-check parity:** `deno check` reports 11 errors both before and after, with
+  **zero from the new parser file**. The 11 are the pre-existing `SupabaseClient` generic
+  mismatch in `index.ts`.
+- **Verification against deployed v22:** all 5 packets returned `engine=geometric` with
+  hashes matching the local Deno output exactly, in **397-1010ms** against roughly 90
+  seconds for the Gemini path. The fallback branch was exercised separately with an
+  invalid PDF: the geometric parse threw, the request reached Gemini, and Gemini
+  rejected it — the handoff works.
+- **Also now returned:** `engine` on every Mode A response, so which path ran is visible
+  in the review queue and the logs rather than having to be inferred.
+- **Open:** `prototypes/` still holds the Node version of the parser plus its audit
+  harness. It duplicates the shipped TypeScript, but the harness only runs under Node,
+  so it was kept for validating future packets. Worth revisiting.

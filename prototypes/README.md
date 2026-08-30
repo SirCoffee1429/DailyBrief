@@ -1,6 +1,12 @@
 # Geometric BEO parser — prototype
 
-Not wired into anything. `process-beo` still parses with Gemini.
+**SHIPPED 2026-08-30.** The parser now runs in `process-beo` v22 as
+`supabase/functions/process-beo/beoGeometricParser.ts`, with Gemini kept as a fallback
+taken only when the geometric result fails to reconcile.
+
+This directory is retained for `auditParser.mjs`, which validates a packet against the
+raw qty-row count and only runs under Node — the shipped copy imports `npm:unpdf` and is
+Deno-only. The two are otherwise the same parser, which is duplication worth revisiting.
 
 ## Why
 

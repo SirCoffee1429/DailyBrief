@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js@^2.4.1/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { parseGeometric } from "./beoGeometricParser.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -132,6 +133,15 @@ async function insertEvent(
   return record.id;
 }
 
+// Base64 -> bytes, in chunks. Spreading a 270KB packet into String.fromCharCode
+// blows the call stack.
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -178,7 +188,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Mode A: PDF upload — parse via Gemini then check conflicts ---
+    // --- Mode A: PDF upload — parse, then check conflicts ---
     let pdfBase64 = "";
     const contentType = req.headers.get("content-type") || "";
 
@@ -208,9 +218,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Starting BEO parsing via Gemini...`);
+    let parsedEvents: BeoEvent[] = [];
+    let engine = "geometric";
+    let fallbackReason: string | null = null;
 
-    const prompt = `
+    // Read the table from the PDF's own coordinates first. It is deterministic and
+    // takes ~300ms; Gemini takes ~90s and re-groups the same packet differently from
+    // one day to the next. The geometric result is accepted ONLY if it reconciles
+    // against an independent count of qty-bearing rows, so an unfamiliar layout falls
+    // back to the model rather than silently producing a wrong order list.
+    try {
+      const geo = await parseGeometric(base64ToBytes(pdfBase64));
+      if (geo.ok) {
+        parsedEvents = geo.events as BeoEvent[];
+        console.log(`Geometric parse: ${geo.events.length} event(s), ${geo.items} item(s), ${geo.pages} page(s)`);
+      } else {
+        fallbackReason = geo.reason;
+      }
+    } catch (err) {
+      fallbackReason = `threw: ${String(err)}`;
+    }
+
+    if (fallbackReason) {
+      engine = "gemini";
+      console.warn(`Geometric parse rejected (${fallbackReason}) — falling back to Gemini`);
+
+      const prompt = `
 You are an expert at parsing Banquet Event Orders (BEOs) for a country club.
 This PDF may contain ONE or MULTIPLE BEOs. Each new BEO begins on its own page with the club logo and a new event title in the top-right.
 
@@ -284,85 +317,83 @@ RULES:
 - Do NOT wrap in markdown code fences. Return ONLY the JSON array.
 `;
 
-    // Setup timeout AbortController to protect against Deno gateway timeouts
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.warn("Gemini API call timed out after 130 seconds. Aborting request.");
-      controller.abort();
-    }, 130000);
+      // Setup timeout AbortController to protect against Deno gateway timeouts
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.warn("Gemini API call timed out after 130 seconds. Aborting request.");
+        controller.abort();
+      }, 130000);
 
-    let geminiRes;
-    try {
-      geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                {
-                  inline_data: {
-                    mime_type: "application/pdf",
-                    data: pdfBase64,
+      let geminiRes;
+      try {
+        geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: "application/pdf",
+                      data: pdfBase64,
+                    },
                   },
-                },
-              ],
+                ],
+              },
+            ],
+            generationConfig: {
+              response_mime_type: "application/json",
+              // Unset, this defaults to 1.0 and the model re-decides how to group an
+              // ambiguous table on every run. Greedy decoding is not a determinism
+              // guarantee from Gemini, but it removes the worst of the churn.
+              temperature: 0,
             },
-          ],
-          generationConfig: {
-            response_mime_type: "application/json",
-            // Unset, this defaults to 1.0 and the model re-decides how to group an
-            // ambiguous table on every run — the same packet produced 43 items one
-            // day and 91 the next. Greedy decoding is not a determinism guarantee
-            // from Gemini, but it removes the sampling that drove the churn.
-            temperature: 0,
-          },
-        }),
-      });
-    } catch (fetchErr: any) {
-      if (fetchErr.name === 'AbortError') {
-        console.error("Gemini API call aborted due to 130s timeout.");
-        throw new Error("Gemini API request timed out after 130 seconds. Please try uploading a smaller PDF or verify network stability.");
+          }),
+        });
+      } catch (fetchErr: any) {
+        if (fetchErr.name === 'AbortError') {
+          console.error("Gemini API call aborted due to 130s timeout.");
+          throw new Error("Gemini API request timed out after 130 seconds. Please try uploading a smaller PDF or verify network stability.");
+        }
+        throw fetchErr;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      throw fetchErr;
-    } finally {
-      clearTimeout(timeoutId);
+
+      if (!geminiRes.ok) {
+        const errorText = await geminiRes.text();
+        console.error(`Gemini API error: ${errorText}`);
+        throw new Error(`Gemini API Error: ${errorText}`);
+      }
+
+      const geminiData = await geminiRes.json();
+      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      console.log(`Raw Gemini output length: ${rawOutput?.length}`);
+
+      if (!rawOutput) {
+        throw new Error("Gemini returned empty output");
+      }
+
+      parsedEvents = JSON.parse(rawOutput);
+      if (!Array.isArray(parsedEvents)) parsedEvents = [parsedEvents];
     }
 
-    if (!geminiRes.ok) {
-      const errorText = await geminiRes.text();
-      console.error(`Gemini API error: ${errorText}`);
-      throw new Error(`Gemini API Error: ${errorText}`);
-    }
-
-    const geminiData = await geminiRes.json();
-    const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    console.log(`Raw Gemini output length: ${rawOutput?.length}`);
-
-    if (!rawOutput) {
-      throw new Error("Gemini returned empty output");
-    }
-
-    let parsedEvents: BeoEvent[] = JSON.parse(rawOutput);
-    if (!Array.isArray(parsedEvents)) parsedEvents = [parsedEvents];
+    // Both guards below are no-ops on geometric output, which already gets these right.
+    // They exist for the Gemini fallback path.
 
     // The BEO's "Event Date(s)" row always prints a range, so a single-day event
-    // arrives as "08/21/2026 - 08/21/2026". Collapse that to null here rather than
-    // relying on the prompt, which is asking the model to contradict the page.
-    // Runs before every mode so insert, approve-replay and parseOnly all agree.
+    // arrives as "08/21/2026 - 08/21/2026". Collapse that to null.
     for (const event of parsedEvents) {
       if (event.event_end_date === event.event_date) event.event_end_date = null;
     }
 
     // The BEO prints the left-hand label cell once and leaves it blank on the rows
-    // beneath, even when those rows carry their own qty — The Eliminator's buffet
-    // prints "Custom Buffets" against Chicken Caprese, then five more dishes at qty
-    // 50 with an empty label cell. Carry the last label forward within the category
-    // so the card's label column is never blank; a category that never had one falls
-    // back to its own name, which is what the left column prints in that case.
+    // beneath, even when those rows carry their own qty. Carry the last label forward
+    // within the category so the card's label column is never blank.
     for (const event of parsedEvents) {
       for (const section of ((event.sections as any[]) || [])) {
         for (const cat of (section.categories || [])) {
@@ -375,16 +406,16 @@ RULES:
       }
     }
 
-    console.log(`Parsed ${parsedEvents.length} event(s) from BEO PDF`);
+    console.log(`Parsed ${parsedEvents.length} event(s) from BEO PDF via ${engine}`);
 
     // --- Mode C: parse only, write nothing ---
     // Used by receive-beo-email, which queues the result in pending_beo_imports
     // for office review instead of touching banquet_event_orders. Returns the
     // same shape Mode B accepts as `parsedEvents`, so approving a queued import
-    // is a replay rather than a second Gemini call.
+    // is a replay rather than a second parse.
     if (payload.parseOnly === true) {
       return new Response(
-        JSON.stringify({ parsedEvents }),
+        JSON.stringify({ parsedEvents, engine }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -395,7 +426,7 @@ RULES:
     if (conflicts.length > 0) {
       console.log(`Found ${conflicts.length} conflict(s) — returning for confirmation`);
       return new Response(
-        JSON.stringify({ needsConfirmation: true, conflicts, parsedEvents }),
+        JSON.stringify({ needsConfirmation: true, conflicts, parsedEvents, engine }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -409,7 +440,7 @@ RULES:
     console.log(`Successfully inserted ${insertedIds.length} BEO(s)`);
 
     return new Response(
-      JSON.stringify({ success: true, count: insertedIds.length, ids: insertedIds }),
+      JSON.stringify({ success: true, count: insertedIds.length, ids: insertedIds, engine }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
