@@ -76,28 +76,28 @@ returns the top 15, and only those reach Gemini.
   attachment** (their "attach" option will not save). `receive-beo-email` fetches
   it in two hops: `/web/token/process/<a>/<b>` 303s to a `viewBatchDocumentResults`
   page whose single href is that path with `view` → `download`; no login on either.
-  Attachments still win, so fixing their attach option retires this path with no
-  code change. The fetch runs in the background task, so the webhook acks in ~2s
-- `EXCLUDED_EVENT_NAMES` drops recurring club events (Bridge, Canasta, POPs Golf
-  etc): WHOLE name, lowercased, apostrophes stripped — the parser returns
-  `Ladies League` when the glyph fails, `Ladies' League` when it does not. Do NOT
-  loosen to contains/startsWith — a real packet holds `Ladies' League` (excluded)
-  beside `Ladies' Night League` and `Ladies Night Out` (both kept). Dropped names
-  land in `pending_beo_imports.excluded_events`; all-excluded ends `discarded`
+  Attachments still win, so fixing their attach option retires this path; the fetch
+  runs in the background task, so the webhook acks in ~2s
+- `EXCLUDED_EVENT_NAMES` drops recurring club events (Bridge, Canasta, POPs Golf):
+  WHOLE name, lowercased, apostrophes stripped — the parser returns `Ladies League`
+  when the glyph fails, `Ladies' League` when it does not. Do NOT loosen to
+  contains/startsWith — a packet holds `Ladies' League` (excluded) beside `Ladies' Night
+  League` and `Ladies Night Out` (kept). Dropped names land in `excluded_events`
 - A BEO's `Event Date(s)` row ALWAYS prints a range — a one-day event reads
-  `08/21/2026 - 08/21/2026`. `process-beo` collapses a same-day end date to null
-  after `JSON.parse`, before the mode split, so insert/approve-replay/parseOnly
-  agree. Prompt wording alone is not enough — it asks Gemini to contradict the page
-- **The Gemini BEO parse is not stable across days.** v21 sets `temperature: 0` and
-  spells out the row/label rules, which killed the worst churn, but the same packet
-  still re-groups between days (Eliminator: 11 items 08-26, 28 on 08-27). Two
-  back-to-back runs is NOT a sufficient test — it proves stability within minutes only.
-  `prototypes/` has a geometric parser reading the PDF's coordinates instead (line
-  spacing is the signal); 71/71 events exact, ~300ms on Deno. Not wired in
+  `08/21/2026 - 08/21/2026`. A same-day end date is collapsed to null in code, before
+  the mode split. Prompt wording alone never held: it asks Gemini to contradict the page
+- **The BEO table is parsed from the PDF's coordinates, not by the model** (`process-beo`
+  v22, `beoGeometricParser.ts`). Columns are fixed (label x<=60, centre 60-500, qty ~538
+  off the `Qty` cell) and **line spacing is the signal**: ~11pt = wrapped line, ~17pt =
+  new row, ~25pt = section header — font and centring do NOT distinguish them
+- **Gemini is the fallback, taken only when the geometric parse fails to reconcile**
+  against an independent count of qty-bearing rows (or throws, or finds no BEO footer).
+  Never remove that check — it stops an unfamiliar layout writing a wrong order list.
+  `engine` on the response says which ran. The model churned between days even at
+  `temperature: 0`, so two back-to-back identical runs is NOT a test of stability
 - An emailed BEO that dies mid-parse is caught by `sweepStuckBeoImports()`
-  (`lib/usePendingBeoImports.js`), called from `useOfficeApprovalCounts` so any
-  office page triggers it. Deliberately not `pg_cron` — a stuck import only
-  matters once a human opens the app
+  (`lib/usePendingBeoImports.js`) via `useOfficeApprovalCounts`, so any office page
+  triggers it. Not `pg_cron` — a stuck import only matters once a human opens the app
 
 ---
 
