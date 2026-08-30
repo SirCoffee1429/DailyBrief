@@ -36,12 +36,9 @@ all derivable from the repo — read `package.json`, `app/src/`, and
 
 Kitchen assistant uses RAG, not full-context dumps:
 
-1. Recipe upload → chunked → `embed-chunks` embeds each via `embedding-001` →
-   stored in `workbook_chunks.embedding` (vector(768))
-2. Question embedded → `match_chunks(query_embedding vector(768), match_count int)`
-   Postgres fn returns top 15 similar chunks → only those sent to Gemini
-3. Gemini answers from relevant context only. Vector index: ivfflat on
-   `workbook_chunks.embedding`
+Recipe upload → chunked → `embed-chunks` (`embedding-001`) → `workbook_chunks.embedding`
+(vector(768), ivfflat). A question is embedded, `match_chunks(query_embedding, match_count)`
+returns the top 15, and only those reach Gemini.
 
 ---
 
@@ -70,12 +67,11 @@ Kitchen assistant uses RAG, not full-context dumps:
 - `.wb-act-btn` is shared beyond the communication board — scope hover-reveal
   rules to `.wb-note .wb-act-btn`, never the bare class, or action buttons go
   invisible app-wide
-- `receive-beo-email` is deliberately wide open — no secret, no sender/subject
-  filter, matching `process-sales-data`; its Postmark address is a random hash and
-  the review queue protects live events. Do not "harden" it back: forwarding
-  rewrites `From` to `ryan@oldhawthorne.com` (a sender allowlist refuses real
-  BEOs), and a secret rides the URL only as `https://user:SECRET@host` — written
-  `https://SECRET@host` it lands in the username half and all mail is refused
+- `receive-beo-email` is deliberately wide open — no secret, no sender/subject filter,
+  matching `process-sales-data`; its Postmark address is a random hash and the review
+  queue protects live events. Do not "harden" it back: forwarding rewrites `From` to
+  `ryan@oldhawthorne.com` (an allowlist refuses real BEOs), and a secret rides the URL
+  only as `https://user:SECRET@host` — as `https://SECRET@host` all mail is refused
 - BEOs now arrive as a **daily ReserveCloud packet emailed as a LINK, not an
   attachment** (their "attach" option will not save). `receive-beo-email` fetches
   it in two hops: `/web/token/process/<a>/<b>` 303s to a `viewBatchDocumentResults`
@@ -92,6 +88,12 @@ Kitchen assistant uses RAG, not full-context dumps:
   `08/21/2026 - 08/21/2026`. `process-beo` collapses a same-day end date to null
   after `JSON.parse`, before the mode split, so insert/approve-replay/parseOnly
   agree. Prompt wording alone is not enough — it asks Gemini to contradict the page
+- **The Gemini BEO parse is not stable across days.** v21 sets `temperature: 0` and
+  spells out the row/label rules, which killed the worst churn, but the same packet
+  still re-groups between days (Eliminator: 11 items 08-26, 28 on 08-27). Two
+  back-to-back runs is NOT a sufficient test — it proves stability within minutes only.
+  `prototypes/` has a geometric parser reading the PDF's coordinates instead (line
+  spacing is the signal); 71/71 events exact, ~300ms on Deno. Not wired in
 - An emailed BEO that dies mid-parse is caught by `sweepStuckBeoImports()`
   (`lib/usePendingBeoImports.js`), called from `useOfficeApprovalCounts` so any
   office page triggers it. Deliberately not `pg_cron` — a stuck import only
@@ -101,12 +103,10 @@ Kitchen assistant uses RAG, not full-context dumps:
 
 ## Future Plans
 
-- Build a universal version of DailyBrief (separate repo/org) that works for any
-  restaurant or country club regardless of file type or structure
-- Integrate KitchSync (scheduling) and PrepMaster (inventory/prep) after
-  DailyBrief validates with paying customers
-- Add real authentication to replace the hardcoded office password
-- Universal file ingestion: PDF, DOCX, CSV, plain text in addition to XLSX
+- Universal DailyBrief (separate repo/org) for any restaurant or club, any file type
+- KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
+- Real auth to replace the hardcoded office password
+- Universal ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 
 ---
 

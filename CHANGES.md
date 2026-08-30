@@ -134,72 +134,11 @@
 - 08-04 — Separate the auto-scheduler branch from main's housekeeping
 - 08-05 — Office Notification Bell (time off + availability)
 - 08-06 — Time Off Approval Workflow + Sidebar Approval Badges
+- 08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
-
-**File(s) Changed:** `supabase/functions/receive-beo-email/index.ts` (new, v5 deployed),
-`supabase/functions/process-beo/index.ts` (Mode C), `supabase/config.toml`,
-migrations `create_pending_beo_imports` + `add_beo_notification_kinds`,
-`app/src/lib/beoDiff.js` (new), `app/src/lib/usePendingBeoImports.js` (new),
-`app/src/components/PendingBeoPanel.jsx` (new), `app/src/pages/EventsBanquetsPage.jsx`,
-`app/src/lib/useOfficeApprovalCounts.js`, `app/src/components/OfficeLayout.jsx`,
-`app/src/lib/notifications.js`, `app/src/components/NotificationBell.jsx`, `app/src/index.css`
-**Type:** `feature`
-**Commits:** `a60f440`, `61a5f2e`, `60ac183`, `2fe81eb` — all pushed
-**Summary:** BEOs emailed by Rhi now arrive in DailyBrief automatically instead of being
-downloaded and re-uploaded by hand. They are never applied silently: each email becomes a
-reviewable card above the BEO list on `/office/events` showing a diff against the live event,
-with Approve and Discard. Proven end to end in production — a real forwarded BEO updated
-Meadley Pool Party from 50 to 150 guests.
-
-**Details:**
-
-- **Pipeline:** Outlook redirect rule → Postmark inbound (the dormant `process-banquets`
-  server, reused; verified dormant against the data, not assumed) → `receive-beo-email` →
-  row in `pending_beo_imports` as `processing` → PDF stored in the private `beo-emails`
-  bucket → 200 returned immediately → Gemini parse under `EdgeRuntime.waitUntil` → row
-  becomes `pending` with `parsed_events`, or `parse_failed` with `error_text`. Bell
-  notification on both paths.
-- **No prompt duplication:** `process-beo` gained a `parseOnly` early return (Mode C)
-  returning the same shape Mode B accepts, so the 50-line Gemini prompt has one home and
-  Approve is a replay rather than a second parse.
-- **Approve applies the whole email.** A packet carries up to a dozen events; Mode B updates
-  in place, so re-applying an unchanged event costs nothing. The panel shows only what
-  differs and collapses the rest behind a count.
-- **Overlap is flagged, not auto-resolved.** The plan called for a newer email to supersede
-  an older one naming the same event; that assumed one event per email. With multi-event
-  packets the older can carry an event the newer lacks, so both are kept and the overlap is
-  warned about in whichever direction it runs.
-- **Auth reversed mid-build — the main lesson.** The endpoint originally required an HTTP
-  Basic secret and gated on a sender allowlist plus a subject keyword. All three were
-  removed. The secret could only reach the endpoint inside the URL as
-  `https://user:SECRET@host`; written naturally as `https://SECRET@host` it lands in the
-  username half with an empty password, and every message was refused — a full debugging
-  cycle lost to a URL format. The allowlist would have refused the first real BEO outright,
-  because forwarding rewrote `From` to `ryan@oldhawthorne.com`. The inbound address is a
-  random hash only one person sends to, so the gates were checking a property of mail that
-  was already ours. What actually protects live event data is the review queue. Setup is now
-  a plain URL and one mail rule, matching `process-sales-data`. `secretMatches` remains and
-  returns `true` when `BEO_WEBHOOK_SECRET` is unset, so it can be switched back on.
-- **Stuck-parse sweep:** a worker killed mid-parse leaves its row at `processing` with
-  nothing running to correct it — uncounted, unnotified, and reading as still working.
-  `sweepStuckBeoImports()` retires anything over 10 minutes to `parse_failed` and writes the
-  bell notification. Runs from `useOfficeApprovalCounts` (mounted by `OfficeLayout`, so every
-  office page triggers it) rather than `pg_cron`; the `.select()` zero-rows check doubles as
-  the multi-manager concurrency guard.
-- **Verification:** all refusal gates by curl; duplicate `MessageID` acked with no second row;
-  a real BEO through to `pending` in 86s and a second in 31s; a non-BEO PDF to `parse_failed`
-  in 17s; signed-URL retrieval byte-identical with unsigned access refused; the panel
-  rendering field/added/removed/quantity diffs against a planted match; the sweep firing from
-  the office dashboard. Phase 0 recon was retired unrun — its only question died with the
-  allowlist.
-- **Leftovers:** two `manual-test-*.pdf` files to delete from the `beo-emails` bucket.
-
----
 
 ### 2026-08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
 
@@ -480,3 +419,57 @@ differently every day, producing between 43 and 91 items for the same ~12 events
   real row with its own qty — faithful to the document, but junk in a food order list.
   Filtering belongs downstream, not in the parser. Rows approved from the 08-25 packet
   still hold the bad structure until re-approved or overwritten by the next packet.
+
+---
+
+### 2026-08-29 — Parse Churn Returned; Geometric Parser Prototype
+
+**File(s) Changed:** `prototypes/` (new: `beoGeometricParser.mjs`, `auditParser.mjs`,
+`README.md`) — `process-beo` unchanged, still v21
+**Type:** `feature` (prototype, not wired in)
+**Summary:** The 08-25 determinism fix did not hold. Correcting that, then building a
+parser that reads the table from the PDF's own coordinates instead of inferring it.
+
+**Details:**
+
+- **Correction to the 08-25 entry.** That entry reported the parse verified
+  deterministic on an identical fingerprint from two back-to-back runs. The test was
+  too weak — it could not distinguish "stable" from "stable within five minutes."
+  Same event, same field, consecutive packets under v21: The Eliminator returned **11
+  items on 08-26 and 28 items on 08-27**. `temperature: 0` narrowed the swing but did
+  not remove it across days.
+- **Both renderings were wrong.** Ground truth from the page geometry: Saturday Lunch
+  Buffet is 5 rows each at qty 25 (`Burger Bar`/`All The Toppings!` merged, since the
+  toppings line carries no qty). 08-26 merged all five into one; 08-27 split them with
+  dish names in the label column.
+- **Repair of the 08-25 rows:** 8 events pushed back through Mode B (updated in place,
+  tasks and crew notes preserved, 0 inserts). Club Car Wash went from 8 buffet rows
+  with missing quantities back to 2 correct rows before that night's service. Four
+  events could not be repaired — they were absent from the packet I had locally.
+- **Prototype: read the geometry, do not infer it.** Columns are fixed (label x<=60,
+  centre 60-500 always centred at 322, qty ~538 anchored per page off the `Qty` cell).
+  The signal that makes the rest work is **line spacing**: ~11-12pt is a wrapped line
+  inside the cell above, ~16-17pt a new table row, ~25-26pt a section header. Neither
+  font nor centring separates a category header from a continuation line — both are
+  lone centre cells at c=322 in the same font — but the gap does.
+- **Validation on 5 packets / 71 events / 264 items:** parsed item count *and* qty sum
+  equal the qty-bearing rows counted straight off the coordinates, without using the
+  parser, on **71 of 71**. Zero blank labels, blank descriptions, missing quantities or
+  missing dates. Where it disagrees with the LLM (MU Golf Fundraiser, 17 vs 15 items)
+  the parser is right — the LLM dropped two qty rows.
+- **Edge-runtime test passed.** `unpdf` under Deno gives byte-identical output to
+  Node/pdfjs (same SHA on all 5 packets, `diff` reports zero lines). Deployed as a
+  throwaway `beo-geom-test` function: all 5 packets returned hashes matching local, at
+  **210-640ms against roughly 90 seconds for the Gemini parse**. Largest packet (685KB)
+  run 4× consecutively — identical hash each time. Garbage input fails cleanly.
+- **Found while testing:** one packet carries two BEOs with the *same event name*
+  (`State Farm/#4163-1` 07/30 and `#4164-1` 07/31). Keying on the footer's BEO number
+  separates them; name alone merges them. No name+date collision occurs in these 5
+  packets so production's dedup key survives, but `beo_number` is the stronger key.
+- **Not measured:** memory in the hosted runtime — `Deno.memoryUsage().rss` returns 0
+  inside the Supabase sandbox. Nothing OOM'd across 9 invocations; that is absence of
+  failure, not a number.
+- **Open:** prototype is not wired in. `beo-geom-test` is deployed and inert — delete
+  from the dashboard (MCP can deploy but not delete). The 3 BEO packets added to
+  `app/sample-data/test_beos/` are untracked and carry member PII, as does the
+  `process-beo upload diff/` screenshot folder.
