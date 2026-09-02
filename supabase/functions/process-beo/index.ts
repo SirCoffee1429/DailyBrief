@@ -224,9 +224,11 @@ Deno.serve(async (req) => {
 
     // Read the table from the PDF's own coordinates first. It is deterministic and
     // takes ~300ms; Gemini takes ~90s and re-groups the same packet differently from
-    // one day to the next. The geometric result is accepted ONLY if it reconciles
-    // against an independent count of qty-bearing rows, so an unfamiliar layout falls
-    // back to the model rather than silently producing a wrong order list.
+    // one day to the next. The geometric result is accepted ONLY if every centre-column
+    // line printed inside a section survives into it, so an unfamiliar layout falls back
+    // to the model rather than silently producing a wrong order list. That check used to
+    // count qty-bearing rows, which is the assembler's own definition of a row: the two
+    // agreed by construction and passed a packet that had lost three whole menus.
     try {
       const geo = await parseGeometric(base64ToBytes(pdfBase64));
       if (geo.ok) {

@@ -136,40 +136,11 @@
 - 08-06 — Time Off Approval Workflow + Sidebar Approval Badges
 - 08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
 - 08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
+- 08-18 — Codex/ChatGPT Tooling Quarantined (`AGENTS.md`, `.codex/`, `.agents/skills/` gitignored; Codex stays advisory-only)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-18 — Codex/ChatGPT Tooling Quarantined
-
-**File(s) Changed:** `.gitignore`, `CLAUDE.md`
-**Type:** `config`
-**Summary:** Connecting the repo to Codex/ChatGPT added `AGENTS.md`, `.codex/`
-and `.agents/skills/`. None were ever committed or pushed. The bundle was
-removed and all three are now gitignored.
-
-**Details:**
-
-- **It copied config, not the project.** `AGENTS.md` is a converted copy of
-  `CLAUDE.md`; `.codex/agents/feature-prioritizer.toml` ports this repo's own
-  agent; `.agents/skills/` was 188 files / 3.4 MB of the everything-claude-code
-  bundle — the same bundle deliberately disabled on 2026-07-31. Source files
-  untouched.
-- **`.agents/skills/` and `.codex/` removed** (moved to session scratchpad, not
-  hard-deleted; Codex regenerates them anyway). `.agents/rules/` is the owner's
-  own tracked content and was left alone.
-- **`AGENTS.md` deliberately kept on disk.** It carries "do not make any changes
-  or create any files or folders" — Codex is advisory only, Claude Code does the
-  editing and deploying. Deleting it would have removed the one instruction
-  restraining Codex.
-- **Known defect, left as-is by owner's call:** AGENTS.md's conversion did a
-  literal find-and-replace producing `~/.Codex/...` paths that do not exist. Noted
-  in CLAUDE.md so a future session isn't misled.
-- Real production risk is a push to `main` (Vercel auto-deploys it), not these
-  files on disk.
-
----
 
 ### 2026-08-19 — BEO Exclusion Filter for ReserveCloud Daily Packets
 
@@ -465,3 +436,65 @@ fails to reconcile.
 - **Open:** `prototypes/` still holds the Node version of the parser plus its audit
   harness. It duplicates the shipped TypeScript, but the harness only runs under Node,
   so it was kept for validating future packets. Worth revisiting.
+
+---
+
+### 2026-08-31 — Geometric Parser Dropped Whole Menus; Reconciliation Gate Could Not See It
+
+**File(s) Changed:** `supabase/functions/process-beo/beoGeometricParser.ts`,
+`supabase/functions/process-beo/index.ts` — **v22 → v23**
+**Type:** `fix`
+**Summary:** Owner spotted that approving the morning's queued packet would have wiped
+the menus off Linkside Dinner Club, Rivalry Run 5k and Lewis and Clark. The geometric
+parser was dropping any table row that carries no printed quantity — and the
+reconciliation gate agreed with it, reporting a clean parse.
+
+**Details:**
+
+- **Root cause:** an item was created ONLY by a row bearing a number in the Qty column
+  (`beoGeometricParser.ts:241`). ReserveCloud prints the Qty **once per section**, on
+  that section's first row, and **omits it entirely when Event Headcount is 0**. Every
+  qty-less row was therefore appended to the previous item's description, or discarded
+  outright when no row in the section had a qty at all. Linkside 09/03 and Vistas 09/08
+  print the SAME three plated dishes; Vistas has one qty (25) and survived as 1 item,
+  Linkside has none and came through with 0.
+- **The gate was the real failure.** `countQtyRows()` counted qty-bearing rows — which
+  is the assembler's own definition of a row. The two shared no code but shared the
+  premise, so they agreed by construction: 17 items = 17 rows, `ok=true`, three menus on
+  the floor. The 08-30 claim that "sharing no logic is the whole point" was the wrong
+  safety property. The 08-29 validation ("71 of 71 events match the raw qty-row count")
+  was measuring the parser against a restatement of its own assumption; re-run on this
+  packet the same harness reports "22 of 22 match" on a parse that lost three menus.
+- **Fix 1 — a row starts an item on a qty OR a left-column label** at new-row spacing.
+  On all three broken pages the label cell is present and correctly placed
+  (`Plated Food`, `Custom Buffets`, `A La Carte Ordering`); only the qty was missing.
+  Items may now carry `qty: ""`, which the DB and UI already store and render.
+- **Fix 1a — a wrapped label line no longer starts an item.** The label cell wraps too
+  ("Hot Grab-n-Go" / "Breakfast", gap 12-13 vs 15-26 for real rows); treating each line
+  as a row truncated the label and tore "foil wrapped" off its dish. It now appends to
+  both the label and the current description.
+- **Fix 2 — the gate is now a conservation check:** every centre-column line printed
+  inside a section must survive into the output, as a category name, an item label or a
+  description line. It models no grouping rules at all. Indexed **per event, not
+  pooled** — Linkside and Vistas print identical menus, and a pooled index let the
+  surviving copy vouch for the lost one (it masked exactly this bug in testing).
+  Matched by containment, since the assembler legitimately joins printed lines.
+- **Two further data-loss defects the new gate found, both fixed:** `isCategoryHeader()`
+  walked past intervening rows to find a label further down, so free text was misread as
+  a header and everything under it discarded — a whole custom dinner menu ("Pacific
+  salmon rollup…") vanished this way; and a two-line category header's second line was
+  swallowed and thrown away ("Quick Lunch Bites" / "Minimum order of 10 per item").
+- **Verified across all 5 packets: 0 dropped lines, 0 events lost items, 211 → 224 items
+  recovered.** Recovered rows include allergy notes that had been vanishing outright
+  (`Glenda Sapp- NO SALT`, `Zola Edwards - GF & DF`). **Negative test:** reintroducing
+  the original bug makes the gate fail with 15 named missing lines, including all of
+  Linkside's menu — the check is real, not decorative. `deno check`: zero errors from
+  the parser file before and after (all 84 are unpdf's own DOM-typed declarations).
+- **Deployed v23 and verified against it** — today's packet returns `engine=geometric`,
+  22 events / 21 items in 2.1s, and its output hashes **identical** to the local run.
+- **The 08-31 queue row was regenerated in place** (`682385c5`) from the v23 parse, left
+  `pending`. All 7 events now carry their menus; `banquet_event_orders` was not touched.
+- **`prototypes/` deleted** — it held the OLD logic and the OLD self-confirming qty-row
+  metric, so that harness would have blessed a broken parse. Nothing imported it;
+  recoverable from `44865a3`. Also gitignored `app/sample-data/process-beo upload diff/`
+  (screenshots of real BEOs, carrying the same member PII as the packets).

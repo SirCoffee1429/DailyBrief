@@ -4,7 +4,8 @@
 // infer it, so the same PDF always yields the same JSON. Gemini re-groups the same
 // packet differently between days; this cannot.
 //
-// Layout, verified across 5 real packets / 71 events / 264 items:
+// Layout, verified across 5 real packets / 70 events / 224 items (4 daily packets plus
+// one 92-page event-contract bundle):
 //   left  x <= 60    row label ("Custom Buffets", "Services") or a time range
 //   mid   x 60-500   centre column, always centred at c = 322
 //   qty   x ~= 538   anchored per page off the "Qty" cell of each section header
@@ -88,43 +89,92 @@ async function loadRows(bytes: Uint8Array): Promise<Row[][]> {
   return pages;
 }
 
-// Independent count of qty-bearing rows, used to reconcile the assembled result.
-// Deliberately shares no logic with the assembler — that is the whole point of it.
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+
+// The club's own page header is reprinted on every page. On a continuation page of a
+// multi-page BEO the table resumes at the top and these lines interleave with it, so the
+// reconciliation scan sees them as table content. They are furniture, correctly ignored
+// by the assembler, and must not count as dropped rows.
+const PAGE_FURNITURE = /^(Club Contact:|E:\s*\S+@|Printed:|The Club at Old Hawthorne$)/;
+
+// Reconciliation: every centre-column line printed inside a section must survive into
+// the output — as a category name, an item label, or a line of a description. Lines
+// that vanish are the failure this exists to catch.
 //
-// Only pages carrying a BEO footer are counted, matching the pages the assembler
+// It deliberately does NOT model how rows group into items. Grouping is the
+// assembler's job, and a check that repeats the assembler's rules only restates them.
+// The previous version counted qty-bearing rows, which IS the assembler's definition
+// of a row, so the two agreed by construction: on the 08-31 packet it reported a clean
+// 17 = 17 while three events lost their entire menu, because a section that prints no
+// qty produced no items and no counted rows alike. Sharing no code was not enough;
+// what matters is sharing no premise. Column geometry (midText) is shared knowingly —
+// that is a fact about the page, not an assumption about rows.
+//
+// Only pages carrying a BEO footer are checked, matching the pages the assembler
 // consumes. A BEO can arrive inside a larger contract bundle (one 92-page EVENT
-// CONTRACT holds its BEO pages at 39-53, 65-69, 84-87); counting the contract pages
-// too would report a phantom shortfall and push a good parse to the model.
-function countQtyRows(pages: Row[][]): number {
-  let rows = 0;
+// CONTRACT holds its BEO pages at 39-53, 65-69, 84-87); checking the contract pages
+// too would report phantom losses and push a good parse to the model.
+function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
+  // Kept text is indexed PER EVENT, not pooled. Two BEOs in one packet routinely print
+  // the same menu — Linkside and Vistas 09/03 and 09/08 are the same three plated
+  // dishes — so a pooled index lets the surviving copy vouch for the lost one and hides
+  // exactly the failure this guards against.
+  //
+  // Matched by containment, not equality: the assembler legitimately joins several
+  // printed lines into one string (a header wrapped over two lines becomes one category
+  // name), so a surviving line is often only part of a kept value. Joined on a newline
+  // so a match cannot straddle two unrelated values.
+  const keptFor = new Map<string, string>();
+  for (const ev of events) {
+    const kept: string[] = [];
+    for (const s of ev.sections) {
+      for (const c of s.categories) {
+        kept.push(norm(c.name));
+        for (const it of c.items) kept.push(norm(it.label), norm(it.description));
+      }
+    }
+    keptFor.set(`${ev.event_name}/#${ev.beo_number}`, kept.join("\n"));
+  }
+
+  const missing: string[] = [];
   for (const page of pages) {
-    if (!page.find(isFooter)?.cells.find((c) => c.text.includes("/#"))) continue;
+    const key = page.find(isFooter)?.cells.find((c) => c.text.includes("/#"))?.text;
+    if (!key) continue;
+    const hay = keptFor.get(key) ?? "";
     let qtyX: number | null = null;
+    let notes = false;
     for (const r of page) {
       if (isFooter(r)) break;
       const h = r.cells.find((c) => c.text === "Qty" && c.x > 400);
-      if (h) { qtyX = h.x + 2; continue; }
-      if (!qtyX) continue;
-      const qx = qtyX;   // the null-narrowing above is lost inside the closure
-      if (r.cells.find((c) => Math.abs(c.x - qx) <= QTY_TOL && /^\d+$/.test(c.text))) rows++;
+      if (h) { qtyX = h.x + 2; notes = false; continue; }
+      if (!qtyX) continue;   // still above the first section header, not in the table
+      if (r.cells.length === 1 && r.cells[0].text === "Notes") { notes = true; continue; }
+      if (notes) continue;   // the notes block is free text, not table content
+      const t = midText(r, qtyX);
+      if (t && !PAGE_FURNITURE.test(t) && !hay.includes(norm(t))) missing.push(t);
     }
   }
-  return rows;
+  return missing;
 }
 
 // A lone centre line names a CATEGORY only when it sits on its own table row (gap) AND
-// the next row bearing a left-hand cell carries a real label. A header printed over two
-// lines is reached by scanning past the wrapped lines. Reaching an item row, a section
-// header, the notes block or the footer first means this line was wrapped text.
+// the very next table row carries a real left-hand label — every category in these BEOs
+// opens with its row-type word printed ("Bar Services" then "Services", "Bakery" then
+// "Displayed"). The scan skips only wrapped lines belonging to this same header, then
+// stops: it must NOT walk on past an intervening row to find a label further down. Doing
+// so misread free text as a header and threw away everything under it — a whole custom
+// dinner menu ("Pacific salmon rollup…") became an empty category and vanished.
 function isCategoryHeader(rows: Row[], i: number, qtyX: number | null): boolean {
   if (rows[i].gap < NEW_ROW_GAP) return false;
   for (let j = i + 1; j < rows.length; j++) {
     const r = rows[j];
     if (isFooter(r) || isSectionHeader(r)) return false;
     if (r.cells.length === 1 && r.cells[0].text === "Notes") return false;
+    if (r.gap < NEW_ROW_GAP) continue;   // wrapped remainder of this same header line
+    // A category's first row normally carries BOTH its label and a qty, so the label
+    // decides; a new row without one means this line was not a header.
     const l = leftCell(r);
-    if (l) return !TIME_RANGE.test(l.text);
-    if (qtyCell(r, qtyX)) return false;
+    return !!l && !TIME_RANGE.test(l.text);
   }
   return false;
 }
@@ -238,28 +288,53 @@ function assemble(pages: Row[][]): BeoEventOut[] {
       const mid = midText(row, qtyX);
       if (!mid && !q) continue;
 
-      if (q) {
-        // A qty starts a new item. The left cell is its label unless it is a time range,
-        // in which case the label carries forward from the row above.
-        if (l && !TIME_RANGE.test(l.text)) lastLabel = l.text;
+      const label = l && !TIME_RANGE.test(l.text) ? l.text : null;
+
+      // The label cell wraps too, and a wrapped line carries the same small gap as any
+      // other continuation: "Hot Grab-n-Go" / "Breakfast" is one label printed over two
+      // lines, and the centre text beside the second line ("foil wrapped") belongs to
+      // the dish above. Treating it as a new row both truncates the label and tears the
+      // description in half.
+      if (label && !q && row.gap < NEW_ROW_GAP && item) {
+        lastLabel = `${lastLabel} ${label}`.trim();
+        item.label = lastLabel;
+        if (mid) item.description = item.description ? item.description + "\n" + mid : mid;
+        continue;
+      }
+
+      // A row starts a new item when it carries a qty OR opens a new table row with a
+      // left-column label. The BEO prints the Qty once per section — on that section's
+      // first row — and omits it altogether when the headcount is 0, so keying an item
+      // on the qty alone loses whole menus: Linkside Dinner Club 09/03 prints three
+      // plated dishes and no qty anywhere on the page. A time range in the left cell is
+      // not a label; it continues the item above.
+      if (q || (label && row.gap >= NEW_ROW_GAP)) {
+        if (label) lastLabel = label;
         if (!category) {
           category = { name: lastLabel || section.meal_type || "Items", items: [] };
           section.categories.push(category);
         }
-        item = { label: lastLabel || category.name, description: mid, qty: q.text };
+        item = { label: lastLabel || category.name, description: mid, qty: q?.text ?? "" };
         category.items.push(item);
         continue;
       }
 
       if (isCategoryHeader(rows, i, qtyX)) {
-        category = { name: mid, items: [] };
-        section.categories.push(category);
-        item = null;
-        // Swallow the wrapped remainder of a multi-line header.
+        // Keep the wrapped remainder of a multi-line header rather than discarding it:
+        // "Quick Lunch Bites" / "Minimum order of 10 per item" is one header, and the
+        // second line is a real instruction to the kitchen.
+        let name = mid;
         while (
           i + 1 < rows.length && rows[i + 1].gap < NEW_ROW_GAP &&
           !leftCell(rows[i + 1]) && !qtyCell(rows[i + 1], qtyX)
-        ) i++;
+        ) {
+          i++;
+          const more = midText(rows[i], qtyX);
+          if (more) name += " " + more;
+        }
+        category = { name, items: [] };
+        section.categories.push(category);
+        item = null;
         continue;
       }
 
@@ -292,12 +367,17 @@ export async function parseGeometric(bytes: Uint8Array) {
     (a, e) => a + e.sections.reduce((b, s) => b + s.categories.reduce((c, k) => c + k.items.length, 0), 0),
     0,
   );
-  const qtyRows = countQtyRows(pages);
+  const dropped = droppedLines(pages, events);
 
   let reason = null;
   if (!events.length) reason = "no events found (no BEO page footer)";
-  else if (items !== qtyRows) reason = `items ${items} != qty rows ${qtyRows}`;
-  else if (events.some((e) => !e.event_name || !e.event_date)) reason = "an event is missing name or date";
+  else if (dropped.length) {
+    reason = `${dropped.length} table line(s) dropped, first: "${dropped[0].slice(0, 60)}"`;
+  } else if (events.some((e) => !e.event_name || !e.event_date)) {
+    reason = "an event is missing name or date";
+  }
 
-  return { ok: !reason, reason, events, items, qtyRows, pages: pages.length };
+  // `dropped` carries the offending lines, not just a count — when the gate fires the
+  // log should say what went missing, otherwise the fallback is undiagnosable.
+  return { ok: !reason, reason, events, items, dropped, pages: pages.length };
 }

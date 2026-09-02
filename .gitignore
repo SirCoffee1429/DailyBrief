@@ -38,4 +38,7 @@ AGENTS.md
 
 # Real BEO packets kept on disk for parser reference. Never committed — they
 # carry member names, home addresses, phone numbers, emails and member numbers.
+# The screenshots are of the same packets on screen, so they carry it too.
 BEOs/
+app/sample-data/test_beos/
+app/sample-data/process-beo upload diff/
