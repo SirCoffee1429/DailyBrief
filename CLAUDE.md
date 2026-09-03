@@ -46,55 +46,55 @@ returns the top 15, and only those reach Gemini.
 
 - Office password (`chef21`) is hardcoded in `OfficeGate.jsx` — client-side
   only, no real auth yet
-- Category stored as `text[]` in Supabase, with legacy string parsing in
-  components for older records
-- Voice input uses Web Speech API — long-press (1.5s) on center nav button
-  triggers voice mode
-- Weather widget defaults to Columbia, MO (38.9517, -92.3341) if geolocation is
-  denied
+- Category stored as `text[]` in Supabase, with legacy string parsing for older records
+- Voice input uses Web Speech API — long-press (1.5s) the center nav button for voice mode
+- Weather widget defaults to Columbia, MO (38.9517, -92.3341) if geolocation is denied
 - Embedding model: `embedding-001` via `v1beta` endpoint
 - Generation model: `gemini-3-flash-preview` via `v1beta` endpoint
 - Dates: use `lib/dates.js` for a local "today", never `toISOString().split()`
   — UTC rolls over at 7pm Central and drops the current day from queries
-- Briefings: `briefings.date` is the day it SHOWS on the dashboard, not when it
-  was written; multiple per day are allowed and all render stacked (newest
-  first, author + time byline). `BriefingEditor` defaults the date via
-  `defaultBriefingDate()` — today before 5pm local, tomorrow after, because
-  posts are written after dinner service
-- FOH shell is the cyan sidebar (`FOHLayout` + the `.foh-v2` class), not the
-  office orange — the office shell's hardcoded orange will bleed through
-  otherwise
-- `.wb-act-btn` is shared beyond the communication board — scope hover-reveal
-  rules to `.wb-note .wb-act-btn`, never the bare class, or action buttons go
-  invisible app-wide
+- Briefings: `briefings.date` is the day it SHOWS on the dashboard, not when it was
+  written; multiple per day are allowed and all render stacked (newest first, author +
+  time byline). `BriefingEditor` defaults the date via `defaultBriefingDate()` — today
+  before 5pm local, tomorrow after, because posts are written after dinner service
+- FOH shell is the cyan sidebar (`FOHLayout` + the `.foh-v2` class), not the office
+  orange — the office shell's hardcoded orange will bleed through otherwise
+- `.wb-act-btn` is shared beyond the communication board — scope hover-reveal rules to
+  `.wb-note .wb-act-btn`, never the bare class, or action buttons go invisible app-wide
 - `receive-beo-email` is deliberately wide open — no secret, no sender/subject filter,
   matching `process-sales-data`; its Postmark address is a random hash and the review
   queue protects live events. Do not "harden" it back: forwarding rewrites `From` to
   `ryan@oldhawthorne.com` (an allowlist refuses real BEOs), and a secret rides the URL
   only as `https://user:SECRET@host` — as `https://SECRET@host` all mail is refused
-- BEOs now arrive as a **daily ReserveCloud packet emailed as a LINK, not an
-  attachment** (their "attach" option will not save). `receive-beo-email` fetches
-  it in two hops: `/web/token/process/<a>/<b>` 303s to a `viewBatchDocumentResults`
-  page whose single href is that path with `view` → `download`; no login on either.
-  Attachments still win, so fixing their attach option retires this path; the fetch
-  runs in the background task, so the webhook acks in ~2s
+- BEOs arrive as a **daily ReserveCloud packet emailed as a LINK, not an attachment**
+  (their "attach" option will not save). `receive-beo-email` fetches it in two hops:
+  `/web/token/process/<a>/<b>` 303s to a page whose single href swaps `view` → `download`;
+  no login on either. Attachments still win, so fixing their attach option retires this
+  path. The fetch is backgrounded, so the webhook acks in ~2s
 - `EXCLUDED_EVENT_NAMES` drops recurring club events (Bridge, Canasta, POPs Golf):
   WHOLE name, lowercased, apostrophes stripped — the parser returns `Ladies League`
   when the glyph fails, `Ladies' League` when it does not. Do NOT loosen to
   contains/startsWith — a packet holds `Ladies' League` (excluded) beside `Ladies' Night
   League` and `Ladies Night Out` (kept). Dropped names land in `excluded_events`
-- A BEO's `Event Date(s)` row ALWAYS prints a range — a one-day event reads
-  `08/21/2026 - 08/21/2026`. A same-day end date is collapsed to null in code, before
-  the mode split. Prompt wording alone never held: it asks Gemini to contradict the page
+- A BEO's `Event Date(s)` row ALWAYS prints a range — one day reads `08/21 - 08/21`. A
+  same-day end date is collapsed to null in code, before the mode split; prompt wording
+  never held, since it asks Gemini to contradict the page
 - **The BEO table is parsed from the PDF's coordinates, not by the model** (`process-beo`
-  v22, `beoGeometricParser.ts`). Columns are fixed (label x<=60, centre 60-500, qty ~538
-  off the `Qty` cell) and **line spacing is the signal**: ~11pt = wrapped line, ~17pt =
-  new row, ~25pt = section header — font and centring do NOT distinguish them
-- **Gemini is the fallback, taken only when the geometric parse fails to reconcile**
-  against an independent count of qty-bearing rows (or throws, or finds no BEO footer).
-  Never remove that check — it stops an unfamiliar layout writing a wrong order list.
-  `engine` on the response says which ran. The model churned between days even at
-  `temperature: 0`, so two back-to-back identical runs is NOT a test of stability
+  v23, `beoGeometricParser.ts`). Columns are fixed (label x<=60, centre 60-500, qty ~538
+  off `Qty`) and **line spacing is the signal** — font and centring are NOT: ~11pt =
+  wrapped line (labels wrap too), ~17pt = new row, ~25pt = section header
+- **A row starts an item on a qty OR a left-column label, never the qty alone** — the BEO
+  prints Qty once per section and omits it at headcount 0, so keying on it dropped whole
+  menus (Linkside 09/03: three dishes, no qty anywhere). Items may carry `qty: ""`
+- **The gate is a CONSERVATION check — never "restore" the old counter.** Every centre
+  line printed in a section must survive into the output, indexed PER EVENT (two BEOs
+  often print the same menu; pooling lets the survivor vouch for the lost one). Gemini is
+  the fallback when a line vanishes, the parse throws, or no footer is found; `engine`
+  says which ran, `dropped` names what went missing. The old gate counted qty-bearing rows
+  — the assembler's own definition of a row — so it agreed by construction and passed a
+  packet that had lost three menus: **sharing no code was the wrong safety property; what
+  matters is sharing no premise.** Gemini churns across days even at `temperature: 0`, so
+  two identical back-to-back runs is NOT a test
 - An emailed BEO that dies mid-parse is caught by `sweepStuckBeoImports()`
   (`lib/usePendingBeoImports.js`) via `useOfficeApprovalCounts`, so any office page
   triggers it. Not `pg_cron` — a stuck import only matters once a human opens the app
