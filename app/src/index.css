@@ -4515,6 +4515,40 @@ tr.beo-completed td .beo-check {
   padding: 8px 12px;
   text-align: center;
   font-weight: 700;
+  /* Was an inline style on the element, which no class could override; it lives
+     here so the desktop chip below can. The blue is deliberate and NOT
+     var(--accent) — the accent is orange in office and cyan in FOH, and the BEO
+     table is meant to read the same in all three shells. */
+  color: #3b82f6;
+}
+
+/* The quantity is the one value on a BEO that cannot be skimmed past — missing it
+   means the wrong amount of food gets made. On desktop it renders as a filled chip
+   centred against its row.
+   The vertical centring matters as much as the fill: a grid cell stretches, so the
+   number used to sit pinned to the top of a row that can be 200px tall, far from
+   the dish text it belongs to. `align-self` shrinks the cell to its content so the
+   number sits beside the middle of the block it applies to. */
+@media (min-width: 769px) {
+  .beo-item-qty {
+    align-self: center;
+    justify-self: center;
+    min-width: 18px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 0.85rem;
+  }
+
+  /* Items can legitimately carry no quantity — the BEO prints the Qty once per
+     section and omits it entirely at headcount 0. Without this those rows render
+     as an empty blue pill, which reads as a rendering fault. */
+  .beo-item-qty:empty {
+    min-width: 0;
+    padding: 0;
+    background: none;
+  }
 }
 
 @media (max-width: 768px) {

@@ -944,7 +944,6 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
     // Read-only BEO body matching the PDF layout
     function renderBeoDetails(b) {
-        const accentBlue = '#3b82f6'
         const cellBorder = '1px solid var(--border-color)'
         const headerBg = 'rgba(59,130,246,0.10)'
         const subHeaderBg = 'rgba(255,255,255,0.04)'
@@ -1006,7 +1005,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                     <div key={iIdx} className="beo-item-row" style={{ borderTop: cellBorder }}>
                                         <div className="beo-item-label" style={{ borderRight: cellBorder }}>{item.label || ''}</div>
                                         <div className="beo-item-description" style={{ borderRight: cellBorder }}>{item.description || ''}</div>
-                                        <div className="beo-item-qty" style={{ color: accentBlue }}>{item.qty || ''}</div>
+                                        <div className="beo-item-qty">{item.qty || ''}</div>
                                     </div>
                                 ))}
                             </div>

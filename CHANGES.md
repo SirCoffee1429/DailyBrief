@@ -137,61 +137,11 @@
 - 08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
 - 08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
 - 08-18 — Codex/ChatGPT Tooling Quarantined (`AGENTS.md`, `.codex/`, `.agents/skills/` gitignored; Codex stays advisory-only)
+- 08-19 — BEO Exclusion Filter for ReserveCloud Packets (`receive-beo-email` v5→v7, `excluded_events` column; whole-name match, apostrophes stripped not standardised — rationale in CLAUDE.md)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-19 — BEO Exclusion Filter for ReserveCloud Daily Packets
-
-**File(s) Changed:** `supabase/functions/receive-beo-email/index.ts` (v5 → v7),
-migration `20260819000000_add_excluded_events_to_pending_beo_imports.sql`
-**Type:** `feature` + `migration`
-**Summary:** ReserveCloud now sends a daily packet of every BEO directly, rather
-than Rhi emailing one and it being forwarded. Owner added an exclusion list for
-recurring club events the kitchen does not cook for. Reviewed, hardened and
-tested end to end against production.
-
-**Details:**
-
-- **The owner's filter was correct but not deployed.** Live was still v5 with no
-  filtering at all, so the first ReserveCloud packet would have imported every
-  excluded event.
-- **Exact whole-name matching kept, by owner's call.** ReserveCloud uses fixed
-  recurring names, and the risk is asymmetric: an extra card costs one click,
-  while a wrongly-excluded BEO never reaches the kitchen. `"Bridge Group"` and
-  `"Bridgewater Wedding"` both still reach review, deliberately.
-- **Apostrophes are stripped, not standardised.** Found by testing, not
-  inspection: a BEO reading `Ladies’ League` came back from the parser as
-  `Ladies League` with no apostrophe at all when the glyph did not render, and as
-  `Ladies' League` with an ASCII one when it did. Matching on any single spelling
-  would silently miss the event. Normalisation now removes `' ' ' ʼ ´` and
-  collapses whitespace, so all three spellings are one key. This does not widen
-  matching.
-- **New `excluded_events jsonb` column.** Excluded events were being dropped with
-  only a count in the logs, and a fully-excluded packet had `parsed_events` set to
-  `[]` — so an over-broad rule would have made a real BEO vanish with nothing to
-  find it by. Edge logs expire in days, so the record lives on the row. Excluded
-  names are also logged by name, not just counted.
-- **Discard path now checks `.select()`** for zero matched rows, matching the
-  pattern the rest of this function already uses. A nameless event is never
-  excluded — it goes to review where a human can see it.
-- **Verification:** 20 unit cases on the matcher, all passing. Five synthetic BEO
-  packets sent through the live webhook: a mixed packet kept
-  "Thompson Rehearsal Dinner" and excluded "Bridge"; an all-excluded packet went
-  to `discarded` with "Canasta, Stag Night" recorded and correctly wrote no bell
-  notification; a real WinAnsi curly apostrophe and a bare "Ladies League" both
-  excluded. `npm run build` clean (4.71s). All 5 test rows and 2 test
-  notifications deleted; 17 live BEOs untouched.
-- **Leftover:** 5 `claude-test-*.pdf` files in the `beo-emails` bucket. There is
-  no DELETE policy on that bucket (the function writes with the service role), and
-  direct deletion from `storage.objects` is blocked, so they need removing from
-  the Supabase dashboard.
-- **Not addressed:** a daily packet re-sends events already approved, so expect
-  repeat review cards; the diff panel shows unchanged events collapsed. Packet
-  size vs the 130s parse budget is untested with a real full-day packet.
-
----
 
 ### 2026-08-19 — Fetch BEO Packets from ReserveCloud Links
 
@@ -498,3 +448,46 @@ reconciliation gate agreed with it, reporting a clean parse.
   metric, so that harness would have blessed a broken parse. Nothing imported it;
   recoverable from `44865a3`. Also gitignored `app/sample-data/process-beo upload diff/`
   (screenshots of real BEOs, carrying the same member PII as the packets).
+
+---
+
+### 2026-09-06 — BEO Qty Column Emphasis (UNCOMMITTED — awaiting owner sign-off)
+
+**File(s) Changed:** `app/src/index.css`, `app/src/pages/EventsBanquetsPage.jsx`
+**Type:** `feature` — **in the working tree only, not committed, not pushed**
+**Summary:** Owner overlooked the Qty column on a BEO during service and it cost a
+bad look. The quantity now renders as a filled blue chip centred against its row on
+desktop, instead of a small number pinned to the top-right of a tall cell.
+
+**Details:**
+
+- **The diagnosis was spatial, not brightness.** Qty was already `font-weight: 700`
+  in accent blue, so "make it stand out" had to mean more than emphasis. On a
+  multi-line dish the grid cell stretches to ~200px and the number sits top-aligned
+  at the far right — the eye tracks the dish text and the number is nowhere near it.
+  Confirmed by looking at the real Linkside card: a 7-line dish with one small `11`
+  about 180px from the last line it applies to.
+- **Owner picked the chip after comparing four treatments** built behind a temporary
+  toggle (current / tinted rail / solid chip / big-no-fill) on live data. Scaffolding
+  removed afterwards; only the chosen treatment remains.
+- **`align-self: center` is the load-bearing part**, not the fill. It stops the grid
+  cell stretching, so the number sits beside the middle of the block it applies to.
+- **Blank quantities had to be handled or the fix would ship a defect.** Items can
+  legitimately carry `qty: ""` (the BEO prints Qty once per section, and omits it at
+  headcount 0), which would have rendered as an *empty blue pill* — worse than the
+  invisible whitespace it replaced. `.beo-item-qty:empty` suppresses the chip.
+  Verified on Rivalry Run 5k, whose `Custom Buffets` row has no printed qty. This is
+  NOT the "flag blanks" feature the owner declined; blanks still show as nothing.
+- **The blue stays hardcoded, deliberately.** `var(--accent)` is orange in office and
+  cyan in FOH; the BEO table is meant to read the same in all three shells, which is
+  why the original code hardcoded `#3b82f6` rather than using the token. The qty
+  colour moved from an inline style into CSS (inline beats classes), which made the
+  local `accentBlue` const unused, so it was removed.
+- **Sized down twice at the owner's request** — `1.05rem/4px 12px/42px` →
+  `0.95/3px 9px/30px` → `0.85rem/2px 6px/18px`. At the final size the number is
+  smaller than the surrounding table text (`0.92rem`), so the chip now carries its
+  emphasis on fill rather than scale.
+- **Open:** mobile is untouched by design (the miss happened on desktop, and the
+  `<=768px` reflow already puts qty beside the label) — but the phone layout was
+  never actually viewed, a window resize failed to take. Owner has not seen the final
+  size on his own screen. Nothing committed; `main` is at `7b576f7`.
