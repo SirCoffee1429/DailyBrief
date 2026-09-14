@@ -2,21 +2,14 @@
 
 ## What This App Is
 
-DailyBrief is a digital kitchen management web app built for Old Hawthorne
-Country Club in Mid-Missouri. It serves two types of users — kitchen crew and
-office/management — through separate password-protected dashboards.
+DailyBrief is a digital kitchen management web app for Old Hawthorne Country Club in
+Mid-Missouri, serving kitchen crew, front of house, and office/management through
+separate password-protected dashboards. Live at https://brief-club.vercel.app —
+**Supabase project ref `chajwmoohmiugdgvqjyo`**.
 
-The app is live at: https://brief-club.vercel.app
-
----
-
-## Key IDs
-
-- **Supabase Project Ref:** chajwmoohmiugdgvqjyo
-
-Stack, dependencies, routes, pages, components, tables, and edge functions are
-all derivable from the repo — read `package.json`, `app/src/`, and
-`supabase/functions/`. Only the non-obvious bits are recorded below.
+Stack, dependencies, routes, pages, components, tables, and edge functions are all
+derivable from the repo — read `package.json`, `app/src/`, and `supabase/functions/`.
+Only the non-obvious bits are recorded below.
 
 ---
 
@@ -49,8 +42,14 @@ returns the top 15, and only those reach Gemini.
 - Category stored as `text[]` in Supabase, with legacy string parsing for older records
 - Voice input uses Web Speech API — long-press (1.5s) the center nav button for voice mode
 - Weather widget defaults to Columbia, MO (38.9517, -92.3341) if geolocation is denied
-- Embedding model: `embedding-001` via `v1beta` endpoint
-- Generation model: `gemini-3-flash-preview` via `v1beta` endpoint
+- Models via `v1beta`: `gemini-embedding-001` (embeddings), `gemini-3-flash-preview`
+  (generation, 9 call sites). **Both are stale** — Google's GA flash line is at 3.8.
+  Upgrade as its OWN change before any new AI feature; it shifts BEO parsing too
+- Recipes are a FIXED Excel template, one sheet each, in `workbook_sheets.rows`: row 1
+  `RECIPE:`|name, row 2 `Ingredients|Quantity|Measure|Unit Cost|Total Cost`, rows 3–23
+  ingredients, row 24 `Assembly:`, rows 25–32 method. **There is NO yield field** — 494
+  sheets, 0 say "serves" — so a recipe is an absolute batch with no denominator and
+  CANNOT be scaled to a headcount until one is added. 411 carry their own cost columns
 - Dates: use `lib/dates.js` for a local "today", never `toISOString().split()`
   — UTC rolls over at 7pm Central and drops the current day from queries
 - Briefings: `briefings.date` is the day it SHOWS on the dashboard, not when it was
@@ -88,13 +87,13 @@ returns the top 15, and only those reach Gemini.
   menus (Linkside 09/03: three dishes, no qty anywhere). Items may carry `qty: ""`
 - **The gate is a CONSERVATION check — never "restore" the old counter.** Every centre
   line printed in a section must survive into the output, indexed PER EVENT (two BEOs
-  often print the same menu; pooling lets the survivor vouch for the lost one). Gemini is
-  the fallback when a line vanishes, the parse throws, or no footer is found; `engine`
-  says which ran, `dropped` names what went missing. The old gate counted qty-bearing rows
-  — the assembler's own definition of a row — so it agreed by construction and passed a
-  packet that had lost three menus: **sharing no code was the wrong safety property; what
-  matters is sharing no premise.** Gemini churns across days even at `temperature: 0`, so
-  two identical back-to-back runs is NOT a test
+  often print the same menu; the survivor vouches for the lost one). Gemini is the
+  fallback when a line vanishes, the parse throws, or no footer is found; `engine` says
+  which ran, `dropped` what went missing. The old gate counted qty-bearing rows — the
+  assembler's own definition of a row — so it agreed by construction and passed a packet
+  that lost three menus: **sharing no code was the wrong safety property; what matters is
+  sharing no premise.** Gemini churns day to day even at `temperature: 0` — two identical
+  back-to-back runs is NOT a test
 - An emailed BEO that dies mid-parse is caught by `sweepStuckBeoImports()`
   (`lib/usePendingBeoImports.js`) via `useOfficeApprovalCounts`, so any office page
   triggers it. Not `pg_cron` — a stuck import only matters once a human opens the app
@@ -103,10 +102,13 @@ returns the top 15, and only those reach Gemini.
 
 ## Future Plans
 
-- Universal DailyBrief (separate repo/org) for any restaurant or club, any file type
+- Universal DailyBrief (separate repo/org) for any restaurant or club — universal
+  ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
-- Universal ingestion: PDF, DOCX, CSV, plain text alongside XLSX
+- Supplier order guide in BEO order lists — spec'd 2026-09-07, NOT built. Inference moves
+  OUT of the per-BEO path: define each dish once, confirm, then generation is arithmetic.
+  Blocked on volume→weight density. Spec: `claudedocs/requirements_beo_order_guide_2026-09-07.md`
 
 ---
 
@@ -151,15 +153,11 @@ follow. For DailyBrief, the rules below win:
 
 ---
 
-## Change Tracking
+## Change Tracking & Session Init
 
-All changes are logged at: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
-
-## Session Initialization
-
-At the start of every new session, or whenever a new model is loaded, you MUST:
-
-1. Read all files in C:\Old Hawthorne Projects\DailyBrief\.agents\rules
+- All changes are logged at `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
+- At the start of every session, or whenever a new model is loaded, you MUST read
+  all files in `C:\Old Hawthorne Projects\DailyBrief\.agents\rules`
 
 ## Your Behavior
 
@@ -192,7 +190,9 @@ At the start of every new session, or whenever a new model is loaded, you MUST:
 Ill trigger the end of the session by running /sc:save command. At that point you will follow the /sc:save command instructions as well as  :
 
 1. Update "CHANGES.md" with a summary of what we worked on and the progress we
-   made. Make sure to save the changes and exit the session. Keep under 500 lines. 
+   made. Make sure to save the changes and exit the session. Keep under 500 lines —
+   to make room, **MOVE** the oldest detailed entries to `docs/changelog/YYYY-MM.md`
+   and leave a substantive one-liner + `→ [full]` link. **Never delete an entry.**
 2. Update this file with any changes or new information that we learned and is
    relevant to the project. Make sure to conslidate this file so that it never
    exceeds 200 lines

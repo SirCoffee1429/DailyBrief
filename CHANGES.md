@@ -1,10 +1,20 @@
 # DailyBrief — Change Log
 
-> **Consolidated 2026-06-12.** Entries before the auto-scheduler work
-> (2026-06-10) are condensed to one line each in the Archive below — full
-> details live in git history. Keep this file under 500 lines: when it grows
-> past that, condense the oldest detailed entries into the Archive.
-> A duplicated block of April 2026 entries was removed during consolidation.
+> **How this file works (revised 2026-09-08).** Recent work keeps its full entry
+> below under **Detailed Entries**. Keep this file under **500 lines**: when it
+> grows past that, **MOVE** — never delete — the oldest detailed entries into
+> `docs/changelog/YYYY-MM.md`, and leave behind a one-line Archive summary that
+> carries real substance plus a `→ [full]` link to the moved entry. The one-liner
+> should stand on its own; the link is the fallback, not the primary interface.
+>
+> **Nothing is ever destroyed.** Anything condensed on or after 2026-09-08 lives in
+> `docs/changelog/`. Entries condensed *before* that date (2026-03 → 2026-08, the
+> title-only lines below) predate this rule and exist in full only in git history —
+> recovering them into `docs/changelog/` is an open job, not yet done.
+>
+> **Consolidated 2026-06-12.** Entries before the auto-scheduler work (2026-06-10)
+> were condensed to one line each. A duplicated block of April 2026 entries was
+> removed during that pass.
 
 ---
 
@@ -138,107 +148,12 @@
 - 08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
 - 08-18 — Codex/ChatGPT Tooling Quarantined (`AGENTS.md`, `.codex/`, `.agents/skills/` gitignored; Codex stays advisory-only)
 - 08-19 — BEO Exclusion Filter for ReserveCloud Packets (`receive-beo-email` v5→v7, `excluded_events` column; whole-name match, apostrophes stripped not standardised — rationale in CLAUDE.md)
+- 08-19 — Fetch BEO Packets from ReserveCloud Links — `receive-beo-email` v7→v8: packets arrive as a LINK, not an attachment; two-hop fetch, backgrounded so the webhook acks in ~2s. → [full](docs/changelog/2026-08.md#2026-08-19--fetch-beo-packets-from-reservecloud-links)
+- 08-24 — BEO Single-Day Events Stop Reporting a Phantom End Date — `process-beo` v16→v17: `Event Date(s)` always prints a range; same-day end collapsed to null in code, before the mode split. → [full](docs/changelog/2026-08.md#2026-08-24--beo-single-day-events-stop-reporting-a-phantom-end-date)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-19 — Fetch BEO Packets from ReserveCloud Links
-
-**File(s) Changed:** `supabase/functions/receive-beo-email/index.ts` (v7 → v8)
-**Type:** `feature`
-**Summary:** The first real ReserveCloud packet was refused with "no PDF
-attachment". ReserveCloud's scheduled task emails a LINK, not an attachment, so
-the function now fetches the packet when no attachment is present.
-
-**Details:**
-
-- **Not a sender or subject problem.** The refusal was `no PDF attachment` at
-  07:33:23 — the mail reached the function fine. There are no sender or subject
-  gates to fail. `noreply@noreply.reservecloud.com` and the subject were never
-  examined.
-- **Two hops, traced against the real link, not guessed:**
-  `/web/token/process/<a>/<b>` 303s to
-  `/pub/selfService/viewBatchDocumentResults/<c>/<d>` (139KB HTML), which carries
-  exactly one href — the same path with `view` → `download` — returning
-  `application/pdf`. Neither hop needs a login.
-- **Attachment still wins when present**, so if ReserveCloud's "attach" option
-  ever starts saving (it currently will not save for the owner), this path stops
-  being used with no code change. That remains the better long-term fix: a link
-  fetch breaks if their page layout changes or the link expires.
-- **The fetch runs in the background task, not the handler.** The webhook acks in
-  ~1.8s, and a dead or expired link fails into `parse_failed` — the same visible
-  path a bad parse uses — rather than holding the webhook open.
-- **Guards:** the download is verified to start with `%PDF-` so an HTML error
-  page served with a 200 fails loudly instead of reaching Gemini as a "PDF".
-  Base64 conversion is chunked; spreading a 270KB packet into
-  `String.fromCharCode` blows the call stack.
-- **Exclusion list validated against real data at last.** The live packet held 24
-  pages / 22 events. All 8 exclusion entries matched real events; 11 events
-  excluded, 11 kept, zero false positives. Two findings worth keeping:
-  ReserveCloud writes `POPs Golf` and `POPs Poker` with a capital "POP" (4 pages
-  would have been missed by case-sensitive matching), and the same packet
-  contains `Ladies' League` (excluded) alongside `Ladies Night Out` and
-  `Ladies' Night League` (both correctly kept) — which is why exact whole-name
-  matching was the right call over any fuzzy match.
-- **Verification:** 11 unit cases on link extraction, all passing. A real
-  24-page/274KB packet parsed in 83s directly and the full webhook path resolved
-  in 42s: link fetched, PDF stored, 22 parsed, 11 kept, 11 excluded.
-  `npm run build` clean.
-- **Open:** link expiry is unknown, so a packet that fails after the link dies
-  cannot be re-fetched — though `pdf_path` preserves the original. The daily
-  packet re-sends every event each day, deduped only by Postmark MessageID, so
-  expect ~11 review cards daily with most unchanged.
-
----
-
-### 2026-08-24 — BEO Single-Day Events Stop Reporting a Phantom End Date
-
-**File(s) Changed:** `supabase/functions/process-beo/index.ts` (v16 → v17),
-`.gitignore`
-**Type:** `fix`
-**Summary:** A BEO's "Event Date(s)" row always prints a range, so a single-day
-event reads `08/21/2026 - 08/21/2026`. Gemini echoed both halves, giving
-single-day events an `event_end_date` equal to `event_date` and making every
-unchanged event report an "End date" change in the review queue.
-
-**Details:**
-
-- **Not model drift — the model was reading the page correctly.** The prompt's
-  `// last day if multi-day, else null` asked Gemini to contradict the document on
-  24 of the packet's 27 pages. It complied on the 08-21/08-23/08-24 packets and did
-  not on 08-22, which is why the symptom looked intermittent.
-- **Prompt rule rewritten to describe what the model actually sees** — it names the
-  "Event Date(s)" row and its range format instead of stating the convention abstractly.
-- **Deterministic guard added after `JSON.parse(rawOutput)`**, so compliance stops
-  mattering. Placed before the mode split so Mode A (insert), Mode B (approve-replay)
-  and Mode C (`parseOnly`) all agree. `parseOnly` was the load-bearing one: it
-  returns `parsedEvents` raw, so `pending_beo_imports` was storing the same-day date
-  and `beoDiff.js` (which diffs `event_end_date` as a scalar) reported a phantom
-  change on every otherwise-unchanged event.
-- **No user-visible damage in the events list.** `EventsBanquetsPage.jsx:714` and
-  `:962` already guard with `event_end_date !== event_date`, so no bogus
-  "Aug 22 – Aug 22" range ever rendered. `banquet_event_orders` was also clean at
-  the time of the fix — 12 rows, 11 null, 1 genuine range — because the daily
-  re-send healed the 08-22 damage via Mode B in-place updates.
-- **Verification:** the real 27-page/289KB packet (the same one that produced the
-  bug) run through deployed v17 with `parseOnly`: HTTP 200 in 87.8s, 23 events,
-  22 `null`, 1 genuine range (The Eliminator, 08-28 → 08-30), zero `end === start`.
-  Cross-checked against a direct pdfjs text extraction of every `Event Date(s)` row:
-  24 same-date pages, 3 multi-day pages, one event. They match exactly.
-  `npm run build` was not run — no frontend file changed and it does not compile
-  Deno functions; the production parse against real data is the stronger gate.
-- **`BEOs/` gitignored.** The reference packet had been staged for commit. Page 1
-  alone carries a member's home address, personal email, two phone numbers and
-  member number, and every page repeats the club contact's direct line. Unstaged
-  and ignored; the file stays on disk for parser work.
-- **Pre-existing, not addressed:** `app/sample-data/test_beos/Event-documents (1.pdf`
-  is already tracked and in git history with the same class of data. Scrubbing it
-  needs a history rewrite — owner's call.
-- **Note:** `supabase functions deploy` returned 401 (CLI not logged in); deployed
-  via the Supabase MCP instead. `verify_jwt` left at `false`, matching config.toml.
-
----
 
 ### 2026-08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily
 
@@ -491,3 +406,70 @@ desktop, instead of a small number pinned to the top-right of a tall cell.
   `<=768px` reflow already puts qty beside the label) — but the phone layout was
   never actually viewed, a window resize failed to take. Owner has not seen the final
   size on his own screen. Nothing committed; `main` is at `7b576f7`.
+
+### 2026-09-07 — Order Guide in BEO Order Lists (BRAINSTORM ONLY — no code written)
+
+**File(s) Changed:** `claudedocs/requirements_beo_order_guide_2026-09-07.md` (new)
+**Type:** `docs` — requirements discovery via `/sc:brainstorm`. **No feature code,
+no schema, no migration, nothing deployed.**
+**Summary:** Owner asked to feed the food supplier's order guide into the existing
+"generate order from BEO" and prep-list features so lists pull from real purchasable
+items, with pricing and quantity scaled to guest count. Discovery turned up two
+findings that reshaped the approach before any code was written.
+
+**Findings (verified against repo + prod DB, not assumed):**
+
+- **Recipes cannot scale — there is no yield.** Across 494 `workbook_sheets`: 1 sheet
+  mentions "yield", **0 say "serves"**, and the 11/25 hits for "portion"/"batch" are
+  prose inside assembly steps. The template is `RECIPE:` / header row /
+  rows 3–23 ingredients / row 24 `Assembly:` / rows 25–32 method. Absolute batch
+  quantities with no denominator cannot be divided down to a headcount.
+- **Dish-level recipe coverage is effectively zero.** Owner had just rewritten the
+  entire catering menu; existing recipes are *components* (sweet and sour sauce,
+  mushroom duxelles), never whole dishes. Owner initially chose "scale from existing
+  recipes" believing coverage was there — his own next answer showed it wasn't, so
+  the design changed rather than proceeding on the stated pick.
+- **411 of 494 sheets already carry `Unit Cost` / `Total Cost`**, which will drift
+  from catalog pricing. Decided: catalog is authoritative and refreshes recipe costs.
+- **Catalog only, no purchase history.** Every quantity must be derived, never
+  recalled — "learn from what we actually ordered" is off the table.
+- **Gemini models are several generations stale.** 9 call sites on
+  `gemini-3-flash-preview` (a *preview* build) plus one `gemini-2.5-flash` and one
+  `gemini-3.1-pro-preview`; Google's GA flash line is now at 3.8.
+
+**Core decision — inference moves OUT of the per-BEO path.**
+The catering menu is finite and owner-authored, so each dish is defined once
+(AI drafts → owner confirms → stored), after which generating an order from a BEO is
+pure arithmetic with **no model call**. This is the material difference from the
+portion-scaling feature scrapped 2026-07-17, which ran inference on every BEO and so
+churned run-to-run and could not be verified — the same non-determinism CLAUDE.md
+already warns about. Same seed-and-confirm pattern is used for the three other
+one-time inputs: product matching, dish specs, and recipe yields.
+
+**Owner's decisions:** catalog-only via CSV/Excel upload; wants real product names +
+cost total + guest-count quantity + pack/case rounding; quantity via a mix of
+"portion rule you set" and "AI infers" (his words), on a newer Gemini; product
+matching = AI proposes, confirm once, stored forever; scope stays **per-BEO** (not a
+combined cross-event roll-up); portions anchored to recipes where they exist, with a
+dish ingredient able to **point at a component recipe**; prep list **out of scope**
+for v1; catalog price wins over recipe cost, and refreshes it.
+
+**Open — blocks design:**
+
+- **Unit conversion is the top unresolved risk.** Recipes measure in `Cups`/`T`;
+  catalogs sell by `lb` and `50# case`. Volume→weight needs a **density per
+  ingredient**, which exists nowhere in this system. Unresolved on purpose — this is
+  the class of hidden complexity that sank the July build.
+- Need two files from the owner: the **supplier order guide export** and the
+  **catering menu**. Their real columns and size drive the ingestion design.
+- Non-blocking: raw vs finished weight, overage buffer, per-BEO case rounding
+  over-buying across events, catalog re-upload cadence, off-menu BEO dishes.
+
+**Also flagged:** the model upgrade should ship as its **own change, before** this
+feature — it alters BEO parsing behaviour too, and shouldn't be confounded with a new
+feature's first run.
+
+**State:** `main` at `a3313c1` ("qty visual update"), in sync with `origin/main`. The
+2026-09-06 qty-chip work **was committed** in that commit — an earlier draft of this
+entry claimed it was still uncommitted, which was wrong: it trusted a stale memory note
+instead of `git log`. This session wrote docs only and committed nothing.
