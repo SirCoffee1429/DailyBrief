@@ -472,3 +472,30 @@ uncommitted work from that session. All cleaned up, committed and pushed.
 
 **State:** `main` at this commit, pushed, in sync with `origin/main`. Working tree
 clean. Nothing deployed this session; production is untouched.
+
+---
+
+### 2026-09-16 — Catalog Baseline Re-Measured and Confirmed (closes the 09-15 open item)
+
+**File(s) Changed:** none (verification only) **Type:** `chore`
+**Summary:** The previous entry left P1's acceptance number in doubt because the master
+item list had existed twice at different byte sizes. Re-measured from source. The number
+holds and the duplicate was a false alarm.
+
+**Details:**
+
+- **Merged the 13 raw exports independently** (dedupe by `Product Number`, highest price
+  wins within the batch): **1,381 products / 394 price-varies / 6 unpriced** from 3,008
+  raw rows — matching the design doc on all three figures. Price basis parsed from the
+  string suffix: 2,630 per-case / 370 per-lb / 8 empty.
+- **The two master copies held identical product data.** Same 1,381 product numbers,
+  zero price differences, identical sheet and row structure. They differ in exactly 14
+  cells, all Index-sheet totals where one copy cached recalculated floats
+  (`2856.141599999999` vs `2856.1416`). The deleted copy was recovered from
+  `bf5bd4c^` to make the comparison rather than reasoning about it.
+- **So the 09-15 caution was unnecessary** — whichever copy the original validation read,
+  it got the same answer. P1's acceptance check is **1,381 / 394 / 6**, confirmed.
+- Worth carrying: `git show <rev>:<path> > file` under PowerShell **corrupts binary
+  files** (167KB xlsx came out 296KB of mangled text). Use the Bash tool for binary
+  extraction. The corrupted copy parsed without throwing and produced plausible-looking
+  wrong numbers — a silent failure, not a loud one.

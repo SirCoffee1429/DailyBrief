@@ -26,8 +26,10 @@ The 09-15 design session had ended without a save. Three defects in its CHANGES.
   the master list despite it. Owner deleted that line himself.
 - **The master item list existed twice with DIFFERENT contents** — 167,232 bytes at
   `Vendor Data/`, 164,054 at `Vendor Data/Order Guides/`. Owner deleted the former.
-  **The design's 1,381-product baseline predates finding the duplicate — P1 must
-  re-measure against the surviving copy, not trust the figure in the design doc.**
+  **RESOLVED 2026-09-16 — false alarm.** Re-merged the 13 exports independently:
+  1,381 / 394 / 6 from 3,008 raw rows, matching the design doc. Both master copies hold
+  identical product data (same 1,381 product numbers, zero price differences), differing
+  only in 14 Index-sheet totals where one cached recalculated floats. Baseline stands.
 
 ## Process note worth keeping
 Mid-session the root `.gitignore` disagreed with itself between two of my own reads:
