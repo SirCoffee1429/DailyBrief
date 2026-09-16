@@ -150,60 +150,11 @@
 - 08-19 — BEO Exclusion Filter for ReserveCloud Packets (`receive-beo-email` v5→v7, `excluded_events` column; whole-name match, apostrophes stripped not standardised — rationale in CLAUDE.md)
 - 08-19 — Fetch BEO Packets from ReserveCloud Links — `receive-beo-email` v7→v8: packets arrive as a LINK, not an attachment; two-hop fetch, backgrounded so the webhook acks in ~2s. → [full](docs/changelog/2026-08.md#2026-08-19--fetch-beo-packets-from-reservecloud-links)
 - 08-24 — BEO Single-Day Events Stop Reporting a Phantom End Date — `process-beo` v16→v17: `Event Date(s)` always prints a range; same-day end collapsed to null in code, before the mode split. → [full](docs/changelog/2026-08.md#2026-08-24--beo-single-day-events-stop-reporting-a-phantom-end-date)
+- 08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily — `process-beo` v17→v21: `generationConfig` never set a temperature, so it defaulted to 1.0 and the model re-grouped an ambiguous layout on every run (43–91 items for the same ~12 events). `temperature: 0`, three prompt rules, label carry-forward moved into code. → [full](docs/changelog/2026-08.md#2026-08-25--beo-parse-was-non-deterministic-same-pdf-different-structure-daily)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily
-
-**File(s) Changed:** `supabase/functions/process-beo/index.ts` (v17 → v21)
-**Type:** `fix`
-**Summary:** Owner reported the morning's packet "changed the format/layout again."
-The BEO had not changed — the parse had. The same PDF was being re-grouped
-differently every day, producing between 43 and 91 items for the same ~12 events.
-
-**Details:**
-
-- **Not caused by the v17 end-date change.** The identical failure — buffet dishes
-  exploded into one item each, descriptions empty — had already happened on **08-23**,
-  two days earlier. Verified by counting items per packet-day in `pending_beo_imports`:
-  3, 3, 1, 7, 3, 8 items for the same Club Car Wash buffet on six consecutive days.
-- **Root cause was sampling.** `generationConfig` set only `response_mime_type`, so
-  temperature defaulted to **1.0**. Where the layout is ambiguous the model re-decided
-  the grouping on every run. Now `temperature: 0`.
-- **The layout genuinely is ambiguous, and the prompt described it wrongly.** Confirmed
-  by extracting x/y text positions from the real packet: on the Club Car Wash page the
-  left column holds a TIME RANGE (`6:15pm-8:30pm`), not a label, and the whole centre
-  block — buffet name, rolls, six dishes, `$48/person +25% grat` — is one cell against
-  qty 26. The prompt's "label = left-column label" did not describe that page.
-- **Three prompt rules added:** one row = one item (a qty-bearing line plus every centre
-  line beneath it); `label` is always the left-column row-TYPE word (`Buffet`,
-  `Services`, `A La Carte Ordering`, `Custom Buffets`…) and never a dish name; a qty is
-  never copied onto the lines beneath the row that carries it.
-- **A contradiction I introduced was caught by the verification run**, not by review:
-  "an item runs until the next qty" versus "if the left cell is a time range, reuse the
-  nearest label" — the second implies a time-range row starts a new item, so the buffet
-  split again and one run copied `qty=26` onto all seven dishes, which would have
-  ordered seven times the food. Fixed by stating that a time range or blank left cell
-  never starts a new item.
-- **Label carry-forward done in CODE, not the prompt.** The BEO prints the label cell
-  once and leaves it blank on rows beneath that carry their own qty (The Eliminator's
-  buffet: `Custom Buffets` against Chicken Caprese, then five dishes at qty 50 with an
-  empty cell). 30 of 68 items came back with a blank label. Now carried forward within
-  the category, falling back to the category name — which is what the left column prints
-  in the one category (of 39) that has no leading label.
-- **Verification — the test that should have existed already:** the same packet parsed
-  twice through the deployed function, item structure fingerprinted and diffed. v18: 63
-  vs 69 items, every row different. v19: 74 vs 69, 60 rows matching. v21: **identical
-  fingerprint `2d7e6069b527`, 68 items, 0 blank labels, 0 items without qty, 0 empty
-  descriptions.** Club Car Wash's buffet is one item at qty 26 with the full dish list.
-- **Open:** `$30/Person` still comes through as an item where the BEO prints it as a
-  real row with its own qty — faithful to the document, but junk in a food order list.
-  Filtering belongs downstream, not in the parser. Rows approved from the 08-25 packet
-  still hold the bad structure until re-approved or overwritten by the next packet.
-
----
 
 ### 2026-08-29 — Parse Churn Returned; Geometric Parser Prototype
 
@@ -473,3 +424,63 @@ feature's first run.
 2026-09-06 qty-chip work **was committed** in that commit — an earlier draft of this
 entry claimed it was still uncommitted, which was wrong: it trusted a stale memory note
 instead of `git log`. This session wrote docs only and committed nothing.
+
+---
+
+### 2026-09-15 — Order Guide Design (DESIGN ONLY — no code, no migration)
+
+**File(s) Changed:** `claudedocs/design_beo_order_guide_2026-09-15.md` (new)
+**Type:** `docs` — architecture via `/sc:design`. **No feature code, no schema
+applied, nothing deployed.**
+**Summary:** Owner delivered both blocking files — the 13 raw PFG exports
+(`Vendor Data/Order Guides/`) and the 8 catering menu PDFs (`New Catering and Event
+Menus 2026/`). All three blocking questions from the 09-07 requirements are now
+closed, and the design is written against measured facts rather than assumptions.
+
+**Details:**
+
+- **The deterministic merge was proven against the AI-built master.** Dedupe by
+  `Product Number` + highest-price-wins-within-batch over the 13 raw exports
+  reproduces the master exactly: **1,381 products / 394 price-varies / 6 unpriced**,
+  all three matching. 3,008 raw rows in. This makes `PFG_Master_Item_List` disposable
+  — the app can rebuild it from source with no AI.
+- **All 13 exports share one header signature**, header on row 7, list name on row 2.
+  `Price` encodes its own basis in the string (`$54.46` vs `$6.1199/lb`), so the
+  master's `Price Basis` column is **parsed, not inferred** — 2,630 per-case /
+  370 per-lb / 8 empty.
+- **Highest-price-wins must scope to one upload batch, not across time.** Across
+  uploads it is a ratchet that can never come down. Called out explicitly in the
+  design as a rule, not a detail.
+- **`case_price` is derived at ingest, not at read.** The 219 catch-weight items are
+  the ~50×-wrong-line failure mode; computing it once removes the chance that a
+  future call site forgets the branch.
+- **Q1 (unit conversion / density) is largely dissolved.** 84.9% of the 1,141 food
+  products are weight, 7.7% count, 5.2% volume, 2.2% #10 cans. Dish-spec portion
+  units are constrained at entry to `oz|lb|ct|each|floz`, and cross-class conversion
+  is forbidden — a mismatch is a gap with `gap_reason`, never a guess. Density, the
+  one input that exists nowhere in this system, is never required.
+- **Correction to a claim I made on 09-14:** I said the menu file names map onto BEO
+  left-column labels. They do not. That was inferred from parser labels in this file
+  rather than from live data. Real BEOs carry line types (`Buffet`, `A La Carte
+  Ordering`, `Rentals`, `Services`) and hold the dish names inside a newline-joined
+  description string. The design adds a `beo_dish_matches` table for the free-text
+  join, which the requirements doc had not anticipated.
+- **`qty` is the multiplier, not `guest_count`** — one 90-guest event carries 82
+  turkey / 8 gluten-free / 37 ham bagged lunches.
+- **Menus supply yield the recipe library lacks** ("Serves 20", "Minimum 20
+  pieces/type"), partially answering finding F1. They are also **season-scoped**
+  (Fall Sept–Nov, Winter Dec–Feb), a requirement that was not in the 09-07 doc.
+- **Scale flagged as the top risk:** ~250–300 dishes across 18 pages means NFR-4's
+  "one or two sittings" is not achievable. Design phases the confirmation pass by
+  menu (Custom Buffets + Plated Dinners first) so the feature is useful before it is
+  complete, rather than pretending the estimate holds.
+- Phasing: P0 Gemini upgrade (own change, first) → P1 catalog ingestion → P2 menu
+  ingestion → P3 dish specs + mappings → P4 runtime arithmetic → P5 recipe cost
+  refresh. P1 verifies against the 1,381 baseline; P4 verifies byte-identical output
+  on the same BEO twice.
+
+**State:** `main` at `ed6dcfd` ("menus, and changes for order guide work", committed
+2026-09-14 by the owner), **one commit ahead of `origin/main` — not pushed**. That
+commit carries the 8 menu PDFs, the 09-07 requirements doc, and `docs/changelog/2026-08.md`.
+This session wrote docs only and committed nothing: `claudedocs/design_beo_order_guide_2026-09-15.md`
+and the 13 raw exports under `Vendor Data/Order Guides/` are still untracked.
