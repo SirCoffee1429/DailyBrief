@@ -106,9 +106,9 @@ returns the top 15, and only those reach Gemini.
   ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
-- Supplier order guide in BEO order lists — spec'd 2026-09-07, NOT built. Inference moves
-  OUT of the per-BEO path: define each dish once, confirm, then generation is arithmetic.
-  Blocked on volume→weight density. Spec: `claudedocs/requirements_beo_order_guide_2026-09-07.md`
+- Supplier order guide in BEO order lists — designed 2026-09-15, NOT built; inference moves
+  OUT of the per-BEO path, and density no longer blocks (cross-class conversion forbidden, a
+  mismatch is a gap). `claudedocs/design_beo_order_guide_2026-09-15.md`; inputs now in-repo
 
 ---
 

@@ -151,64 +151,11 @@
 - 08-19 — Fetch BEO Packets from ReserveCloud Links — `receive-beo-email` v7→v8: packets arrive as a LINK, not an attachment; two-hop fetch, backgrounded so the webhook acks in ~2s. → [full](docs/changelog/2026-08.md#2026-08-19--fetch-beo-packets-from-reservecloud-links)
 - 08-24 — BEO Single-Day Events Stop Reporting a Phantom End Date — `process-beo` v16→v17: `Event Date(s)` always prints a range; same-day end collapsed to null in code, before the mode split. → [full](docs/changelog/2026-08.md#2026-08-24--beo-single-day-events-stop-reporting-a-phantom-end-date)
 - 08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily — `process-beo` v17→v21: `generationConfig` never set a temperature, so it defaulted to 1.0 and the model re-grouped an ambiguous layout on every run (43–91 items for the same ~12 events). `temperature: 0`, three prompt rules, label carry-forward moved into code. → [full](docs/changelog/2026-08.md#2026-08-25--beo-parse-was-non-deterministic-same-pdf-different-structure-daily)
+- 08-29 — Parse Churn Returned; Geometric Parser Prototype — `temperature: 0` narrowed the swing but did not remove it across days (same event: 11 items on 08-26, 28 on 08-27). Prototype reads the table off PDF coordinates; validated on 5 packets / 71 events / 264 items, 71 of 71. → [full](docs/changelog/2026-08.md#2026-08-29--parse-churn-returned-geometric-parser-prototype)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-29 — Parse Churn Returned; Geometric Parser Prototype
-
-**File(s) Changed:** `prototypes/` (new: `beoGeometricParser.mjs`, `auditParser.mjs`,
-`README.md`) — `process-beo` unchanged, still v21
-**Type:** `feature` (prototype, not wired in)
-**Summary:** The 08-25 determinism fix did not hold. Correcting that, then building a
-parser that reads the table from the PDF's own coordinates instead of inferring it.
-
-**Details:**
-
-- **Correction to the 08-25 entry.** That entry reported the parse verified
-  deterministic on an identical fingerprint from two back-to-back runs. The test was
-  too weak — it could not distinguish "stable" from "stable within five minutes."
-  Same event, same field, consecutive packets under v21: The Eliminator returned **11
-  items on 08-26 and 28 items on 08-27**. `temperature: 0` narrowed the swing but did
-  not remove it across days.
-- **Both renderings were wrong.** Ground truth from the page geometry: Saturday Lunch
-  Buffet is 5 rows each at qty 25 (`Burger Bar`/`All The Toppings!` merged, since the
-  toppings line carries no qty). 08-26 merged all five into one; 08-27 split them with
-  dish names in the label column.
-- **Repair of the 08-25 rows:** 8 events pushed back through Mode B (updated in place,
-  tasks and crew notes preserved, 0 inserts). Club Car Wash went from 8 buffet rows
-  with missing quantities back to 2 correct rows before that night's service. Four
-  events could not be repaired — they were absent from the packet I had locally.
-- **Prototype: read the geometry, do not infer it.** Columns are fixed (label x<=60,
-  centre 60-500 always centred at 322, qty ~538 anchored per page off the `Qty` cell).
-  The signal that makes the rest work is **line spacing**: ~11-12pt is a wrapped line
-  inside the cell above, ~16-17pt a new table row, ~25-26pt a section header. Neither
-  font nor centring separates a category header from a continuation line — both are
-  lone centre cells at c=322 in the same font — but the gap does.
-- **Validation on 5 packets / 71 events / 264 items:** parsed item count *and* qty sum
-  equal the qty-bearing rows counted straight off the coordinates, without using the
-  parser, on **71 of 71**. Zero blank labels, blank descriptions, missing quantities or
-  missing dates. Where it disagrees with the LLM (MU Golf Fundraiser, 17 vs 15 items)
-  the parser is right — the LLM dropped two qty rows.
-- **Edge-runtime test passed.** `unpdf` under Deno gives byte-identical output to
-  Node/pdfjs (same SHA on all 5 packets, `diff` reports zero lines). Deployed as a
-  throwaway `beo-geom-test` function: all 5 packets returned hashes matching local, at
-  **210-640ms against roughly 90 seconds for the Gemini parse**. Largest packet (685KB)
-  run 4× consecutively — identical hash each time. Garbage input fails cleanly.
-- **Found while testing:** one packet carries two BEOs with the *same event name*
-  (`State Farm/#4163-1` 07/30 and `#4164-1` 07/31). Keying on the footer's BEO number
-  separates them; name alone merges them. No name+date collision occurs in these 5
-  packets so production's dedup key survives, but `beo_number` is the stronger key.
-- **Not measured:** memory in the hosted runtime — `Deno.memoryUsage().rss` returns 0
-  inside the Supabase sandbox. Nothing OOM'd across 9 invocations; that is absence of
-  failure, not a number.
-- **Open:** prototype is not wired in. `beo-geom-test` is deployed and inert — delete
-  from the dashboard (MCP can deploy but not delete). The 3 BEO packets added to
-  `app/sample-data/test_beos/` are untracked and carry member PII, as does the
-  `process-beo upload diff/` screenshot folder.
-
----
 
 ### 2026-08-30 — Geometric Parser Wired Into process-beo
 
@@ -484,3 +431,44 @@ closed, and the design is written against measured facts rather than assumptions
 commit carries the 8 menu PDFs, the 09-07 requirements doc, and `docs/changelog/2026-08.md`.
 This session wrote docs only and committed nothing: `claudedocs/design_beo_order_guide_2026-09-15.md`
 and the 13 raw exports under `Vendor Data/Order Guides/` are still untracked.
+
+---
+
+### 2026-09-15 — Session Housekeeping: CHANGES.md Repair, Docs and Vendor Data Committed
+
+**File(s) Changed:** `CHANGES.md`, `docs/changelog/2026-08.md`, `.gitignore`,
+`app/.claude/settings.local.json`, `Vendor Data/` **Type:** `chore` — housekeeping
+only. **No feature code, no schema, nothing deployed.**
+**Summary:** `/sc:load` turned up three defects in the 09-15 design entry and a pile of
+uncommitted work from that session. All cleaned up, committed and pushed.
+
+**Details:**
+
+- **The 09-15 entry had been inserted mid-entry.** It landed before the last two
+  paragraphs of the 09-07 entry, orphaning its "Also flagged" and "State" paragraphs
+  under the wrong date. Moved back to 09-07 unedited.
+- **09-15's state paragraph was inherited and wrong.** It claimed `main` was at
+  `a3313c1` and in sync with origin. `main` was actually at `ed6dcfd`, one commit ahead
+  and unpushed. Replaced with the real state.
+- **Over the 500-line cap at 535.** Moved the 08-25 and 08-29 entries verbatim to
+  `docs/changelog/2026-08.md` with one-line pointers, per the MOVE-never-delete rule.
+  The 08-25 move was diffed against `git show HEAD:CHANGES.md` — 47 lines, identical.
+- **Committed and pushed in three commits** (`a5b8b9d`, `8f4c8b8`, this one), which also
+  carried the owner's 09-14 `ed6dcfd` off the local machine for the first time.
+- **Vendor data is now tracked** at `Vendor Data/Order Guides/` — 13 raw PFG exports
+  plus the master item list, the input P1 verifies against. Owner chose this knowingly
+  after being told the supplier pricing lands in GitHub history permanently.
+- **`.gitignore`: the `Vendor Data/PFG_Master_Item_List_09-06-26` rule is gone.** It
+  never matched the real filename (missing `20` and `.xlsx`), so the master list had
+  been committed in `ed6dcfd` despite it. Owner removed the line himself once the
+  decision was to track the exports.
+- **The master item list existed twice with different contents** — 167,232 bytes at
+  `Vendor Data/`, 164,054 at `Vendor Data/Order Guides/`. Owner deleted the former.
+  **Open: the design's 1,381-product baseline was measured before the duplicate was
+  found, so P1 must re-confirm that number against the surviving copy rather than
+  trusting the figure in the design doc.**
+- `app/.claude/settings.local.json`: dropped four permission entries pinned to a dead
+  session scratchpad path.
+
+**State:** `main` at this commit, pushed, in sync with `origin/main`. Working tree
+clean. Nothing deployed this session; production is untouched.
