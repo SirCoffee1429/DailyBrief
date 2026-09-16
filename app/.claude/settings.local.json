@@ -9,7 +9,10 @@
       "Bash(npm run *)",
       "mcp__serena__activate_project",
       "mcp__serena__read_memory",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "PowerShell(Get-ChildItem *)",
+      "mcp__claude_ai_Supabase__list_tables"
     ]
-  }
+  },
+  "outputStyle": "Proactive"
 }
