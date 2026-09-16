@@ -496,6 +496,5 @@ holds and the duplicate was a false alarm.
 - **So the 09-15 caution was unnecessary** — whichever copy the original validation read,
   it got the same answer. P1's acceptance check is **1,381 / 394 / 6**, confirmed.
 - Worth carrying: `git show <rev>:<path> > file` under PowerShell **corrupts binary
-  files** (167KB xlsx came out 296KB of mangled text). Use the Bash tool for binary
-  extraction. The corrupted copy parsed without throwing and produced plausible-looking
-  wrong numbers — a silent failure, not a loud one.
+  files** (167KB xlsx came out 296KB of mangled text) — use the Bash tool. It parsed
+  without throwing and produced plausible wrong numbers: a silent failure, not a loud one.
