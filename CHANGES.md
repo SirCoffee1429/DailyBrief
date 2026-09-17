@@ -155,50 +155,13 @@
 - 08-30 — Geometric Parser Wired Into process-beo — `process-beo` v21→v22: geometric first, Gemini kept as the fallback and taken only when the parse fails to reconcile. All 5 packets returned `engine=geometric` in 397-1010ms against ~90s for Gemini. → [full](docs/changelog/2026-08.md#2026-08-30--geometric-parser-wired-into-process-beo)
 - 08-31 — Geometric Parser Dropped Whole Menus; Reconciliation Gate Could Not See It — `process-beo` v22→v23: a row starts on a qty **or** a left-column label, because the BEO prints Qty once per section. The old gate counted qty-bearing rows — the assembler's own definition of a row — so it agreed by construction and passed a packet that lost three menus. Replaced with a per-event conservation check. → [full](docs/changelog/2026-08.md#2026-08-31--geometric-parser-dropped-whole-menus-reconciliation-gate-could-not-see-it)
 
+### September 2026
+
+- 09-06 — BEO Qty Column Emphasis — qty renders as a filled blue chip **centred** against its row on desktop (`a3313c1`). `align-self: center` is the load-bearing part, not the fill: on a multi-line dish the cell stretched to ~200px and the number sat top-right, far from the text it applied to. `.beo-item-qty:empty` is required, or legitimately blank quantities draw an empty pill. Mobile untouched. → [full](docs/changelog/2026-09.md#2026-09-06--beo-qty-column-emphasis-uncommitted--awaiting-owner-sign-off)
+
 ---
 
 ## Detailed Entries
-
-### 2026-09-06 — BEO Qty Column Emphasis (UNCOMMITTED — awaiting owner sign-off)
-
-**File(s) Changed:** `app/src/index.css`, `app/src/pages/EventsBanquetsPage.jsx`
-**Type:** `feature` — **in the working tree only, not committed, not pushed**
-**Summary:** Owner overlooked the Qty column on a BEO during service and it cost a
-bad look. The quantity now renders as a filled blue chip centred against its row on
-desktop, instead of a small number pinned to the top-right of a tall cell.
-
-**Details:**
-
-- **The diagnosis was spatial, not brightness.** Qty was already `font-weight: 700`
-  in accent blue, so "make it stand out" had to mean more than emphasis. On a
-  multi-line dish the grid cell stretches to ~200px and the number sits top-aligned
-  at the far right — the eye tracks the dish text and the number is nowhere near it.
-  Confirmed by looking at the real Linkside card: a 7-line dish with one small `11`
-  about 180px from the last line it applies to.
-- **Owner picked the chip after comparing four treatments** built behind a temporary
-  toggle (current / tinted rail / solid chip / big-no-fill) on live data. Scaffolding
-  removed afterwards; only the chosen treatment remains.
-- **`align-self: center` is the load-bearing part**, not the fill. It stops the grid
-  cell stretching, so the number sits beside the middle of the block it applies to.
-- **Blank quantities had to be handled or the fix would ship a defect.** Items can
-  legitimately carry `qty: ""` (the BEO prints Qty once per section, and omits it at
-  headcount 0), which would have rendered as an *empty blue pill* — worse than the
-  invisible whitespace it replaced. `.beo-item-qty:empty` suppresses the chip.
-  Verified on Rivalry Run 5k, whose `Custom Buffets` row has no printed qty. This is
-  NOT the "flag blanks" feature the owner declined; blanks still show as nothing.
-- **The blue stays hardcoded, deliberately.** `var(--accent)` is orange in office and
-  cyan in FOH; the BEO table is meant to read the same in all three shells, which is
-  why the original code hardcoded `#3b82f6` rather than using the token. The qty
-  colour moved from an inline style into CSS (inline beats classes), which made the
-  local `accentBlue` const unused, so it was removed.
-- **Sized down twice at the owner's request** — `1.05rem/4px 12px/42px` →
-  `0.95/3px 9px/30px` → `0.85rem/2px 6px/18px`. At the final size the number is
-  smaller than the surrounding table text (`0.92rem`), so the chip now carries its
-  emphasis on fill rather than scale.
-- **Open:** mobile is untouched by design (the miss happened on desktop, and the
-  `<=768px` reflow already puts qty beside the label) — but the phone layout was
-  never actually viewed, a window resize failed to take. Owner has not seen the final
-  size on his own screen. Nothing committed; `main` is at `7b576f7`.
 
 ### 2026-09-07 — Order Guide in BEO Order Lists (BRAINSTORM ONLY — no code written)
 
