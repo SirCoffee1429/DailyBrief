@@ -117,10 +117,9 @@ returns the top 15, and only those reach Gemini.
 
 - **`main`** — the primary day-to-day workspace and Vercel's production branch
   (deploys to brief-club.vercel.app). Non-scheduler work belongs here.
-- **`auto-scheduler`** — a slow-moving side feature (BOH weekly schedule
-  generator) worked on in occasional bursts. **Local only, never pushed**, and
-  deliberately so; its edge function is not deployed. Do not merge or push it
-  without the owner asking. It drifts behind `main` between bursts — merge
+- **`auto-scheduler`** — a slow-moving side feature (BOH weekly schedule generator) worked
+  on in bursts. **Local only, never pushed**, deliberately; its edge function is not
+  deployed. Never merge or push it unasked. It drifts behind `main` between bursts — merge
   `main` into it at the START of a scheduler session, not at ship time.
 
 ---
