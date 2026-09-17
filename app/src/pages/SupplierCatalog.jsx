@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
 import CatalogUploadPanel from '../components/CatalogUploadPanel.jsx'
+import CategorySeedPanel from '../components/CategorySeedPanel.jsx'
 
 const PAGE_SIZE = 50
 
@@ -16,7 +17,9 @@ export default function SupplierCatalog() {
     const [error, setError] = useState(null)
     const [showUpload, setShowUpload] = useState(false)
     const [lastUpload, setLastUpload] = useState(null)
-    // Bumped after a commit so the header's "loaded on" line re-reads.
+    const [categories, setCategories] = useState([])
+    const [category, setCategory] = useState('')
+    // Bumped after a commit so the header's "loaded on" line and the filter re-read.
     const [refreshKey, setRefreshKey] = useState(0)
 
     // Debounced so typing doesn't fire a request per keystroke.
@@ -35,6 +38,8 @@ export default function SupplierCatalog() {
                 .select('*', { count: 'exact' })
                 .order('description')
                 .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+
+            if (category) request = request.eq('category', category)
 
             if (search) {
                 // Match the kitchen's vocabulary as well as the supplier's: a product
@@ -61,9 +66,18 @@ export default function SupplierCatalog() {
         } finally {
             setLoading(false)
         }
-    }, [search, page])
+    }, [search, page, category])
 
     useEffect(() => { load() }, [load])
+
+    // Categories come from a grouped query, not from pulling every product down to
+    // dedupe client-side. Empty until the master list has been seeded.
+    useEffect(() => {
+        supabase.rpc('supplier_categories').then(({ data, error: catError }) => {
+            if (catError) console.error('Could not read categories:', catError)
+            else setCategories(data || [])
+        })
+    }, [refreshKey])
 
     // Last upload, so the page says how old the prices are without anyone guessing.
     useEffect(() => {
@@ -100,13 +114,31 @@ export default function SupplierCatalog() {
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                 />
+                {categories.length > 0 && (
+                    <select
+                        className="input"
+                        style={{ width: 'auto', minWidth: '170px' }}
+                        value={category}
+                        onChange={e => { setCategory(e.target.value); setPage(0) }}
+                    >
+                        <option value="">All categories</option>
+                        {categories.map(c => (
+                            <option key={c.category} value={c.category}>
+                                {c.category} ({c.product_count})
+                            </option>
+                        ))}
+                    </select>
+                )}
                 <button className="btn btn-secondary" onClick={() => setShowUpload(v => !v)}>
-                    {showUpload ? 'Hide upload' : 'Load order guides'}
+                    {showUpload ? 'Hide loading' : 'Load data'}
                 </button>
             </div>
 
             {showUpload && (
-                <CatalogUploadPanel onCommitted={() => { setRefreshKey(k => k + 1); setPage(0); load() }} />
+                <>
+                    <CatalogUploadPanel onCommitted={() => { setRefreshKey(k => k + 1); setPage(0); load() }} />
+                    <CategorySeedPanel onSeeded={() => { setRefreshKey(k => k + 1); load() }} />
+                </>
             )}
 
             {error && (
@@ -154,6 +186,7 @@ function ProductRow({ product }) {
     const {
         description, custom_description, brand, product_number, pack_size,
         price, price_basis, case_price, price_varies, pack_total_base, base_unit, source_lists,
+        category, item_group,
     } = product
 
     return (
@@ -165,6 +198,7 @@ function ProductRow({ product }) {
                     <span>#{product_number}</span>
                     <span>{pack_size}</span>
                     {pack_total_base && <span>{round(pack_total_base)} {base_unit}/case</span>}
+                    {category && <span className="catalog-row-tag">{item_group || category}</span>}
                 </div>
                 {source_lists?.length > 0 && (
                     <div className="catalog-row-lists">{source_lists.join(' · ')}</div>

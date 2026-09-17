@@ -150,6 +150,65 @@ export function parseExportWorkbook(sheetToRows, fileName) {
     return { listName, rows }
 }
 
+// Reads categorisation out of the master item list, which is a DIFFERENT shape from the
+// raw exports: one sheet per category (the sheet name IS the category), each with its own
+// title and note rows above a header carrying `Product #` and `Item Group`.
+//
+// Deliberately tolerant about which row the header sits on — the master is hand-built, so
+// the header is found by looking for it rather than by a fixed offset.
+export function parseMasterCategories({ sheetNames, sheetToRows }) {
+    const rows = []
+    const skippedSheets = []
+
+    for (const name of sheetNames) {
+        // The Index sheet is a summary, not products.
+        if (name.toLowerCase() === 'index') continue
+
+        const grid = (sheetToRows(name) || []).map((r) => (r || []).map((c) => String(c ?? '').trim()))
+        const headerRow = grid.findIndex((r) => r.some((c) => /^product\s*#$/i.test(c)))
+        if (headerRow === -1) {
+            skippedSheets.push(name)
+            continue
+        }
+
+        const iProduct = grid[headerRow].findIndex((c) => /^product\s*#$/i.test(c))
+        const iGroup = grid[headerRow].findIndex((c) => /^item\s*group$/i.test(c))
+
+        for (const row of grid.slice(headerRow + 1)) {
+            const productNumber = row[iProduct]
+            if (!productNumber) continue
+            rows.push({
+                product_number: productNumber,
+                category: name,
+                item_group: iGroup === -1 ? null : (row[iGroup] || null),
+            })
+        }
+    }
+
+    // A product filed under two categories would make the seed order-dependent, so it is
+    // reported rather than silently resolved by whichever sheet happened to come last.
+    const firstSeen = new Map()
+    const conflicts = []
+    for (const r of rows) {
+        const prev = firstSeen.get(r.product_number)
+        if (prev && prev !== r.category) conflicts.push({ product_number: r.product_number, categories: [prev, r.category] })
+        else firstSeen.set(r.product_number, r.category)
+    }
+
+    return {
+        rows,
+        stats: {
+            rows: rows.length,
+            products: firstSeen.size,
+            categories: new Set(rows.map((r) => r.category)).size,
+            item_groups: new Set(rows.map((r) => r.item_group).filter(Boolean)).size,
+            conflicts: conflicts.length,
+            skipped_sheets: skippedSheets,
+        },
+        conflicts,
+    }
+}
+
 // The exact row shape written to `supplier_products`.
 //
 // This lives here, beside the merge, rather than inside the upload component so that a

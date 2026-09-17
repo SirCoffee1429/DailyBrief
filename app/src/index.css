@@ -7020,6 +7020,14 @@ tr.beo-completed td .beo-check {
   color: var(--text-secondary);
 }
 
+.catalog-row-tag {
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  font-size: 0.75rem;
+}
+
 .catalog-row-lists {
   margin-top: var(--space-1);
   font-size: 0.75rem;
