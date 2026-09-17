@@ -463,5 +463,9 @@ BEO order lists will draw on; nothing about order lists changed yet.
   archive, and 7 had already reached commit `7416c60`. Restored from git and redone through
   encoding-explicit tooling, with the moved entries diffed line-for-line against their
   source revisions. **Never round-trip a UTF-8 file through bare `Get-Content`.**
-- **Still untested:** the browser-side click path (file read → parse → commit). It needs
-  a dev server, which is blocked here.
+- **Gap closed the same day — the browser path is now verified.** The owner loaded all 13
+  exports through the page, which wrote a third `supplier_catalog_uploads` row (09-17
+  17:35, 13 files / 1,381 products) alongside the two harness runs. Counts afterwards:
+  **1,381 / 394 / 6 / 219 catch-weight / 35 needing a pack size** — unchanged, so the
+  upsert updated in place rather than inserting. Confirmed by querying the side effect,
+  not by the page looking right. **P1's acceptance criterion is met end to end.**
