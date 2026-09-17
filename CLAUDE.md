@@ -37,27 +37,28 @@ returns the top 15, and only those reach Gemini.
 
 ## Key Design Decisions
 
-- Office password (`chef21`) is hardcoded in `OfficeGate.jsx` — client-side
-  only, no real auth yet
+- Office password (`chef21`) is hardcoded in `OfficeGate.jsx` — client-side only, no real auth
 - Category stored as `text[]` in Supabase, with legacy string parsing for older records
 - Voice input uses Web Speech API — long-press (1.5s) the center nav button for voice mode
 - Weather widget defaults to Columbia, MO (38.9517, -92.3341) if geolocation is denied
 - Models via `v1beta`: `gemini-embedding-001` (embeddings), `gemini-3-flash-preview`
-  (generation, 9 call sites). **Both are stale** — Google's GA flash line is at 3.8.
-  Upgrade as its OWN change before any new AI feature; it shifts BEO parsing too
-- Recipes are a FIXED Excel template, one sheet each, in `workbook_sheets.rows`: row 1
-  `RECIPE:`|name, row 2 `Ingredients|Quantity|Measure|Unit Cost|Total Cost`, rows 3–23
-  ingredients, row 24 `Assembly:`, rows 25–32 method. **There is NO yield field** — 494
-  sheets, 0 say "serves" — so a recipe is an absolute batch with no denominator and
-  CANNOT be scaled to a headcount until one is added. 411 carry their own cost columns
-- Dates: use `lib/dates.js` for a local "today", never `toISOString().split()`
-  — UTC rolls over at 7pm Central and drops the current day from queries
-- Briefings: `briefings.date` is the day it SHOWS on the dashboard, not when it was
-  written; multiple per day are allowed and all render stacked (newest first, author +
-  time byline). `BriefingEditor` defaults the date via `defaultBriefingDate()` — today
-  before 5pm local, tomorrow after, because posts are written after dinner service
-- FOH shell is the cyan sidebar (`FOHLayout` + the `.foh-v2` class), not the office
-  orange — the office shell's hardcoded orange will bleed through otherwise
+  (generation, 9 call sites). Both trail Google's GA line, but the owner reviewed this
+  2026-09-17 and **chose NOT to upgrade** — the parse is stable. Don't re-propose unasked
+- Recipes are a FIXED Excel template in `workbook_sheets.rows`: row 1 `RECIPE:`|name, row 2
+  `Ingredients|Quantity|Measure|Unit Cost|Total Cost`, rows 3–23 ingredients, row 24
+  `Assembly:`, rows 25–32 method. **There is NO yield field** — 494 sheets, 0 say "serves"
+  — a recipe is an absolute batch that CANNOT scale to a headcount. 411 carry cost columns
+- Dates: use `lib/dates.js` for a local "today", never `toISOString().split()` — UTC rolls
+  over at 7pm Central and drops the current day from queries
+- Briefings: `briefings.date` is the day it SHOWS, not when it was written; multiple per
+  day all render stacked (newest first, author + time byline). `defaultBriefingDate()`
+  picks today before 5pm local and tomorrow after — posts are written after dinner service
+- Catalog (`supplier_products`): highest-price-wins is scoped to ONE upload batch — across
+  uploads it is a ratchet that never comes down. `case_price` is derived at INGEST (219
+  catch-weight items priced per lb; a read-time branch gets forgotten and prints ~50x low).
+  `category` seeds from the master via an RPC filling only NULLs — a re-upload can't clobber it
+- FOH shell is the cyan sidebar (`FOHLayout` + `.foh-v2`), not the office orange — the
+  office shell's hardcoded orange bleeds through otherwise
 - `.wb-act-btn` is shared beyond the communication board — scope hover-reveal rules to
   `.wb-note .wb-act-btn`, never the bare class, or action buttons go invisible app-wide
 - `receive-beo-email` is deliberately wide open — no secret, no sender/subject filter,
@@ -106,9 +107,9 @@ returns the top 15, and only those reach Gemini.
   ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
-- Supplier order guide in BEO order lists — designed 2026-09-15, NOT built; inference moves
-  OUT of the per-BEO path, and density no longer blocks (cross-class conversion forbidden, a
-  mismatch is a gap). `claudedocs/design_beo_order_guide_2026-09-15.md`; inputs now in-repo
+- Supplier order guide in BEO order lists — **P1 SHIPPED 2026-09-17** (`/office/catalog`:
+  1,381 products, search, categories); P0 skipped, P2 menus next. Inference stays OUT of
+  the per-BEO path. Phasing: `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---
 
