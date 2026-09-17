@@ -24,6 +24,7 @@ import TimeOff from './pages/TimeOff.jsx'
 import SchedulePage from './pages/SchedulePage.jsx'
 import RosterCoveragePage from './pages/RosterCoveragePage.jsx'
 import AvailabilityPage from './pages/AvailabilityPage.jsx'
+import SupplierCatalog from './pages/SupplierCatalog.jsx'
 
 export default function App() {
     return (
@@ -58,6 +59,7 @@ export default function App() {
             <Route path="/office/workbooks/create" element={<OfficeGate><OfficeLayout><RecipeCreator /></OfficeLayout></OfficeGate>} />
             <Route path="/office/workbooks/upload" element={<OfficeGate><OfficeLayout><WorkbookUpload /></OfficeLayout></OfficeGate>} />
             <Route path="/office/workbooks/:id" element={<OfficeGate><OfficeLayout><WorkbookViewer /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/catalog" element={<OfficeGate><OfficeLayout><SupplierCatalog /></OfficeLayout></OfficeGate>} />
             <Route path="/office/history" element={<OfficeGate><OfficeLayout><History /></OfficeLayout></OfficeGate>} />
             <Route path="/office/events" element={<OfficeGate><OfficeLayout><EventsBanquetsPage /></OfficeLayout></OfficeGate>} />
             <Route path="/office/chat" element={<OfficeGate><OfficeLayout><Communication /></OfficeLayout></OfficeGate>} />

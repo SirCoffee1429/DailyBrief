@@ -6952,3 +6952,115 @@ tr.beo-completed td .beo-check {
   border-color: #f87171;
   color: #f87171;
 }
+
+/* ============================================
+   Supplier catalog
+   ============================================ */
+
+.catalog-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.catalog-stat {
+  flex: 1;
+  min-width: 90px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.catalog-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.catalog-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.catalog-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.catalog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.catalog-row-main {
+  min-width: 0;
+}
+
+.catalog-row-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.catalog-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.catalog-row-lists {
+  margin-top: var(--space-1);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
+
+.catalog-row-price {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.catalog-row-case {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.catalog-row-case-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.catalog-row-basis {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* The price column drops under the product on a phone rather than squeezing it. */
+@media (max-width: 640px) {
+  .catalog-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .catalog-row-price {
+    text-align: left;
+  }
+}

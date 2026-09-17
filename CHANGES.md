@@ -152,55 +152,11 @@
 - 08-24 — BEO Single-Day Events Stop Reporting a Phantom End Date — `process-beo` v16→v17: `Event Date(s)` always prints a range; same-day end collapsed to null in code, before the mode split. → [full](docs/changelog/2026-08.md#2026-08-24--beo-single-day-events-stop-reporting-a-phantom-end-date)
 - 08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily — `process-beo` v17→v21: `generationConfig` never set a temperature, so it defaulted to 1.0 and the model re-grouped an ambiguous layout on every run (43–91 items for the same ~12 events). `temperature: 0`, three prompt rules, label carry-forward moved into code. → [full](docs/changelog/2026-08.md#2026-08-25--beo-parse-was-non-deterministic-same-pdf-different-structure-daily)
 - 08-29 — Parse Churn Returned; Geometric Parser Prototype — `temperature: 0` narrowed the swing but did not remove it across days (same event: 11 items on 08-26, 28 on 08-27). Prototype reads the table off PDF coordinates; validated on 5 packets / 71 events / 264 items, 71 of 71. → [full](docs/changelog/2026-08.md#2026-08-29--parse-churn-returned-geometric-parser-prototype)
+- 08-30 — Geometric Parser Wired Into process-beo — `process-beo` v21→v22: geometric first, Gemini kept as the fallback and taken only when the parse fails to reconcile. All 5 packets returned `engine=geometric` in 397-1010ms against ~90s for Gemini. → [full](docs/changelog/2026-08.md#2026-08-30--geometric-parser-wired-into-process-beo)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-30 — Geometric Parser Wired Into process-beo
-
-**File(s) Changed:** `supabase/functions/process-beo/index.ts`,
-`supabase/functions/process-beo/beoGeometricParser.ts` (new) — **v21 → v22**
-**Type:** `feature`
-**Summary:** The BEO table is now read from the PDF's own coordinates instead of being
-inferred by Gemini. Gemini is kept as a fallback, taken only when the geometric result
-fails to reconcile.
-
-**Details:**
-
-- **Geometric first, model second — not a blend.** `parseGeometric()` runs on every
-  upload. Its result is accepted ONLY if it reconciles against an independent count of
-  qty-bearing rows taken straight from the coordinates. If it does not, or if it throws,
-  or if no BEO footer is found, the request falls through to the existing Gemini path.
-  An unfamiliar layout therefore degrades to the old behaviour rather than silently
-  writing a wrong order list.
-- **The reconciliation counter shares no logic with the assembler** — that is what makes
-  it a real check rather than a restatement.
-- **Caught a wrong assumption while building.** Scoping that counter to pages carrying a
-  BEO footer was necessary: `test_beos (46)` is not a daily packet at all but a 92-page
-  EVENT CONTRACT with BEO pages embedded at 39-53, 65-69 and 84-87. Counting the contract
-  pages reported 40 items against 75 rows and would have pushed a good parse to the model
-  every time. The earlier "5 packets, same template" claim was wrong — it is 4 daily
-  packets plus one contract bundle.
-- **Two real defects fixed while typing the parser:** `getTextContent()` returns
-  `TextItem | TextMarkedContent`, and marked-content items have no `.str` — an unguarded
-  `.trim()` would have thrown. And `midText(row)` was being called with one argument
-  against a two-argument signature; it worked by accident, and now says so.
-- **Type-check parity:** `deno check` reports 11 errors both before and after, with
-  **zero from the new parser file**. The 11 are the pre-existing `SupabaseClient` generic
-  mismatch in `index.ts`.
-- **Verification against deployed v22:** all 5 packets returned `engine=geometric` with
-  hashes matching the local Deno output exactly, in **397-1010ms** against roughly 90
-  seconds for the Gemini path. The fallback branch was exercised separately with an
-  invalid PDF: the geometric parse threw, the request reached Gemini, and Gemini
-  rejected it — the handoff works.
-- **Also now returned:** `engine` on every Mode A response, so which path ran is visible
-  in the review queue and the logs rather than having to be inferred.
-- **Open:** `prototypes/` still holds the Node version of the parser plus its audit
-  harness. It duplicates the shipped TypeScript, but the harness only runs under Node,
-  so it was kept for validating future packets. Worth revisiting.
-
----
 
 ### 2026-08-31 — Geometric Parser Dropped Whole Menus; Reconciliation Gate Could Not See It
 
@@ -498,3 +454,51 @@ holds and the duplicate was a false alarm.
 - Worth carrying: `git show <rev>:<path> > file` under PowerShell **corrupts binary
   files** (167KB xlsx came out 296KB of mangled text) — use the Bash tool. It parsed
   without throwing and produced plausible wrong numbers: a silent failure, not a loud one.
+
+---
+
+### 2026-09-17 — Supplier Catalog: Ingestion + Product Search (order guide P1)
+
+**File(s) Changed:** `app/src/lib/catalogParse.js` (new),
+`app/src/components/CatalogUploadPanel.jsx` (new), `app/src/pages/SupplierCatalog.jsx`
+(new), `supabase/migrations/20260916000000_create_supplier_catalog.sql` (new),
+`app/src/App.jsx`, `app/src/components/OfficeLayout.jsx`, `app/src/index.css`
+**Type:** `feature` — P1 of the order guide design. **Committed, NOT pushed; not live.**
+**Summary:** The office can load the Performance Foodservice order guide exports and
+search every purchasable product with its real case price. This is the foundation the
+BEO order lists will draw on; nothing about order lists changed yet.
+
+**Details:**
+
+- **P0 (the Gemini model upgrade) was SKIPPED** at the owner's call after his own
+  research — the parse works and the upgrade risked more than it offered. P1 never
+  depended on it.
+- **Parsing lives in a pure module** (`catalogParse.js`): no React, no network, no xlsx
+  import — the caller injects the sheet reader. That is what let the exact shipped code
+  run headless against the 13 reference files before any UI existed.
+- **Verified against the design's baseline, twice over.** Parsed: 3,008 raw rows → **1,381
+  products / 394 price-varies / 6 unpriced**. Read back out of `supplier_products` after
+  the real upsert: the same three numbers, plus **219 catch-weight** and **35 needing a
+  manual pack size** — both figures the design predicted independently.
+- **The refresh rules were tested, not assumed.** `category` is sticky because the upsert
+  payload OMITS the column, relying on PostgREST updating only the columns it is given —
+  someone else's library's behaviour. So: curated a category on a real row, re-ran the
+  batch, confirmed it survived, `first_seen_at` held, `last_seen_at` advanced, table still
+  1,381 with no duplicates. Probe row reset afterwards.
+- **`case_price` is derived once at ingest**, never at read. 219 products quote a
+  per-pound price; a read-time branch means some later call site forgets and prints a line
+  ~50x low. Verified: beef at $5.1561/lb in a 6/10 LB case stores $309.37.
+- **Three catch-weight products get no `case_price` on purpose** — priced per pound but
+  packed by count, so the classes do not meet. A gap, not a guess. Same reason the 25
+  `6/#10 CN` items carry no pack total: a #10 can is nominal, not a fixed measure.
+- **The odd pack shapes drove the code, not the reverse.** Profiling all 3,008 rows first
+  found 27 distinct formats; `6/#10 CN` fell through the regex because `#` sits
+  mid-string. After the fix the unparsed set is exactly 25 cans + 2 CS + 2 FT + 6 counts.
+- **The migration is additive** — two new tables, applied to prod. Menu, dish and mapping
+  tables belong to later phases and were deliberately not created.
+- **Verification split:** data path proven headlessly (above) and `npm run build` passes,
+  but **the UI was confirmed by the owner in his own dev server**, not by me — `npm run
+  dev` was blocked here by the permission classifier reading it as a deploy.
+- **Open:** `category`/`item_group` are null for all 1,381 products — P1 ingests only the
+  raw exports, so search is text-only with no category filter. The master item list
+  already carries that categorisation and could seed it in one pass.
