@@ -150,6 +150,41 @@ export function parseExportWorkbook(sheetToRows, fileName) {
     return { listName, rows }
 }
 
+// The exact row shape written to `supplier_products`.
+//
+// This lives here, beside the merge, rather than inside the upload component so that a
+// headless check can exercise the SHIPPED payload instead of a copy of it. A checker
+// that retypes the payload proves the table's contract and nothing about the code that
+// actually runs — the two drift, and the drift is invisible.
+//
+// `category` and `item_group` are deliberately ABSENT: on conflict PostgREST updates
+// only the columns present here, which is what keeps a curated categorisation from
+// being wiped by a refresh.
+export function buildProductRows(products, priceAsOf, seenAt = new Date()) {
+    const lastSeen = seenAt.toISOString()
+    return products.map((p) => ({
+        product_number: p.product_number,
+        description: p.description,
+        brand: p.brand,
+        custom_description: p.custom_description,
+        pack_size: p.pack_size,
+        pack_count: p.pack_count,
+        pack_unit_size: p.pack_unit_size,
+        pack_unit_size_max: p.pack_unit_size_max,
+        pack_unit: p.pack_unit,
+        pack_total_base: p.pack_total_base,
+        base_unit: p.base_unit,
+        uom: p.uom,
+        price: p.price,
+        price_basis: p.price_basis,
+        case_price: p.case_price,
+        price_varies: p.price_varies,
+        price_as_of: priceAsOf,
+        source_lists: p.source_lists,
+        last_seen_at: lastSeen,
+    }))
+}
+
 // Merges every row of one upload batch into unique products.
 //
 // Highest price wins WITHIN THE BATCH only. Carried across uploads it becomes a ratchet:

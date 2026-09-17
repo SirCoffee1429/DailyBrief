@@ -153,72 +153,11 @@
 - 08-25 — BEO Parse Was Non-Deterministic; Same PDF, Different Structure Daily — `process-beo` v17→v21: `generationConfig` never set a temperature, so it defaulted to 1.0 and the model re-grouped an ambiguous layout on every run (43–91 items for the same ~12 events). `temperature: 0`, three prompt rules, label carry-forward moved into code. → [full](docs/changelog/2026-08.md#2026-08-25--beo-parse-was-non-deterministic-same-pdf-different-structure-daily)
 - 08-29 — Parse Churn Returned; Geometric Parser Prototype — `temperature: 0` narrowed the swing but did not remove it across days (same event: 11 items on 08-26, 28 on 08-27). Prototype reads the table off PDF coordinates; validated on 5 packets / 71 events / 264 items, 71 of 71. → [full](docs/changelog/2026-08.md#2026-08-29--parse-churn-returned-geometric-parser-prototype)
 - 08-30 — Geometric Parser Wired Into process-beo — `process-beo` v21→v22: geometric first, Gemini kept as the fallback and taken only when the parse fails to reconcile. All 5 packets returned `engine=geometric` in 397-1010ms against ~90s for Gemini. → [full](docs/changelog/2026-08.md#2026-08-30--geometric-parser-wired-into-process-beo)
+- 08-31 — Geometric Parser Dropped Whole Menus; Reconciliation Gate Could Not See It — `process-beo` v22→v23: a row starts on a qty **or** a left-column label, because the BEO prints Qty once per section. The old gate counted qty-bearing rows — the assembler's own definition of a row — so it agreed by construction and passed a packet that lost three menus. Replaced with a per-event conservation check. → [full](docs/changelog/2026-08.md#2026-08-31--geometric-parser-dropped-whole-menus-reconciliation-gate-could-not-see-it)
 
 ---
 
 ## Detailed Entries
-
-### 2026-08-31 — Geometric Parser Dropped Whole Menus; Reconciliation Gate Could Not See It
-
-**File(s) Changed:** `supabase/functions/process-beo/beoGeometricParser.ts`,
-`supabase/functions/process-beo/index.ts` — **v22 → v23**
-**Type:** `fix`
-**Summary:** Owner spotted that approving the morning's queued packet would have wiped
-the menus off Linkside Dinner Club, Rivalry Run 5k and Lewis and Clark. The geometric
-parser was dropping any table row that carries no printed quantity — and the
-reconciliation gate agreed with it, reporting a clean parse.
-
-**Details:**
-
-- **Root cause:** an item was created ONLY by a row bearing a number in the Qty column
-  (`beoGeometricParser.ts:241`). ReserveCloud prints the Qty **once per section**, on
-  that section's first row, and **omits it entirely when Event Headcount is 0**. Every
-  qty-less row was therefore appended to the previous item's description, or discarded
-  outright when no row in the section had a qty at all. Linkside 09/03 and Vistas 09/08
-  print the SAME three plated dishes; Vistas has one qty (25) and survived as 1 item,
-  Linkside has none and came through with 0.
-- **The gate was the real failure.** `countQtyRows()` counted qty-bearing rows — which
-  is the assembler's own definition of a row. The two shared no code but shared the
-  premise, so they agreed by construction: 17 items = 17 rows, `ok=true`, three menus on
-  the floor. The 08-30 claim that "sharing no logic is the whole point" was the wrong
-  safety property. The 08-29 validation ("71 of 71 events match the raw qty-row count")
-  was measuring the parser against a restatement of its own assumption; re-run on this
-  packet the same harness reports "22 of 22 match" on a parse that lost three menus.
-- **Fix 1 — a row starts an item on a qty OR a left-column label** at new-row spacing.
-  On all three broken pages the label cell is present and correctly placed
-  (`Plated Food`, `Custom Buffets`, `A La Carte Ordering`); only the qty was missing.
-  Items may now carry `qty: ""`, which the DB and UI already store and render.
-- **Fix 1a — a wrapped label line no longer starts an item.** The label cell wraps too
-  ("Hot Grab-n-Go" / "Breakfast", gap 12-13 vs 15-26 for real rows); treating each line
-  as a row truncated the label and tore "foil wrapped" off its dish. It now appends to
-  both the label and the current description.
-- **Fix 2 — the gate is now a conservation check:** every centre-column line printed
-  inside a section must survive into the output, as a category name, an item label or a
-  description line. It models no grouping rules at all. Indexed **per event, not
-  pooled** — Linkside and Vistas print identical menus, and a pooled index let the
-  surviving copy vouch for the lost one (it masked exactly this bug in testing).
-  Matched by containment, since the assembler legitimately joins printed lines.
-- **Two further data-loss defects the new gate found, both fixed:** `isCategoryHeader()`
-  walked past intervening rows to find a label further down, so free text was misread as
-  a header and everything under it discarded — a whole custom dinner menu ("Pacific
-  salmon rollup…") vanished this way; and a two-line category header's second line was
-  swallowed and thrown away ("Quick Lunch Bites" / "Minimum order of 10 per item").
-- **Verified across all 5 packets: 0 dropped lines, 0 events lost items, 211 → 224 items
-  recovered.** Recovered rows include allergy notes that had been vanishing outright
-  (`Glenda Sapp- NO SALT`, `Zola Edwards - GF & DF`). **Negative test:** reintroducing
-  the original bug makes the gate fail with 15 named missing lines, including all of
-  Linkside's menu — the check is real, not decorative. `deno check`: zero errors from
-  the parser file before and after (all 84 are unpdf's own DOM-typed declarations).
-- **Deployed v23 and verified against it** — today's packet returns `engine=geometric`,
-  22 events / 21 items in 2.1s, and its output hashes **identical** to the local run.
-- **The 08-31 queue row was regenerated in place** (`682385c5`) from the v23 parse, left
-  `pending`. All 7 events now carry their menus; `banquet_event_orders` was not touched.
-- **`prototypes/` deleted** — it held the OLD logic and the OLD self-confirming qty-row
-  metric, so that harness would have blessed a broken parse. Nothing imported it;
-  recoverable from `44865a3`. Also gitignored `app/sample-data/process-beo upload diff/`
-  (screenshots of real BEOs, carrying the same member PII as the packets).
-
----
 
 ### 2026-09-06 — BEO Qty Column Emphasis (UNCOMMITTED — awaiting owner sign-off)
 
@@ -502,3 +441,27 @@ BEO order lists will draw on; nothing about order lists changed yet.
 - **Open:** `category`/`item_group` are null for all 1,381 products — P1 ingests only the
   raw exports, so search is text-only with no category filter. The master item list
   already carries that categorisation and could seed it in one pass.
+
+**Reflection pass, same day — a verification gap found and closed:**
+
+- **The upload button had never actually run.** `supplier_catalog_uploads` held exactly
+  one row, stamped by the node harness; the owner's dev-server session added none. What
+  he confirmed was the page rendering and search working over products **the harness had
+  loaded** — real verification of the read path, but the commit path was untested and I
+  had let it read as done.
+- **Cause: the harness retyped the upsert payload instead of importing it**, so it proved
+  the table's contract and nothing about the shipped code. The two had already drifted —
+  the harness stamped a UTC `price_as_of`, the component a local one. Same trap as the old
+  BEO reconciliation gate, inverted: that gate shared the assembler's premise and agreed
+  by construction; this one shared no code with what ships and so vouched for nothing.
+- **Fixed by extracting `buildProductRows()`** into `catalogParse.js`, used by the
+  component and imported by the harness. Re-ran: same counts, and the logged payload
+  columns confirm `category`/`item_group` stay absent, which is what makes them sticky.
+- **Corrupted both changelog files while tidying, and had to restore them.** PowerShell's
+  `Get-Content` decodes UTF-8 as ANSI by default, so a `Get-Content`/`Set-Content -Encoding
+  UTF8` round-trip bakes the mojibake in — 183 mangled sequences in `CHANGES.md`, 88 in the
+  archive, and 7 had already reached commit `7416c60`. Restored from git and redone through
+  encoding-explicit tooling, with the moved entries diffed line-for-line against their
+  source revisions. **Never round-trip a UTF-8 file through bare `Get-Content`.**
+- **Still untested:** the browser-side click path (file read → parse → commit). It needs
+  a dev server, which is blocked here.

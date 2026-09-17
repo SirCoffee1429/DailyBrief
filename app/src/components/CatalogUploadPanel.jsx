@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase.js'
 import { localDateString } from '../lib/dates.js'
-import { parseExportWorkbook, mergeBatch } from '../lib/catalogParse.js'
+import { parseExportWorkbook, mergeBatch, buildProductRows } from '../lib/catalogParse.js'
 
 // Rows per upsert request. 1,381 products in one call is a large payload for
 // PostgREST; 500 keeps each request small without making the upload chatty.
@@ -58,28 +58,7 @@ export default function CatalogUploadPanel({ onCommitted }) {
         setBusy(true)
         setError(null)
         try {
-            const priceAsOf = localDateString()
-            const rows = preview.products.map(p => ({
-                product_number: p.product_number,
-                description: p.description,
-                brand: p.brand,
-                custom_description: p.custom_description,
-                pack_size: p.pack_size,
-                pack_count: p.pack_count,
-                pack_unit_size: p.pack_unit_size,
-                pack_unit_size_max: p.pack_unit_size_max,
-                pack_unit: p.pack_unit,
-                pack_total_base: p.pack_total_base,
-                base_unit: p.base_unit,
-                uom: p.uom,
-                price: p.price,
-                price_basis: p.price_basis,
-                case_price: p.case_price,
-                price_varies: p.price_varies,
-                price_as_of: priceAsOf,
-                source_lists: p.source_lists,
-                last_seen_at: new Date().toISOString(),
-            }))
+            const rows = buildProductRows(preview.products, localDateString())
 
             for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
                 const { error: upsertError } = await supabase
