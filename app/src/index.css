@@ -7072,3 +7072,87 @@ tr.beo-completed td .beo-check {
     text-align: left;
   }
 }
+
+/* ============================================
+   Menu dishes (draft + confirm)
+   ============================================ */
+
+.menu-dish-row {
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+/* The keyboard cursor. Confirming ~300 dishes is done from the keyboard, so which row
+   is selected has to be readable at a glance without hunting for a focus ring. */
+.menu-dish-row.selected {
+  border-left-color: var(--accent);
+  background: var(--bg-glass);
+}
+
+.menu-dish-row.editing {
+  cursor: default;
+  border-left-color: var(--accent);
+}
+
+.menu-dish-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.menu-dish-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.menu-dish-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.menu-dish-field-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.menu-draft-results {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.menu-draft-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.menu-draft-result-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.menu-draft-result-counts {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .menu-dish-actions {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,69 @@
+// Pure helpers for the menu draft/confirm flow.
+//
+// Kept out of the components (same reason as catalogParse.js) so the rules can be run
+// and checked headlessly against the real filenames rather than only through the UI.
+
+// 'fall' | 'winter' are the two seasonal menus; everything else is year-round.
+const SEASON_PATTERNS = [
+    { season: 'fall', re: /\bfall\b/i },
+    { season: 'winter', re: /\bwinter\b/i },
+]
+
+// A file's name IS its menu identity, so this has to be deterministic — the model is
+// never asked which menu it is reading. 'Seasonal - Fall.pdf' is the Fall menu, not a
+// menu called "Seasonal - Fall", because the season is a separate dimension of identity
+// and the two seasonal files both hold a plated dinner and a buffet.
+export function menuSourceFromFilename(filename) {
+    const stem = filename.replace(/\.pdf$/i, '').trim()
+
+    const match = SEASON_PATTERNS.find(p => p.re.test(stem))
+    if (match) return { menuSource: 'Seasonal', season: match.season }
+
+    return { menuSource: stem, season: null }
+}
+
+// The fields a reviewer can correct before confirming. Anything not listed here is
+// either identity (name, menu_source, season) or provenance (source_page) and is not
+// editable from the review list.
+export const EDITABLE_FIELDS = ['menu_section', 'description', 'upcharge', 'base_price', 'price_unit', 'serves', 'min_order']
+
+// Money and counts arrive from text inputs as strings; '' has to become null rather
+// than 0, or an unpriced dish silently claims to cost nothing.
+export function normaliseDishEdits(dish) {
+    const num = (v) => {
+        if (v === null || v === undefined || String(v).trim() === '') return null
+        const n = Number(String(v).replace(/[^0-9.]/g, ''))
+        return isFinite(n) ? n : null
+    }
+    const int = (v) => {
+        const n = num(v)
+        return n === null ? null : Math.round(n)
+    }
+    const str = (v) => {
+        const s = (v ?? '').toString().trim()
+        return s === '' ? null : s
+    }
+
+    return {
+        menu_section: str(dish.menu_section),
+        description: str(dish.description),
+        upcharge: num(dish.upcharge),
+        base_price: num(dish.base_price),
+        price_unit: dish.price_unit || null,
+        serves: int(dish.serves),
+        min_order: int(dish.min_order),
+    }
+}
+
+// How a dish's price reads on one line. upcharge and base_price mean different things
+// (a supplement on a package vs. the dish's own price) and are never added together.
+export function priceLabel(dish) {
+    if (dish.base_price !== null && dish.base_price !== undefined) {
+        const unit = dish.price_unit ? `/${dish.price_unit}` : ''
+        return `$${Number(dish.base_price).toFixed(2)}${unit}`
+    }
+    if (dish.upcharge !== null && dish.upcharge !== undefined) {
+        return `+$${Number(dish.upcharge).toFixed(2)}`
+    }
+    return 'included'
+}

@@ -1,0 +1,280 @@
+// Drafts menu_dishes rows from one catering menu PDF.
+//
+// Phase P2 of claudedocs/design_beo_order_guide_2026-09-15.md.
+//
+// Unlike process-beo this has NO geometric parser and deliberately does not want one.
+// A BEO is a generated table with a fixed grid, so its coordinates carry the structure.
+// These 8 menus are hand-designed marketing layouts: two-column pages where the price
+// column extracts as a detached run of its own (Breakfast prints eight dish names, then
+// eight prices, in separate blocks), section headings share a font class with dish
+// names, and every text layer reader mangles the ligatures ("Stuﬀed", "T omato").
+// Aligning a price to its dish needs to SEE the page, which is what the multimodal
+// model does.
+//
+// That non-determinism is acceptable here and nowhere else: this runs once per menu,
+// writes drafts only, and nothing downstream may use a dish until a human confirms it.
+// The per-BEO path stays pure arithmetic.
+
+import "jsr:@supabase/functions-js@^2.4.1/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+// gemini-2.5-flash, NOT the gemini-3-flash-preview the other nine call sites use, and
+// measured rather than assumed: 3-flash-preview took 25s on the ONE-page Platters menu,
+// which puts the 5-page Plated Dinners well past the 130s gateway margin. This is the
+// same conclusion process-beo reached for the same job (multimodal PDF -> JSON) when it
+// was reverted to 2.5-flash on 2026-05-30. Nothing here is an upgrade proposal for the
+// other call sites; it is the model that finishes inside the timeout for this one.
+const GEMINI_ENDPOINT =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+const PRICE_UNITS = ['each', 'person', 'dozen', 'tray', 'piece'];
+const SEASONS = ['fall', 'winter'];
+
+interface DraftDish {
+  name: string;
+  menu_section: string | null;
+  description: string | null;
+  source_page: number | null;
+  upcharge: number | null;
+  base_price: number | null;
+  price_unit: string | null;
+  serves: number | null;
+  min_order: number | null;
+}
+
+const PROMPT = `
+You are reading one catering menu from a private country club. Return every DISH a
+kitchen could be asked to produce, as a JSON array. Return ONLY the array.
+
+Each element:
+{
+  "name": string,             // the dish name ONLY, with no price in it
+  "menu_section": string|null,// the heading above it: "Salads", "Premium Entrées",
+                              // "Buffet Sides", "Served Cold", "Packaged Snacks"
+  "description": string|null, // the sub-line under the name, listing components or choices
+  "source_page": number,      // 1-based page the dish is printed on
+  "upcharge": number|null,    // a "+$N" ADDED to a package price. "Chopped Cobb +$5" -> 5
+  "base_price": number|null,  // the dish's OWN standalone price. "Cheeseburger  $7" -> 7
+  "price_unit": "each"|"person"|"dozen"|"tray"|"piece"|null,
+  "serves": number|null,      // "Serves 20" / "(serves 20)" -> 20
+  "min_order": number|null    // "Minimum 20 pieces/type", "(min. order 12)" -> 20 / 12
+}
+
+RULES — read carefully, several of these are the whole point of using a model here.
+
+1. UPCHARGE VS BASE PRICE ARE NOT THE SAME NUMBER. A leading "+" means upcharge: the
+   dish is part of a package that already carries a per-person price, and this is the
+   supplement. A bare price is base_price: the dish is sold on its own. Never put one
+   in the other's field. A dish with neither has both null — that is correct and common,
+   because it is included in the package price.
+
+2. PRICES ARE OFTEN IN A SEPARATE COLUMN FROM THE DISH NAME. Some pages print a list of
+   dishes on the left and a column of prices on the right. Align each price with the
+   dish it is VERTICALLY level with on the page. If you cannot tell which dish a price
+   belongs to, set the price null rather than guessing. A wrong price is worse than
+   no price — a missing one shows up as a gap and gets fixed; a wrong one is trusted.
+   One Breakfast row prints a literal "$ ? /ea" — that is not a price, return null.
+
+3. price_unit says what base_price BUYS:
+   - "$8/ea", "Cheeseburger $7"                -> "each"
+   - "$18/person", "$23/person", "$30.00 / person" -> "person"
+   - "$30/doz", "$24/doz"                      -> "dozen"
+   - "$90/tray"                                -> "tray"
+   - "Starting at $85 for 20 pieces"           -> "piece", and min_order 20
+   - "Charcuterie Board $200" with "Serves 20" -> null unit, base_price 200, serves 20
+   Null when there is no base_price, or when the unit is not one of those five.
+
+4. A MINIMUM OR YIELD STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT.
+   "Breakfast Sandwiches - Minimum 20 pieces/type" is a heading: give each sandwich
+   beneath it min_order 20. Same for "Individually Wrapped Sandwiches - Minimum order
+   of 10 per sandwich type" and "Bagel Bar - Minimum 12". Copy the value down onto
+   each dish; do not emit the heading itself as a dish.
+
+5. A PRICE THAT APPLIES TO A WHOLE SECTION IS NOT A DISH'S OWN PRICE. On the hors
+   d'oeuvres pages, "Chicken - Starting at $95 for 20 pieces" prices the whole group:
+   give each dish under it base_price 95, price_unit "piece", min_order 20.
+
+6. DO NOT EMIT NON-DISHES. Skip package descriptions and policy prose entirely:
+   "Starting at $38 for one salad, rolls with butter...", "Add upgrades for total
+   cost", "Minimum of 20 people to order", RSVP and seating-chart paragraphs, the
+   "Mid-Missouri Harvest Showcase" sourcing blurb, and the "1-Entrée Buffet Package:
+   $30.00 / person" package lines. Skip beverages and coffee-station notes.
+   DO emit sauces, sides, desserts and salads — they are all things the kitchen makes.
+
+7. A DISH LISTED TWICE ON DIFFERENT PAGES IS ONE DISH. The cold hors d'oeuvres repeat
+   verbatim on both pages; return that dish once, with the FIRST page it appears on.
+
+8. "Specialty Cheesecake" followed by "Strawberry (+$1), Lemon Blueberry (+$1),
+   Espresso, Turtle (+$1)..." is ONE dish whose flavours live in description. Do not
+   split a flavour list into one dish per flavour, and do not take one of those "+$1"
+   values as the dish's upcharge.
+
+9. Fix mangled ligatures and spacing you can see are typographic, not intended:
+   "Stuﬀed" -> "Stuffed", "T omato" -> "Tomato", "Buﬀet" -> "Buffet".
+   Otherwise preserve the menu's own capitalisation and wording exactly.
+
+10. Do not wrap the output in markdown code fences.
+`;
+
+// Coerce one model-emitted dish into the table's shape. The model is the one part of
+// this path that can return anything at all, so every field is checked here rather
+// than trusted into the database: an out-of-range price_unit or season would be
+// rejected by a CHECK constraint and take the whole batch down with it.
+function cleanDish(raw: any, page_fallback: number): DraftDish | null {
+  const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
+  if (!name) return null;
+
+  const num = (v: any): number | null => {
+    const n = typeof v === 'string' ? parseFloat(v.replace(/[^0-9.]/g, '')) : v;
+    return typeof n === 'number' && isFinite(n) ? n : null;
+  };
+  const int = (v: any): number | null => {
+    const n = num(v);
+    return n === null ? null : Math.round(n);
+  };
+  const str = (v: any): string | null => {
+    const s = typeof v === 'string' ? v.trim() : '';
+    return s === '' ? null : s;
+  };
+
+  const price_unit = str(raw?.price_unit)?.toLowerCase() ?? null;
+
+  return {
+    name,
+    menu_section: str(raw?.menu_section),
+    description: str(raw?.description),
+    source_page: int(raw?.source_page) ?? page_fallback,
+    upcharge: num(raw?.upcharge),
+    base_price: num(raw?.base_price),
+    price_unit: price_unit && PRICE_UNITS.includes(price_unit) ? price_unit : null,
+    serves: int(raw?.serves),
+    min_order: int(raw?.min_order),
+  };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const payload = await req.json();
+    const { pdfBase64, menuSource } = payload;
+
+    if (!pdfBase64) throw new Error("pdfBase64 is required");
+    if (!menuSource || !String(menuSource).trim()) {
+      throw new Error("menuSource is required — it is half of a dish's identity");
+    }
+
+    // Season comes from the CALLER, not the model: it is a property of which file was
+    // uploaded ("Seasonal - Fall.pdf"), and asking the model to infer it from the page
+    // would make identity itself non-deterministic.
+    const season = SEASONS.includes(payload.season) ? payload.season : null;
+
+    // A model this prompt disagrees with is easier to diagnose against the raw array
+    // than against a row count, so parse-only is a first-class mode, as in process-beo.
+    const parseOnly = payload.parseOnly === true;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 130000);
+
+    let geminiRes;
+    try {
+      geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: PROMPT },
+              { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
+            ],
+          }],
+          generationConfig: {
+            response_mime_type: "application/json",
+            // Same reasoning as process-beo: unset this defaults to 1.0 and the model
+            // re-decides an ambiguous layout on every run. Greedy decoding is not a
+            // determinism guarantee, but it removes the worst of the churn — and here
+            // a human confirms every row anyway.
+            temperature: 0,
+          },
+        }),
+      });
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') {
+        throw new Error("Gemini timed out after 130 seconds reading this menu.");
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!geminiRes.ok) {
+      throw new Error(`Gemini API Error: ${await geminiRes.text()}`);
+    }
+
+    const geminiData = await geminiRes.json();
+    const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawOutput) throw new Error("Gemini returned empty output");
+
+    let parsed = JSON.parse(rawOutput);
+    if (!Array.isArray(parsed)) parsed = [parsed];
+
+    const dishes = parsed
+      .map((d: any) => cleanDish(d, 1))
+      .filter((d: DraftDish | null): d is DraftDish => d !== null);
+
+    // A menu that yields nothing is a failed read, not an empty menu — every one of
+    // these 8 files has dishes on it. Say so rather than reporting "0 drafted", which
+    // reads like success.
+    if (dishes.length === 0) {
+      throw new Error("No dishes could be read from this PDF. Nothing was saved.");
+    }
+
+    const rows = dishes.map(d => ({ ...d, menu_source: String(menuSource).trim(), season }));
+
+    if (parseOnly) {
+      return new Response(
+        JSON.stringify({ dishes: rows, count: rows.length }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // One RPC, so a menu can never land half-written and a dish someone already
+    // confirmed can never be overwritten by a re-draft.
+    const { data: result, error } = await db.rpc('upsert_menu_dish_drafts', { p_dishes: rows });
+    if (error) throw error;
+
+    const counts = Array.isArray(result) ? result[0] : result;
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        menu_source: String(menuSource).trim(),
+        season,
+        read: rows.length,
+        ...counts,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (err) {
+    console.error("Error processing menu:", err);
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

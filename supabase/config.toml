@@ -25,6 +25,10 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+[functions.process-menu]
+enabled = true
+verify_jwt = false
+
 # Postmark cannot send a Supabase JWT, so this is false for the same reason
 # process-sales-data and process-banquets are. The endpoint accepts any message
 # carrying a PDF: its Postmark inbound address is a random hash known only to

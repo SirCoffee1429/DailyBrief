@@ -78,6 +78,10 @@ export default function OfficeLayout({ children }) {
                         <i className="fa-solid fa-boxes-stacked office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Catalog</span>
                     </NavLink>
+                    <NavLink to="/office/menus" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                        <i className="fa-solid fa-utensils office-v2-nav-icon" />
+                        <span style={{ marginLeft: '0.75rem' }}>Menus</span>
+                    </NavLink>
                     <NavLink to="/office/history" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-check-square office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Tasks</span>
