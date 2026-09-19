@@ -4,9 +4,13 @@
 // and checked headlessly against the real filenames rather than only through the UI.
 
 // 'fall' | 'winter' are the two seasonal menus; everything else is year-round.
+// Underscores are word characters, so \b does NOT fire between "_" and "Fall" —
+// 'Old_Hawthorne_Fall_Menu.docx' would silently come through with no season. The
+// separator class is spelled out instead of relying on \b.
+const SEP = '(?:^|[^A-Za-z0-9])'
 const SEASON_PATTERNS = [
-    { season: 'fall', re: /\bfall\b/i },
-    { season: 'winter', re: /\bwinter\b/i },
+    { season: 'fall', re: new RegExp(`${SEP}fall(?![A-Za-z0-9])`, 'i') },
+    { season: 'winter', re: new RegExp(`${SEP}winter(?![A-Za-z0-9])`, 'i') },
 ]
 
 // A file's name IS its menu identity, so this has to be deterministic — the model is
@@ -14,12 +18,16 @@ const SEASON_PATTERNS = [
 // menu called "Seasonal - Fall", because the season is a separate dimension of identity
 // and the two seasonal files both hold a plated dinner and a buffet.
 export function menuSourceFromFilename(filename) {
-    const stem = filename.replace(/\.pdf$/i, '').trim()
+    const stem = filename.replace(/\.(pdf|docx)$/i, '').trim()
 
     const match = SEASON_PATTERNS.find(p => p.re.test(stem))
     if (match) return { menuSource: 'Seasonal', season: match.season }
 
     return { menuSource: stem, season: null }
+}
+
+export function isDocx(filename) {
+    return /\.docx$/i.test(filename)
 }
 
 // The fields a reviewer can correct before confirming. Anything not listed here is

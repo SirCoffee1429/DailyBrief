@@ -161,112 +161,12 @@
 - 09-07 — Order Guide in BEO Order Lists (BRAINSTORM) — requirements for costing a BEO off the real supplier catalog. Three blockers named (unit conversion, no catalog export, no menu file) and the core call made: **inference happens once per thing, never per BEO**, so the runtime path stays arithmetic. → [full](docs/changelog/2026-09.md#2026-09-07--order-guide-in-beo-order-lists-brainstorm-only--no-code-written)
 - 09-15 — Order Guide Design — all three blockers answered from delivered files. Merging the 13 raw exports reproduces the AI-built master exactly (1,381 / 394 / 6), making the master disposable. Cross-class unit conversion **forbidden** (a gap, never a guess), so density is never needed. BEO lines name dishes only inside a description string, so `beo_dish_matches` was added. Phased P0-P5. → [full](docs/changelog/2026-09.md#2026-09-15--order-guide-design-design-only--no-code-no-migration)
 - 09-15 — Session Housekeeping: CHANGES.md Repair, Docs and Vendor Data Committed — the changelog had been truncated mid-entry and was rebuilt from git; `claudedocs/` and the 13 vendor order guides committed. `BEOs/` stays gitignored for PII. → [full](docs/changelog/2026-09.md#2026-09-15--session-housekeeping-changesmd-repair-docs-and-vendor-data-committed)
+- 09-16 — Catalog Baseline Re-Measured and Confirmed — merged the 13 raw exports independently: **1,381 products / 394 price-varies / 6 unpriced**, matching the design on all three. The two master copies held identical product data (14 cells differ, all cached Index-sheet floats), so the 09-15 duplicate-file caution was a false alarm. PowerShell `git show >` corrupts binaries — use Bash. → [full](docs/changelog/2026-09.md#2026-09-16--catalog-baseline-re-measured-and-confirmed-closes-the-09-15-open-item)
+- 09-17 — Supplier Catalog: Ingestion + Product Search (order guide **P1**) — `/office/catalog` loads the 13 PFG exports into `supplier_products`: **1,381 / 394 varies / 6 unpriced / 219 catch-weight**. Parsing lives in a pure module so the shipped code ran headless against the real files. `case_price` derives at INGEST; `category` is sticky because the upsert omits the column. A reflection pass caught that the upload BUTTON had never run — the harness had retyped the payload instead of importing it, and the two had drifted. → [full](docs/changelog/2026-09.md#2026-09-17--supplier-catalog-ingestion--product-search-order-guide-p1)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-16 — Catalog Baseline Re-Measured and Confirmed (closes the 09-15 open item)
-
-**File(s) Changed:** none (verification only) **Type:** `chore`
-**Summary:** The previous entry left P1's acceptance number in doubt because the master
-item list had existed twice at different byte sizes. Re-measured from source. The number
-holds and the duplicate was a false alarm.
-
-**Details:**
-
-- **Merged the 13 raw exports independently** (dedupe by `Product Number`, highest price
-  wins within the batch): **1,381 products / 394 price-varies / 6 unpriced** from 3,008
-  raw rows — matching the design doc on all three figures. Price basis parsed from the
-  string suffix: 2,630 per-case / 370 per-lb / 8 empty.
-- **The two master copies held identical product data.** Same 1,381 product numbers,
-  zero price differences, identical sheet and row structure. They differ in exactly 14
-  cells, all Index-sheet totals where one copy cached recalculated floats
-  (`2856.141599999999` vs `2856.1416`). The deleted copy was recovered from
-  `bf5bd4c^` to make the comparison rather than reasoning about it.
-- **So the 09-15 caution was unnecessary** — whichever copy the original validation read,
-  it got the same answer. P1's acceptance check is **1,381 / 394 / 6**, confirmed.
-- Worth carrying: `git show <rev>:<path> > file` under PowerShell **corrupts binary
-  files** (167KB xlsx came out 296KB of mangled text) — use the Bash tool. It parsed
-  without throwing and produced plausible wrong numbers: a silent failure, not a loud one.
-
----
-
-### 2026-09-17 — Supplier Catalog: Ingestion + Product Search (order guide P1)
-
-**File(s) Changed:** `app/src/lib/catalogParse.js` (new),
-`app/src/components/CatalogUploadPanel.jsx` (new), `app/src/pages/SupplierCatalog.jsx`
-(new), `supabase/migrations/20260916000000_create_supplier_catalog.sql` (new),
-`app/src/App.jsx`, `app/src/components/OfficeLayout.jsx`, `app/src/index.css`
-**Type:** `feature` — P1 of the order guide design. **Committed, NOT pushed; not live.**
-**Summary:** The office can load the Performance Foodservice order guide exports and
-search every purchasable product with its real case price. This is the foundation the
-BEO order lists will draw on; nothing about order lists changed yet.
-
-**Details:**
-
-- **P0 (the Gemini model upgrade) was SKIPPED** at the owner's call after his own
-  research — the parse works and the upgrade risked more than it offered. P1 never
-  depended on it.
-- **Parsing lives in a pure module** (`catalogParse.js`): no React, no network, no xlsx
-  import — the caller injects the sheet reader. That is what let the exact shipped code
-  run headless against the 13 reference files before any UI existed.
-- **Verified against the design's baseline, twice over.** Parsed: 3,008 raw rows → **1,381
-  products / 394 price-varies / 6 unpriced**. Read back out of `supplier_products` after
-  the real upsert: the same three numbers, plus **219 catch-weight** and **35 needing a
-  manual pack size** — both figures the design predicted independently.
-- **The refresh rules were tested, not assumed.** `category` is sticky because the upsert
-  payload OMITS the column, relying on PostgREST updating only the columns it is given —
-  someone else's library's behaviour. So: curated a category on a real row, re-ran the
-  batch, confirmed it survived, `first_seen_at` held, `last_seen_at` advanced, table still
-  1,381 with no duplicates. Probe row reset afterwards.
-- **`case_price` is derived once at ingest**, never at read. 219 products quote a
-  per-pound price; a read-time branch means some later call site forgets and prints a line
-  ~50x low. Verified: beef at $5.1561/lb in a 6/10 LB case stores $309.37.
-- **Three catch-weight products get no `case_price` on purpose** — priced per pound but
-  packed by count, so the classes do not meet. A gap, not a guess. Same reason the 25
-  `6/#10 CN` items carry no pack total: a #10 can is nominal, not a fixed measure.
-- **The odd pack shapes drove the code, not the reverse.** Profiling all 3,008 rows first
-  found 27 distinct formats; `6/#10 CN` fell through the regex because `#` sits
-  mid-string. After the fix the unparsed set is exactly 25 cans + 2 CS + 2 FT + 6 counts.
-- **The migration is additive** — two new tables, applied to prod. Menu, dish and mapping
-  tables belong to later phases and were deliberately not created.
-- **Verification split:** data path proven headlessly (above) and `npm run build` passes,
-  but **the UI was confirmed by the owner in his own dev server**, not by me — `npm run
-  dev` was blocked here by the permission classifier reading it as a deploy.
-- **Open:** `category`/`item_group` are null for all 1,381 products — P1 ingests only the
-  raw exports, so search is text-only with no category filter. The master item list
-  already carries that categorisation and could seed it in one pass.
-
-**Reflection pass, same day — a verification gap found and closed:**
-
-- **The upload button had never actually run.** `supplier_catalog_uploads` held exactly
-  one row, stamped by the node harness; the owner's dev-server session added none. What
-  he confirmed was the page rendering and search working over products **the harness had
-  loaded** — real verification of the read path, but the commit path was untested and I
-  had let it read as done.
-- **Cause: the harness retyped the upsert payload instead of importing it**, so it proved
-  the table's contract and nothing about the shipped code. The two had already drifted —
-  the harness stamped a UTC `price_as_of`, the component a local one. Same trap as the old
-  BEO reconciliation gate, inverted: that gate shared the assembler's premise and agreed
-  by construction; this one shared no code with what ships and so vouched for nothing.
-- **Fixed by extracting `buildProductRows()`** into `catalogParse.js`, used by the
-  component and imported by the harness. Re-ran: same counts, and the logged payload
-  columns confirm `category`/`item_group` stay absent, which is what makes them sticky.
-- **Corrupted both changelog files while tidying, and had to restore them.** PowerShell's
-  `Get-Content` decodes UTF-8 as ANSI by default, so a `Get-Content`/`Set-Content -Encoding
-  UTF8` round-trip bakes the mojibake in — 183 mangled sequences in `CHANGES.md`, 88 in the
-  archive, and 7 had already reached commit `7416c60`. Restored from git and redone through
-  encoding-explicit tooling, with the moved entries diffed line-for-line against their
-  source revisions. **Never round-trip a UTF-8 file through bare `Get-Content`.**
-- **Gap closed the same day — the browser path is now verified.** The owner loaded all 13
-  exports through the page, which wrote a third `supplier_catalog_uploads` row (09-17
-  17:35, 13 files / 1,381 products) alongside the two harness runs. Counts afterwards:
-  **1,381 / 394 / 6 / 219 catch-weight / 35 needing a pack size** — unchanged, so the
-  upsert updated in place rather than inserting. Confirmed by querying the side effect,
-  not by the page looking right. **P1's acceptance criterion is met end to end.**
-
----
 
 ### 2026-09-17 — Catalog Categories Seeded From the Master List
 
@@ -487,3 +387,70 @@ surcharge, not food. They are now flagged so P3 can never give them ingredients.
 - **The review UI now has three outcomes** instead of two: Confirm (real food), Price
   rule (`p` — real money, no ingredients, row kept), Not a dish (deletes noise the model
   misread). Compiled, not clicked.
+
+---
+
+### 2026-09-19 — Menu Upload Accepts Word (.docx)
+
+**File(s) Changed:** `supabase/functions/process-menu/index.ts`,
+`app/src/components/MenuUploadPanel.jsx`, `app/src/lib/menuDrafts.js`,
+`app/package.json` (+ `mammoth`)
+**Type:** `feature` — **not pushed.** `process-menu` deployed v5.
+**Summary:** `/office/menus` now takes Word files as well as PDFs. Verified against the
+club's real `Old_Hawthorne_Fall_Menu.docx`: **87 dishes, every section matching a hand
+count of the source.**
+
+**Details:**
+
+- **Gemini cannot read a .docx at all.** Its document vision only meaningfully
+  understands PDF; other types are treated as plain text, and a .docx is a zip, so raw
+  bytes would arrive as garbage. Checked the Google docs rather than assuming. So the
+  file must be converted, and the only question was where.
+- **Converted in the BROWSER, not the edge function — and that was measured.** The first
+  build did it server-side with `npm:mammoth`; resolving it and its eight dependencies on
+  a cold start pushed the request past the 130s gateway and **failed the first upload
+  every time**, succeeding only on a retry (70-95s warm). A menu is loaded perhaps once a
+  season, so a cold function is the NORMAL case here, not the rare one. Mammoth now runs
+  client-side behind a dynamic `import()`, so it is a **separate 396 kB chunk (124 kB
+  gzipped) fetched only when a Word file is dropped** — the main bundle is unchanged, and
+  the function is back to zero npm dependencies, matching the PDF path it competes with
+  for latency.
+- **The prompt is now a shared core plus ONE swappable section.** Schema and semantics
+  are identical whatever the file was; only how a dish is FOUND differs. The PDF section
+  keeps the spatial rules; the Word section describes markup. Sending HTML with the
+  PDF's "align each price with the dish it is vertically level with" would have been
+  instructions about a page that no longer exists.
+- **Two characters mean opposite things in the same document, and guessing would have
+  been silent garbage.** `·` (middle dot) SEPARATES dishes in an inline run
+  (`Salads (pick one) — Garden Salad · Caesar Salad · Chopped Cobb +$5`), while `•`
+  PREFIXES a single dish name in the seasonal callout. My first draft named the wrong
+  one, having assumed "bullet" from the extracted text; **the real markup came from
+  running mammoth locally under Deno before deploying.**
+- **Rule 7 was dropping a real dish.** "A dish listed twice is one dish" made the model
+  discard "Country Style Green Beans" from *Plated Dinner — Vegetable Side* because it had
+  already emitted it under *Custom Buffet — Sides*. Those are different rows under the
+  identity fixed yesterday, and they are priced separately. Rule now dedupes **within a
+  section only**; the re-run went 86 → 87 dishes and Vegetable Side 3 → 4, matching the
+  page. Found by counting against the source, not by reading the output and nodding.
+- **Sections are qualified by menu part** ("Plated Dinner — Dessert", not "Dessert")
+  because one Word file holds Custom Buffet, Themed Buffets and Plated Dinner, each with
+  its own Salads and Dessert — bare names would collapse different dishes into one row.
+- **The source's own broken price survived as a gap:** the Fall menu prints
+  "Sliced Tenderloin +$" with no number, and it came back `null` rather than guessed.
+- **Fixed a latent season bug found on the way:** `fall` never matched
+  `Old_Hawthorne_Fall_Menu` because `_` is a word character, so an underscore-named
+  seasonal file would have been filed with no season at all. The separator class is now
+  explicit; "Waterfall" and "WinterfellFeast" still correctly do NOT match.
+- **Local Deno turned out to be installed**, which is what made it possible to test
+  mammoth's real API before deploying — `{buffer: Uint8Array}` works, `{arrayBuffer}`
+  fails with the unhelpful "Could not find file in options". `SUPABASE_ACCESS_TOKEN` is
+  set but **401s**, so deploys still go through the MCP tool.
+- **NOT loaded into the database.** Every run was `parseOnly`; `menu_dishes` still holds
+  the 232 rows from the PDFs. See the open question below before loading any Word menu.
+- **Open — these Word menus are a DIFFERENT menu from the PDFs already confirmed.**
+  `Old_Hawthorne_Fall_Menu.docx` carries six Themed Buffets (Southern BBQ $41/person,
+  Fiesta Feast $43 …) that appear nowhere in the PDFs, and a condensed Custom Buffet
+  (5 sides, against 13 in the PDF). Its filename resolves to `menu_source='Seasonal'`,
+  `season='fall'` — **the same identity as the already-confirmed Seasonal-Fall PDF rows**,
+  so loading it would mix two menu versions under one key. Which version is current is
+  the owner's call.

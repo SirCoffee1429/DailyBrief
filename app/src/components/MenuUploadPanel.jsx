@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { menuSourceFromFilename } from '../lib/menuDrafts.js'
+import { menuSourceFromFilename, isDocx } from '../lib/menuDrafts.js'
 
 // Drafts dishes from catering menu PDFs, one file per request.
 //
@@ -16,8 +16,8 @@ export default function MenuUploadPanel({ onDrafted }) {
     const inputRef = useRef(null)
 
     function addFiles(fileList) {
-        const pdfs = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.pdf'))
-        setFiles(prev => [...prev, ...pdfs.filter(f => !prev.some(p => p.name === f.name))])
+        const menus = Array.from(fileList).filter(f => /\.(pdf|docx)$/i.test(f.name))
+        setFiles(prev => [...prev, ...menus.filter(f => !prev.some(p => p.name === f.name))])
         setResults([])
     }
 
@@ -30,16 +30,33 @@ export default function MenuUploadPanel({ onDrafted }) {
             const { menuSource, season } = menuSourceFromFilename(file.name)
             setCurrent(menuSource)
             try {
-                const base64 = await new Promise((resolve, reject) => {
-                    const reader = new FileReader()
-                    reader.onload = () => resolve(reader.result.split(',')[1])
-                    reader.onerror = () => reject(new Error('Could not read the file'))
-                    reader.readAsDataURL(file)
-                })
+                const body = { menuSource, season }
 
-                const { data, error } = await supabase.functions.invoke('process-menu', {
-                    body: { pdfBase64: base64, menuSource, season },
-                })
+                if (isDocx(file.name)) {
+                    // A .docx is converted to HTML HERE rather than in the edge function.
+                    // Gemini cannot read .docx at all, so something has to convert it —
+                    // but doing it server-side meant resolving npm:mammoth and its eight
+                    // dependencies on every cold start, which pushed the request past the
+                    // 130s gateway margin and failed the FIRST upload every time. A menu
+                    // is loaded perhaps once a season, so a cold function is the normal
+                    // case here, not the rare one. Imported dynamically so mammoth is its
+                    // own chunk, fetched only when someone actually drops a Word file.
+                    const mammoth = await import('mammoth')
+                    const { value } = await mammoth.convertToHtml({
+                        arrayBuffer: await file.arrayBuffer(),
+                    })
+                    if (!value?.trim()) throw new Error('That Word file had no readable text')
+                    body.docHtml = value
+                } else {
+                    body.pdfBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader()
+                        reader.onload = () => resolve(reader.result.split(',')[1])
+                        reader.onerror = () => reject(new Error('Could not read the file'))
+                        reader.readAsDataURL(file)
+                    })
+                }
+
+                const { data, error } = await supabase.functions.invoke('process-menu', { body })
                 if (error) throw error
                 if (data?.error) throw new Error(data.error)
 
@@ -69,7 +86,7 @@ export default function MenuUploadPanel({ onDrafted }) {
                 onDragLeave={() => setDragging(false)}
             >
                 <div className="upload-zone-icon">📋</div>
-                <div className="upload-zone-text">Drop the catering menu PDFs here</div>
+                <div className="upload-zone-text">Drop the catering menus here — PDF or Word</div>
                 <div className="upload-zone-hint">
                     Everything drafted lands unconfirmed — nothing is used downstream until
                     you confirm it below
@@ -77,7 +94,7 @@ export default function MenuUploadPanel({ onDrafted }) {
                 <input
                     ref={inputRef}
                     type="file"
-                    accept=".pdf"
+                    accept=".pdf,.docx"
                     multiple
                     style={{ display: 'none' }}
                     onChange={e => { addFiles(e.target.files); e.target.value = '' }}

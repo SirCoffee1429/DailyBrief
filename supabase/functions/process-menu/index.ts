@@ -1,15 +1,21 @@
-// Drafts menu_dishes rows from one catering menu PDF.
+// Drafts menu_dishes rows from one catering menu — a PDF, or a Word .docx.
 //
 // Phase P2 of claudedocs/design_beo_order_guide_2026-09-15.md.
 //
 // Unlike process-beo this has NO geometric parser and deliberately does not want one.
 // A BEO is a generated table with a fixed grid, so its coordinates carry the structure.
-// These 8 menus are hand-designed marketing layouts: two-column pages where the price
+// The menu PDFs are hand-designed marketing layouts: two-column pages where the price
 // column extracts as a detached run of its own (Breakfast prints eight dish names, then
 // eight prices, in separate blocks), section headings share a font class with dish
 // names, and every text layer reader mangles the ligatures ("Stuﬀed", "T omato").
 // Aligning a price to its dish needs to SEE the page, which is what the multimodal
 // model does.
+//
+// A .docx cannot be fed to Gemini at all — its document vision only meaningfully
+// understands PDF, and a .docx is a zip, so the raw bytes read as garbage. It is
+// converted to HTML first and the model reads markup instead of a page. The two sources
+// therefore need DIFFERENT finding rules but the SAME schema and semantics, which is why
+// the prompt is a shared core with one swappable section.
 //
 // That non-determinism is acceptable here and nowhere else: this runs once per menu,
 // writes drafts only, and nothing downstream may use a dish until a human confirms it.
@@ -51,7 +57,9 @@ interface DraftDish {
   min_order: number | null;
 }
 
-const PROMPT = `
+// The schema and the semantic rules are identical whatever the file was; only the way a
+// dish is FOUND on the page differs, so that part is swapped in per source type below.
+const PROMPT_CORE = `
 You are reading one catering menu from a private country club. Return every DISH a
 kitchen could be asked to produce, as a JSON array. Return ONLY the array.
 
@@ -61,7 +69,7 @@ Each element:
   "menu_section": string|null,// the heading above it: "Salads", "Premium Entrées",
                               // "Buffet Sides", "Served Cold", "Packaged Snacks"
   "description": string|null, // the sub-line under the name, listing components or choices
-  "source_page": number,      // 1-based page the dish is printed on
+  "source_page": number|null, // 1-based page the dish is printed on, null if unknowable
   "upcharge": number|null,    // a "+$N" ADDED to a package price. "Chopped Cobb +$5" -> 5
   "base_price": number|null,  // the dish's OWN standalone price. "Cheeseburger  $7" -> 7
   "price_unit": "each"|"person"|"dozen"|"tray"|"piece"|null,
@@ -76,13 +84,6 @@ RULES — read carefully, several of these are the whole point of using a model 
    supplement. A bare price is base_price: the dish is sold on its own. Never put one
    in the other's field. A dish with neither has both null — that is correct and common,
    because it is included in the package price.
-
-2. PRICES ARE OFTEN IN A SEPARATE COLUMN FROM THE DISH NAME. Some pages print a list of
-   dishes on the left and a column of prices on the right. Align each price with the
-   dish it is VERTICALLY level with on the page. If you cannot tell which dish a price
-   belongs to, set the price null rather than guessing. A wrong price is worse than
-   no price — a missing one shows up as a gap and gets fixed; a wrong one is trusted.
-   One Breakfast row prints a literal "$ ? /ea" — that is not a price, return null.
 
 3. price_unit says what base_price BUYS:
    - "$8/ea", "Cheeseburger $7"                -> "each"
@@ -110,8 +111,11 @@ RULES — read carefully, several of these are the whole point of using a model 
    $30.00 / person" package lines. Skip beverages and coffee-station notes.
    DO emit sauces, sides, desserts and salads — they are all things the kitchen makes.
 
-7. A DISH LISTED TWICE ON DIFFERENT PAGES IS ONE DISH. The cold hors d'oeuvres repeat
-   verbatim on both pages; return that dish once, with the FIRST page it appears on.
+7. DEDUPE ONLY WITHIN A SECTION, NEVER ACROSS SECTIONS. The cold hors d'oeuvres repeat
+   verbatim on two pages under the SAME heading — return that dish once. But the SAME
+   NAME under a DIFFERENT section is a DIFFERENT row and you must emit BOTH: "Country
+   Style Green Beans" is a Custom Buffet side AND a Plated Dinner vegetable side, and
+   they are priced separately. Collapsing those loses a real dish.
 
 8. "Specialty Cheesecake" followed by "Strawberry (+$1), Lemon Blueberry (+$1),
    Espresso, Turtle (+$1)..." is ONE dish whose flavours live in description. Do not
@@ -125,11 +129,72 @@ RULES — read carefully, several of these are the whole point of using a model 
 10. Do not wrap the output in markdown code fences.
 `;
 
+// A rendered PDF page: position carries the meaning, and the model can see it.
+const PROMPT_PDF_LAYOUT = `
+2. PRICES ARE OFTEN IN A SEPARATE COLUMN FROM THE DISH NAME. Some pages print a list of
+   dishes on the left and a column of prices on the right. Align each price with the
+   dish it is VERTICALLY level with on the page. If you cannot tell which dish a price
+   belongs to, set the price null rather than guessing. A wrong price is worse than
+   no price — a missing one shows up as a gap and gets fixed; a wrong one is trusted.
+   One Breakfast row prints a literal "$ ? /ea" — that is not a price, return null.
+`;
+
+// A .docx converted to HTML by mammoth. There is NO page and NO spatial layout: the
+// structure is in the markup. These Word menus are written very differently from the
+// PDFs, and TWO different shapes appear in the same file — an inline run of dishes
+// separated by "·", and one-dish-per-paragraph with a "•" prefix. The two characters
+// mean opposite things, which is the trap this section exists to disarm.
+const PROMPT_DOCX_STRUCTURE = `
+2. THIS IS A WORD DOCUMENT CONVERTED TO HTML. There are no pages, so ALWAYS return
+   source_page as null — never invent a page number. Read the markup, and expect BOTH
+   of these shapes in the same document:
+
+   a. INLINE RUN — a section and all of its dishes in ONE paragraph, with dishes
+      separated by a MIDDLE DOT "·", like:
+        <p><strong>Salads</strong><em>  (pick one)</em>  —  Garden Salad  ·  Caesar
+        Salad  ·  Chopped Cobb +$5 </p>
+      The <strong> text is the section name. Everything after the em dash "—" splits on
+      "·" into SEPARATE DISHES — three here. A <br /> inside the paragraph can start a
+      whole new section; treat what follows it as a fresh section heading.
+
+   b. ONE DISH PER PARAGRAPH — the name in <strong>, often prefixed with a literal
+      BULLET "•", and its description in <em>:
+        <p><strong>•  Roasted Beet & Goat Cheese</strong><em> — candied walnuts,
+        arugula</em></p>
+      STRIP the leading "•" and any dashes from the name. The <em> text is description.
+      A description may instead sit in the NEXT paragraph, entirely in <em>.
+
+   So "·" SEPARATES dishes and "•" PREFIXES one. Never split a name on "•", and never
+   treat a "·" run as a single dish.
+
+   c. "(pick one)", "(pick two)", "(pick from)" state how many selections the package
+      includes. They are package composition, NOT dishes and NOT part of a name.
+
+   d. A NAMED PACKAGE WITH ITS OWN PER-PERSON PRICE IS ONE DISH, not many:
+        <p><strong>Southern BBQ   $41/person</strong></p>
+        <p><em>House smoked brisket, shredded pork, elote corn, baked beans</em></p>
+      Emit ONE dish "Southern BBQ", base_price 41, price_unit "person", components in
+      description. Do NOT emit the components as separate dishes.
+
+   e. QUALIFY THE SECTION WITH THE MENU PART IT SITS UNDER. One document holds several
+      parts — "Custom Buffet", "Themed Buffets", "Plated Dinner" — each with its own
+      "Salads" and "Dessert". Return menu_section as "Plated Dinner — Dessert", not
+      bare "Dessert", or two different desserts collapse into one row.
+      Ignore the repeated club-name banner ("THE CLUB AT OLD HAWTHORNE") entirely.
+
+   f. Callout boxes and tables hold real dishes. A single-cell box headed
+      "THIS FALL — CHEF'S SEASONAL SELECTIONS" is a normal part of the menu: emit its
+      dishes, qualifying menu_section with that box's heading.
+
+   g. A price written but INCOMPLETE — a bare "+$" with no number — gets a null
+      upcharge. Never guess the missing figure.
+`;
+
 // Coerce one model-emitted dish into the table's shape. The model is the one part of
 // this path that can return anything at all, so every field is checked here rather
 // than trusted into the database: an out-of-range price_unit or season would be
 // rejected by a CHECK constraint and take the whole batch down with it.
-function cleanDish(raw: any, page_fallback: number): DraftDish | null {
+function cleanDish(raw: any, page_fallback: number | null): DraftDish | null {
   const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
   if (!name) return null;
 
@@ -169,8 +234,23 @@ Deno.serve(async (req) => {
   try {
     const payload = await req.json();
     const { pdfBase64, menuSource } = payload;
+    // A Word menu arrives ALREADY converted to HTML by the browser. Converting here
+    // instead meant resolving npm:mammoth and its eight dependencies on every cold
+    // start, which pushed the request past the 130s gateway margin — and since a menu
+    // is loaded perhaps once a season, a cold function is the normal case, not the rare
+    // one. This function therefore keeps zero npm dependencies, exactly like the PDF
+    // path it has to match for latency.
+    const docHtml: string | null =
+      typeof payload.docHtml === 'string' && payload.docHtml.trim()
+        ? payload.docHtml.trim()
+        : null;
 
-    if (!pdfBase64) throw new Error("pdfBase64 is required");
+    if (!pdfBase64 && !docHtml) {
+      throw new Error("pdfBase64 or docHtml is required");
+    }
+    if (pdfBase64 && docHtml) {
+      throw new Error("Send one menu per request, not both");
+    }
     if (!menuSource || !String(menuSource).trim()) {
       throw new Error("menuSource is required — it is half of a dish's identity");
     }
@@ -184,6 +264,14 @@ Deno.serve(async (req) => {
     // than against a row count, so parse-only is a first-class mode, as in process-beo.
     const parseOnly = payload.parseOnly === true;
 
+    const prompt = docHtml
+      ? PROMPT_CORE.replace("3. price_unit says", PROMPT_DOCX_STRUCTURE + "\n3. price_unit says")
+      : PROMPT_CORE.replace("3. price_unit says", PROMPT_PDF_LAYOUT + "\n3. price_unit says");
+
+    const parts = docHtml
+      ? [{ text: prompt }, { text: `\n\nTHE MENU (HTML):\n${docHtml}` }]
+      : [{ text: prompt }, { inline_data: { mime_type: "application/pdf", data: pdfBase64 } }];
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 130000);
 
@@ -194,12 +282,7 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: PROMPT },
-              { inline_data: { mime_type: "application/pdf", data: pdfBase64 } },
-            ],
-          }],
+          contents: [{ parts }],
           generationConfig: {
             response_mime_type: "application/json",
             // Same reasoning as process-beo: unset this defaults to 1.0 and the model
@@ -230,15 +313,17 @@ Deno.serve(async (req) => {
     let parsed = JSON.parse(rawOutput);
     if (!Array.isArray(parsed)) parsed = [parsed];
 
+    // A .docx has no pages, so there is no sensible fallback — null beats inventing a 1
+    // that a reviewer would then use to go looking for the dish on "page 1".
     const dishes = parsed
-      .map((d: any) => cleanDish(d, 1))
+      .map((d: any) => cleanDish(d, docHtml ? null : 1))
       .filter((d: DraftDish | null): d is DraftDish => d !== null);
 
     // A menu that yields nothing is a failed read, not an empty menu — every one of
     // these 8 files has dishes on it. Say so rather than reporting "0 drafted", which
     // reads like success.
     if (dishes.length === 0) {
-      throw new Error("No dishes could be read from this PDF. Nothing was saved.");
+      throw new Error("No dishes could be read from this menu. Nothing was saved.");
     }
 
     const rows = dishes.map(d => ({ ...d, menu_source: String(menuSource).trim(), season }));
