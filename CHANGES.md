@@ -158,139 +158,12 @@
 ### September 2026
 
 - 09-06 — BEO Qty Column Emphasis — qty renders as a filled blue chip **centred** against its row on desktop (`a3313c1`). `align-self: center` is the load-bearing part, not the fill: on a multi-line dish the cell stretched to ~200px and the number sat top-right, far from the text it applied to. `.beo-item-qty:empty` is required, or legitimately blank quantities draw an empty pill. Mobile untouched. → [full](docs/changelog/2026-09.md#2026-09-06--beo-qty-column-emphasis-uncommitted--awaiting-owner-sign-off)
+- 09-07 — Order Guide in BEO Order Lists (BRAINSTORM) — requirements for costing a BEO off the real supplier catalog. Three blockers named (unit conversion, no catalog export, no menu file) and the core call made: **inference happens once per thing, never per BEO**, so the runtime path stays arithmetic. → [full](docs/changelog/2026-09.md#2026-09-07--order-guide-in-beo-order-lists-brainstorm-only--no-code-written)
+- 09-15 — Order Guide Design — all three blockers answered from delivered files. Merging the 13 raw exports reproduces the AI-built master exactly (1,381 / 394 / 6), making the master disposable. Cross-class unit conversion **forbidden** (a gap, never a guess), so density is never needed. BEO lines name dishes only inside a description string, so `beo_dish_matches` was added. Phased P0-P5. → [full](docs/changelog/2026-09.md#2026-09-15--order-guide-design-design-only--no-code-no-migration)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-07 — Order Guide in BEO Order Lists (BRAINSTORM ONLY — no code written)
-
-**File(s) Changed:** `claudedocs/requirements_beo_order_guide_2026-09-07.md` (new)
-**Type:** `docs` — requirements discovery via `/sc:brainstorm`. **No feature code,
-no schema, no migration, nothing deployed.**
-**Summary:** Owner asked to feed the food supplier's order guide into the existing
-"generate order from BEO" and prep-list features so lists pull from real purchasable
-items, with pricing and quantity scaled to guest count. Discovery turned up two
-findings that reshaped the approach before any code was written.
-
-**Findings (verified against repo + prod DB, not assumed):**
-
-- **Recipes cannot scale — there is no yield.** Across 494 `workbook_sheets`: 1 sheet
-  mentions "yield", **0 say "serves"**, and the 11/25 hits for "portion"/"batch" are
-  prose inside assembly steps. The template is `RECIPE:` / header row /
-  rows 3–23 ingredients / row 24 `Assembly:` / rows 25–32 method. Absolute batch
-  quantities with no denominator cannot be divided down to a headcount.
-- **Dish-level recipe coverage is effectively zero.** Owner had just rewritten the
-  entire catering menu; existing recipes are *components* (sweet and sour sauce,
-  mushroom duxelles), never whole dishes. Owner initially chose "scale from existing
-  recipes" believing coverage was there — his own next answer showed it wasn't, so
-  the design changed rather than proceeding on the stated pick.
-- **411 of 494 sheets already carry `Unit Cost` / `Total Cost`**, which will drift
-  from catalog pricing. Decided: catalog is authoritative and refreshes recipe costs.
-- **Catalog only, no purchase history.** Every quantity must be derived, never
-  recalled — "learn from what we actually ordered" is off the table.
-- **Gemini models are several generations stale.** 9 call sites on
-  `gemini-3-flash-preview` (a *preview* build) plus one `gemini-2.5-flash` and one
-  `gemini-3.1-pro-preview`; Google's GA flash line is now at 3.8.
-
-**Core decision — inference moves OUT of the per-BEO path.**
-The catering menu is finite and owner-authored, so each dish is defined once
-(AI drafts → owner confirms → stored), after which generating an order from a BEO is
-pure arithmetic with **no model call**. This is the material difference from the
-portion-scaling feature scrapped 2026-07-17, which ran inference on every BEO and so
-churned run-to-run and could not be verified — the same non-determinism CLAUDE.md
-already warns about. Same seed-and-confirm pattern is used for the three other
-one-time inputs: product matching, dish specs, and recipe yields.
-
-**Owner's decisions:** catalog-only via CSV/Excel upload; wants real product names +
-cost total + guest-count quantity + pack/case rounding; quantity via a mix of
-"portion rule you set" and "AI infers" (his words), on a newer Gemini; product
-matching = AI proposes, confirm once, stored forever; scope stays **per-BEO** (not a
-combined cross-event roll-up); portions anchored to recipes where they exist, with a
-dish ingredient able to **point at a component recipe**; prep list **out of scope**
-for v1; catalog price wins over recipe cost, and refreshes it.
-
-**Open — blocks design:**
-
-- **Unit conversion is the top unresolved risk.** Recipes measure in `Cups`/`T`;
-  catalogs sell by `lb` and `50# case`. Volume→weight needs a **density per
-  ingredient**, which exists nowhere in this system. Unresolved on purpose — this is
-  the class of hidden complexity that sank the July build.
-- Need two files from the owner: the **supplier order guide export** and the
-  **catering menu**. Their real columns and size drive the ingestion design.
-- Non-blocking: raw vs finished weight, overage buffer, per-BEO case rounding
-  over-buying across events, catalog re-upload cadence, off-menu BEO dishes.
-
-**Also flagged:** the model upgrade should ship as its **own change, before** this
-feature — it alters BEO parsing behaviour too, and shouldn't be confounded with a new
-feature's first run.
-
-**State:** `main` at `a3313c1` ("qty visual update"), in sync with `origin/main`. The
-2026-09-06 qty-chip work **was committed** in that commit — an earlier draft of this
-entry claimed it was still uncommitted, which was wrong: it trusted a stale memory note
-instead of `git log`. This session wrote docs only and committed nothing.
-
----
-
-### 2026-09-15 — Order Guide Design (DESIGN ONLY — no code, no migration)
-
-**File(s) Changed:** `claudedocs/design_beo_order_guide_2026-09-15.md` (new)
-**Type:** `docs` — architecture via `/sc:design`. **No feature code, no schema
-applied, nothing deployed.**
-**Summary:** Owner delivered both blocking files — the 13 raw PFG exports
-(`Vendor Data/Order Guides/`) and the 8 catering menu PDFs (`New Catering and Event
-Menus 2026/`). All three blocking questions from the 09-07 requirements are now
-closed, and the design is written against measured facts rather than assumptions.
-
-**Details:**
-
-- **The deterministic merge was proven against the AI-built master.** Dedupe by
-  `Product Number` + highest-price-wins-within-batch over the 13 raw exports
-  reproduces the master exactly: **1,381 products / 394 price-varies / 6 unpriced**,
-  all three matching. 3,008 raw rows in. This makes `PFG_Master_Item_List` disposable
-  — the app can rebuild it from source with no AI.
-- **All 13 exports share one header signature**, header on row 7, list name on row 2.
-  `Price` encodes its own basis in the string (`$54.46` vs `$6.1199/lb`), so the
-  master's `Price Basis` column is **parsed, not inferred** — 2,630 per-case /
-  370 per-lb / 8 empty.
-- **Highest-price-wins must scope to one upload batch, not across time.** Across
-  uploads it is a ratchet that can never come down. Called out explicitly in the
-  design as a rule, not a detail.
-- **`case_price` is derived at ingest, not at read.** The 219 catch-weight items are
-  the ~50×-wrong-line failure mode; computing it once removes the chance that a
-  future call site forgets the branch.
-- **Q1 (unit conversion / density) is largely dissolved.** 84.9% of the 1,141 food
-  products are weight, 7.7% count, 5.2% volume, 2.2% #10 cans. Dish-spec portion
-  units are constrained at entry to `oz|lb|ct|each|floz`, and cross-class conversion
-  is forbidden — a mismatch is a gap with `gap_reason`, never a guess. Density, the
-  one input that exists nowhere in this system, is never required.
-- **Correction to a claim I made on 09-14:** I said the menu file names map onto BEO
-  left-column labels. They do not. That was inferred from parser labels in this file
-  rather than from live data. Real BEOs carry line types (`Buffet`, `A La Carte
-  Ordering`, `Rentals`, `Services`) and hold the dish names inside a newline-joined
-  description string. The design adds a `beo_dish_matches` table for the free-text
-  join, which the requirements doc had not anticipated.
-- **`qty` is the multiplier, not `guest_count`** — one 90-guest event carries 82
-  turkey / 8 gluten-free / 37 ham bagged lunches.
-- **Menus supply yield the recipe library lacks** ("Serves 20", "Minimum 20
-  pieces/type"), partially answering finding F1. They are also **season-scoped**
-  (Fall Sept–Nov, Winter Dec–Feb), a requirement that was not in the 09-07 doc.
-- **Scale flagged as the top risk:** ~250–300 dishes across 18 pages means NFR-4's
-  "one or two sittings" is not achievable. Design phases the confirmation pass by
-  menu (Custom Buffets + Plated Dinners first) so the feature is useful before it is
-  complete, rather than pretending the estimate holds.
-- Phasing: P0 Gemini upgrade (own change, first) → P1 catalog ingestion → P2 menu
-  ingestion → P3 dish specs + mappings → P4 runtime arithmetic → P5 recipe cost
-  refresh. P1 verifies against the 1,381 baseline; P4 verifies byte-identical output
-  on the same BEO twice.
-
-**State:** `main` at `ed6dcfd` ("menus, and changes for order guide work", committed
-2026-09-14 by the owner), **one commit ahead of `origin/main` — not pushed**. That
-commit carries the 8 menu PDFs, the 09-07 requirements doc, and `docs/changelog/2026-08.md`.
-This session wrote docs only and committed nothing: `claudedocs/design_beo_order_guide_2026-09-15.md`
-and the 13 raw exports under `Vendor Data/Order Guides/` are still untracked.
-
----
 
 ### 2026-09-15 — Session Housekeeping: CHANGES.md Repair, Docs and Vendor Data Committed
 
@@ -474,3 +347,137 @@ has a category filter beside its search box.
 - **Untested:** the panel's own button. The categories were already seeded by the harness,
   so clicking it now correctly reports 0 seeded / 1,381 already set — which looks like a
   no-op. Clearing categories first would let that path be exercised properly.
+
+---
+
+### 2026-09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide P2)
+
+**File(s) Changed:** `supabase/migrations/20260918000000_create_menu_dishes.sql` (new),
+`supabase/functions/process-menu/index.ts` (new), `supabase/config.toml`,
+`app/src/lib/menuDrafts.js` (new), `app/src/components/MenuUploadPanel.jsx` (new),
+`app/src/pages/MenuDishes.jsx` (new), `app/src/App.jsx`,
+`app/src/components/OfficeLayout.jsx`, `app/src/index.css`
+**Type:** `feature` — P2 of the order guide design. **Not committed, not pushed.**
+**Summary:** The 8 catering menu PDFs can be read into `menu_dishes` drafts and confirmed
+at `/office/menus`. This builds the dish vocabulary a BEO line will be matched against in
+P4; nothing about BEOs or order lists changed yet.
+
+**Details:**
+
+- **A model reads these menus, and that is the right call — for a reason worth keeping.**
+  `process-beo` reads its table from PDF coordinates because a BEO is a generated grid.
+  These menus are hand-designed marketing layouts, and the difference is concrete: on
+  Breakfast the **price column extracts as a detached run** — eight dish names, then eight
+  prices, in separate blocks — so linear text cannot say which price belongs to which
+  dish. Aligning them needs to see the page. A geometric parser here would be the same
+  tool applied to a problem that does not have the property it depends on.
+- **Non-determinism is contained, not tolerated.** This runs once per menu, writes
+  `status='draft'` only, and nothing downstream may use a dish until a human confirms it.
+  The per-BEO path stays arithmetic, which is the whole architecture.
+- **Verified against the source, dish by dish, not by eyeballing.** Plated Dinners: **80
+  dishes**, matching a hand count of all five pages section by section (10 salads/soups,
+  8 starch, 7 veg, 7 chicken, 9 beef-pork-lamb, 7 seafood, 3 pasta, 2 veg entrées, 14
+  sauces, 13 desserts), every upcharge correct including `+$2.5` and the malformed `+3`
+  on Local Sauteed Mushrooms. Page 1 — RSVP and seating-chart policy prose — correctly
+  produced zero dishes. Custom Buffets: **44 dishes**, likewise an exact match.
+- **One real parse error found, and left in place.** On Breakfast, 9 of 10 priced rows are
+  right — including `$ ? /ea` correctly read as no price, `$90/tray`, and both
+  section-level minimums copied down onto each dish beneath them — but "Sausage, Egg,
+  Arugula, & Gouda Croissant" prints **no** price and was given `$9` from the row above
+  it. Verified by reading the rendered page, since the text layer cannot settle it.
+  Not prompt-tweaked away: a fix I cannot prove across all 8 menus is a fix I am guessing
+  at, and this is exactly the class of error the confirm gate exists to catch.
+- **Two deliberate departures from the design's §8 schema**, both from the real files:
+  - **Added `price_unit`.** The menus state a price four different ways — `$8/ea`,
+    `$18/person`, `$30/doz`, `$90/tray` — and `base_price` alone cannot tell P4 which,
+    so the arithmetic would have to guess at the last moment.
+  - **Omitted `effective_start`/`effective_end`.** Fall is Sept–Nov and Winter Dec–Feb
+    **every year**; an absolute date range expires. `season` is stored; resolving a BEO's
+    date to a season is P4's job, and P4 can add the shape it actually needs.
+- **`unique nulls not distinct (name, menu_source, season)`** — not cosmetic. `season` is
+  null on the six year-round menus, and under the default NULLS DISTINCT every re-parse
+  of those menus would insert a full duplicate set instead of conflicting.
+- **Re-drafting can never overwrite a confirmed dish**, and that rule lives in the
+  database, not the caller. `upsert_menu_dish_drafts(jsonb)` is one statement whose
+  `ON CONFLICT ... DO UPDATE ... WHERE status = 'draft'` makes the stickiness
+  unforgettable, and it cannot leave a menu half-written. Proven, not asserted: a
+  confirmed row whose re-draft carried a **different** upcharge kept its own value, a
+  draft row updated, a new row inserted, and a dish repeated inside one payload deduped
+  rather than throwing `cannot affect row a second time`. Returns
+  `inserted / updated / skipped_confirmed` so a no-op is visible instead of silent.
+- **The model swap was measured, not assumed.** `gemini-3-flash-preview` took 25s on the
+  **one-page** Platters menu and blew the 130s gateway margin on 4-page Custom Buffets.
+  `gemini-2.5-flash` does the 5-page Plated Dinners in 64s. This is the same conclusion
+  `process-beo` reached for the same job on 2026-05-30, and is **not** a re-proposal of
+  the P0 upgrade the owner cancelled — it is the model that finishes in time for this
+  one function.
+- **Confirmation volume was the design's top risk, so the list is keyboard-driven:**
+  j/k or arrows to move, `c` to confirm and advance, `e` to edit, plus a per-dish
+  "Not a dish" discard for a heading the model mistook for food. Bulk confirm is scoped
+  to **what is on screen**, never "all drafts everywhere" — confirming a menu nobody read
+  is the exact mistake the gate exists to prevent.
+- **Identity is not editable in the review UI.** Changing `name`/`menu_source`/`season`
+  would either collide with another dish's unique key or orphan the row from the menu it
+  was drafted off. A misread name is a discard-and-redraft.
+- **Verified end to end through the deployed function**, which is the shipped code path:
+  Custom Buffets wrote 44 read / 44 inserted / 0 skipped. `menuSourceFromFilename` was
+  run against the real 8 filenames — the two seasonal files correctly collapse to one
+  `menu_source` separated by season, which is what the unique key needs.
+- **Not verified:** the browser UI itself. The upload panel, the confirm/edit/discard
+  mutations and the keyboard nav have only been compiled (`npm run build` passes), never
+  clicked — the same gap that P1 hit, and it is not closed until someone drafts a menu
+  from the page and a `menu_dishes` row changes status as a result.
+- **Open:** three pricing-rule lines on Custom Buffets ("Additional Salad +$5",
+  "Additional side +$4", "additional dessert +$4") draft as dishes and should be
+  discarded; Breakfast's "Omelet Station" puts its **$100 flat setup fee** in `upcharge`,
+  which is a per-person field, and lands under the wrong section.
+
+---
+
+### 2026-09-18 — Remaining 6 Menus Drafted; menu_dishes Identity Corrected
+
+**File(s) Changed:**
+`supabase/migrations/20260918000001_menu_dish_identity_includes_section.sql` (new)
+**Type:** `fix` + data load. **Not committed, not pushed.**
+**Summary:** Custom Buffets and Plated Dinners were confirmed by the owner (124 dishes).
+Drafting the remaining menus exposed a real bug in P2's unique key, which was silently
+dropping dishes; the key now includes `menu_section`.
+
+**Details:**
+
+- **P1 of this session's verification closed itself:** all 124 dishes came back
+  `confirmed`, every one with a timestamp, across **96 distinct seconds** in two
+  sittings — the signature of a human working down the list, not a bulk UPDATE. The
+  review page's confirm path is verified. Nothing was discarded, so the three
+  pricing-rule lines ("Additional Salad +$5", "Additional side +$4", "additional
+  dessert +$4") are now confirmed as dishes and may want removing.
+- **The bug: `(name, menu_source, season)` cannot hold one dish name twice on one
+  menu.** Breakfast read 22 dishes and stored 21; Seasonal-Fall read 27 and stored 26.
+  Both were genuine, and both the same shape — a name that legitimately appears in two
+  sections at two prices:
+  - Breakfast "Yogurt Parfait Bar" — standalone under *Fruit & Yogurt* at `$10/ea`
+    min 12, **and** a *Custom Breakfast Buffet* upgrade at `+$6`. The $10 item was lost.
+  - Fall "Shaved Brussels Sprout & Honeycrisp Apple Salad" — a plated *Starter Course*
+    **and** a *Buffet Salad*. The buffet one was lost.
+- **What made it dangerous was that it was silent.** The RPC's payload dedupe exists to
+  stop `ON CONFLICT` throwing "cannot affect row a second time", and it cannot tell a
+  duplicate *reading* of one dish from two different dishes sharing a name. Nothing in
+  the UI would ever have shown the loss — **only the `read` vs `inserted` counters
+  caught it**, which is the argument for having the RPC return all three numbers
+  instead of a bare success.
+- **Fixed by widening the key to include `menu_section`.** This splits the two real
+  cases while still collapsing the one the dedupe was built for: the cold hors
+  d'oeuvres repeat verbatim across both pages under the *same* heading, so they stay
+  one row. Widening a unique key cannot conflict existing rows, so the 124 confirmed
+  dishes were unaffected.
+- **The cost, accepted deliberately:** identity now depends on a model-generated field,
+  so a re-draft that renames a section ("Entrées" vs "Entrees") inserts a second row
+  rather than updating the first. That is a duplicate a human can see and discard —
+  strictly better than a dish that silently disappears.
+- **Loaded:** Breakfast 22, Hors d'Oeuvres 28, Platters 6, Seasonal-Fall 27,
+  Seasonal-Winter 25.
+- **Still not exercised:** the upload panel's own button. Every menu so far was drafted
+  by the harness calling the deployed function — the same edge function the browser
+  calls, but `MenuUploadPanel.jsx` itself (file read, base64, the sequential loop,
+  season from filename) has never run. **Quick Lunch Bites was deliberately left
+  unloaded** so that path can be tested by doing real work rather than by a no-op.
