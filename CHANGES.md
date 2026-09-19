@@ -160,51 +160,11 @@
 - 09-06 — BEO Qty Column Emphasis — qty renders as a filled blue chip **centred** against its row on desktop (`a3313c1`). `align-self: center` is the load-bearing part, not the fill: on a multi-line dish the cell stretched to ~200px and the number sat top-right, far from the text it applied to. `.beo-item-qty:empty` is required, or legitimately blank quantities draw an empty pill. Mobile untouched. → [full](docs/changelog/2026-09.md#2026-09-06--beo-qty-column-emphasis-uncommitted--awaiting-owner-sign-off)
 - 09-07 — Order Guide in BEO Order Lists (BRAINSTORM) — requirements for costing a BEO off the real supplier catalog. Three blockers named (unit conversion, no catalog export, no menu file) and the core call made: **inference happens once per thing, never per BEO**, so the runtime path stays arithmetic. → [full](docs/changelog/2026-09.md#2026-09-07--order-guide-in-beo-order-lists-brainstorm-only--no-code-written)
 - 09-15 — Order Guide Design — all three blockers answered from delivered files. Merging the 13 raw exports reproduces the AI-built master exactly (1,381 / 394 / 6), making the master disposable. Cross-class unit conversion **forbidden** (a gap, never a guess), so density is never needed. BEO lines name dishes only inside a description string, so `beo_dish_matches` was added. Phased P0-P5. → [full](docs/changelog/2026-09.md#2026-09-15--order-guide-design-design-only--no-code-no-migration)
+- 09-15 — Session Housekeeping: CHANGES.md Repair, Docs and Vendor Data Committed — the changelog had been truncated mid-entry and was rebuilt from git; `claudedocs/` and the 13 vendor order guides committed. `BEOs/` stays gitignored for PII. → [full](docs/changelog/2026-09.md#2026-09-15--session-housekeeping-changesmd-repair-docs-and-vendor-data-committed)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-15 — Session Housekeeping: CHANGES.md Repair, Docs and Vendor Data Committed
-
-**File(s) Changed:** `CHANGES.md`, `docs/changelog/2026-08.md`, `.gitignore`,
-`app/.claude/settings.local.json`, `Vendor Data/` **Type:** `chore` — housekeeping
-only. **No feature code, no schema, nothing deployed.**
-**Summary:** `/sc:load` turned up three defects in the 09-15 design entry and a pile of
-uncommitted work from that session. All cleaned up, committed and pushed.
-
-**Details:**
-
-- **The 09-15 entry had been inserted mid-entry.** It landed before the last two
-  paragraphs of the 09-07 entry, orphaning its "Also flagged" and "State" paragraphs
-  under the wrong date. Moved back to 09-07 unedited.
-- **09-15's state paragraph was inherited and wrong.** It claimed `main` was at
-  `a3313c1` and in sync with origin. `main` was actually at `ed6dcfd`, one commit ahead
-  and unpushed. Replaced with the real state.
-- **Over the 500-line cap at 535.** Moved the 08-25 and 08-29 entries verbatim to
-  `docs/changelog/2026-08.md` with one-line pointers, per the MOVE-never-delete rule.
-  The 08-25 move was diffed against `git show HEAD:CHANGES.md` — 47 lines, identical.
-- **Committed and pushed in three commits** (`a5b8b9d`, `8f4c8b8`, this one), which also
-  carried the owner's 09-14 `ed6dcfd` off the local machine for the first time.
-- **Vendor data is now tracked** at `Vendor Data/Order Guides/` — 13 raw PFG exports
-  plus the master item list, the input P1 verifies against. Owner chose this knowingly
-  after being told the supplier pricing lands in GitHub history permanently.
-- **`.gitignore`: the `Vendor Data/PFG_Master_Item_List_09-06-26` rule is gone.** It
-  never matched the real filename (missing `20` and `.xlsx`), so the master list had
-  been committed in `ed6dcfd` despite it. Owner removed the line himself once the
-  decision was to track the exports.
-- **The master item list existed twice with different contents** — 167,232 bytes at
-  `Vendor Data/`, 164,054 at `Vendor Data/Order Guides/`. Owner deleted the former.
-  **Open: the design's 1,381-product baseline was measured before the duplicate was
-  found, so P1 must re-confirm that number against the surviving copy rather than
-  trusting the figure in the design doc.**
-- `app/.claude/settings.local.json`: dropped four permission entries pinned to a dead
-  session scratchpad path.
-
-**State:** `main` at this commit, pushed, in sync with `origin/main`. Working tree
-clean. Nothing deployed this session; production is untouched.
-
----
 
 ### 2026-09-16 — Catalog Baseline Re-Measured and Confirmed (closes the 09-15 open item)
 
