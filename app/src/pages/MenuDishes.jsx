@@ -130,6 +130,37 @@ export default function MenuDishes() {
         }
     }
 
+    // A row that states a selection surcharge rather than food — "Additional Salad +$5"
+    // means the SECOND salad costs $5 more, whichever salad that turns out to be. It is
+    // confirmed (it has been reviewed and the price is real) but flagged, because the
+    // dish the rule applies to is already its own row and gets ordered on its own.
+    // Giving this one ingredients too would order that food twice.
+    async function markPriceRule(dish) {
+        setBusy(true)
+        try {
+            const { error: updateError } = await supabase
+                .from('menu_dishes')
+                .update({
+                    is_price_rule: true,
+                    status: 'confirmed',
+                    confirmed_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', dish.id)
+            if (updateError) throw updateError
+
+            if (status === 'draft') setDishes(prev => prev.filter(d => d.id !== dish.id))
+            else setDishes(prev => prev.map(d => d.id === dish.id
+                ? { ...d, is_price_rule: true, status: 'confirmed' } : d))
+            loadSources()
+        } catch (err) {
+            console.error('Could not mark the price rule:', err)
+            setError(err.message)
+        } finally {
+            setBusy(false)
+        }
+    }
+
     // A dish the menus do not really offer (a heading the model mistook for a dish) is
     // deleted rather than confirmed. Only drafts can be discarded this way.
     async function discardDish(dish) {
@@ -149,7 +180,7 @@ export default function MenuDishes() {
 
     useKeyboardReview({
         dishes, selected, setSelected, editingId, setEditingId,
-        onConfirm: confirmDish, busy,
+        onConfirm: confirmDish, onPriceRule: markPriceRule, busy,
     })
 
     const draftCount = dishes.filter(d => d.status === 'draft').length
@@ -226,7 +257,8 @@ export default function MenuDishes() {
             {!loading && dishes.length > 0 && (
                 <>
                     <div className="page-subtitle" style={{ marginBottom: 'var(--space-3)' }}>
-                        j / k or ↑ ↓ to move · c to confirm · e to edit · Esc to close an edit
+                        j / k or ↑ ↓ to move · c to confirm · p to mark a price rule ·
+                        e to edit · Esc to close an edit
                     </div>
                     <div className="catalog-list">
                         {dishes.map((dish, i) => (
@@ -241,6 +273,7 @@ export default function MenuDishes() {
                                 onCancelEdit={() => setEditingId(null)}
                                 onSave={edits => saveEdits(dish, edits)}
                                 onConfirm={() => confirmDish(dish)}
+                                onPriceRule={() => markPriceRule(dish)}
                                 onDiscard={() => discardDish(dish)}
                             />
                         ))}
@@ -254,12 +287,12 @@ export default function MenuDishes() {
 // j/k/arrows to move, c to confirm, e to edit. Bound to the window rather than to a row
 // so the list is navigable without clicking into it first, and disabled entirely while
 // an edit form is open so typing a "c" into a description does not confirm anything.
-function useKeyboardReview({ dishes, selected, setSelected, editingId, setEditingId, onConfirm, busy }) {
+function useKeyboardReview({ dishes, selected, setSelected, editingId, setEditingId, onConfirm, onPriceRule, busy }) {
     // Everything the handler reads goes through a ref so the listener binds once on
     // mount instead of being torn down and re-added on every render (onConfirm is a new
     // function each time).
     const state = useRef({})
-    state.current = { dishes, selected, editingId, busy, onConfirm }
+    state.current = { dishes, selected, editingId, busy, onConfirm, onPriceRule }
 
     // Confirming the last row in a draft-filtered list shortens the list underneath the
     // cursor, which would otherwise leave it pointing past the end with nothing selected.
@@ -269,7 +302,7 @@ function useKeyboardReview({ dishes, selected, setSelected, editingId, setEditin
 
     useEffect(() => {
         function onKeyDown(e) {
-            const { dishes, selected, editingId, busy, onConfirm } = state.current
+            const { dishes, selected, editingId, busy, onConfirm, onPriceRule } = state.current
             const tag = e.target.tagName
             if (editingId || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
                 if (e.key === 'Escape') setEditingId(null)
@@ -286,6 +319,9 @@ function useKeyboardReview({ dishes, selected, setSelected, editingId, setEditin
             } else if (e.key === 'c') {
                 const dish = dishes[selected]
                 if (dish && dish.status === 'draft') onConfirm(dish)
+            } else if (e.key === 'p') {
+                const dish = dishes[selected]
+                if (dish && dish.status === 'draft') onPriceRule(dish)
             } else if (e.key === 'e') {
                 e.preventDefault()
                 const dish = dishes[selected]
@@ -297,7 +333,7 @@ function useKeyboardReview({ dishes, selected, setSelected, editingId, setEditin
     }, [setSelected, setEditingId])
 }
 
-function DishRow({ dish, isSelected, isEditing, busy, onSelect, onEdit, onCancelEdit, onSave, onConfirm, onDiscard }) {
+function DishRow({ dish, isSelected, isEditing, busy, onSelect, onEdit, onCancelEdit, onSave, onConfirm, onPriceRule, onDiscard }) {
     const rowRef = useRef(null)
 
     // Keep the keyboard cursor on screen when it walks past the fold.
@@ -319,6 +355,7 @@ function DishRow({ dish, isSelected, isEditing, busy, onSelect, onEdit, onCancel
                 <div className="catalog-row-name">{dish.name}</div>
                 <div className="catalog-row-meta">
                     {dish.menu_section && <span className="catalog-row-tag">{dish.menu_section}</span>}
+                    {dish.is_price_rule && <span className="badge badge-warning">Price rule — not food</span>}
                     <span>{dish.menu_source}{dish.season ? ` · ${dish.season}` : ''}</span>
                     {dish.source_page && <span>p{dish.source_page}</span>}
                     {dish.serves && <span>serves {dish.serves}</span>}
@@ -336,6 +373,12 @@ function DishRow({ dish, isSelected, isEditing, busy, onSelect, onEdit, onCancel
                             </button>
                             <button className="btn btn-sm btn-secondary" disabled={busy} onClick={e => { e.stopPropagation(); onEdit() }}>
                                 Edit
+                            </button>
+                            {/* Three distinct outcomes: real food (Confirm), a real price
+                                rule that is not food (Price rule), and noise the model
+                                misread off the page (Not a dish, which deletes). */}
+                            <button className="btn btn-sm btn-secondary" disabled={busy} onClick={e => { e.stopPropagation(); onPriceRule() }}>
+                                Price rule
                             </button>
                             <button className="btn btn-sm btn-danger" disabled={busy} onClick={e => { e.stopPropagation(); onDiscard() }}>
                                 Not a dish
