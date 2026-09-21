@@ -53,6 +53,7 @@ interface DraftDish {
   upcharge: number | null;
   base_price: number | null;
   price_unit: string | null;
+  price_qty: number;
   serves: number | null;
   min_order: number | null;
 }
@@ -73,6 +74,8 @@ Each element:
   "upcharge": number|null,    // a "+$N" ADDED to a package price. "Chopped Cobb +$5" -> 5
   "base_price": number|null,  // the dish's OWN standalone price. "Cheeseburger  $7" -> 7
   "price_unit": "each"|"person"|"dozen"|"tray"|"piece"|null,
+  "price_qty": number,        // how many price_unit the base_price BUYS. Almost always
+                              // 1. "$115 for 20 glasses" -> base_price 115, qty 20.
   "serves": number|null,      // "Serves 20" / "(serves 20)" -> 20
   "min_order": number|null    // "Minimum 20 pieces/type", "(min. order 12)" -> 20 / 12
 }
@@ -85,14 +88,17 @@ RULES — read carefully, several of these are the whole point of using a model 
    in the other's field. A dish with neither has both null — that is correct and common,
    because it is included in the package price.
 
-3. price_unit says what base_price BUYS:
-   - "$8/ea", "Cheeseburger $7"                -> "each"
-   - "$18/person", "$23/person", "$30.00 / person" -> "person"
-   - "$30/doz", "$24/doz"                      -> "dozen"
-   - "$90/tray"                                -> "tray"
-   - "Starting at $85 for 20 pieces"           -> "piece", and min_order 20
-   - "Charcuterie Board $200" with "Serves 20" -> null unit, base_price 200, serves 20
-   Null when there is no base_price, or when the unit is not one of those five.
+3. base_price BUYS price_qty x price_unit. Getting the QUANTITY wrong is the single
+   most damaging mistake available to you — a price stated "for 20 pieces" and stored
+   as a per-piece price is twenty times too expensive, and it looks perfectly normal.
+   - "$8/ea", "Cheeseburger $7"                -> 8,   qty 1,  "each"
+   - "$18/person", "$30.00 / person"           -> 18,  qty 1,  "person"
+   - "$30/doz", "$24/doz"                      -> 30,  qty 1,  "dozen"
+   - "$90/tray"                                -> 90,  qty 1,  "tray"
+   - "+$115 for 20 glasses"                    -> 115, qty 20, "each"
+   - "Charcuterie Board $200" with "Serves 20" -> 200, qty 1,  null unit, serves 20
+   price_qty is 1 unless the menu explicitly says the price covers several. price_unit
+   is null when there is no base_price or the unit is not one of those five.
 
 4. A MINIMUM OR YIELD STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT.
    "Breakfast Sandwiches - Minimum 20 pieces/type" is a heading: give each sandwich
@@ -100,9 +106,13 @@ RULES — read carefully, several of these are the whole point of using a model 
    of 10 per sandwich type" and "Bagel Bar - Minimum 12". Copy the value down onto
    each dish; do not emit the heading itself as a dish.
 
-5. A PRICE THAT APPLIES TO A WHOLE SECTION IS NOT A DISH'S OWN PRICE. On the hors
-   d'oeuvres pages, "Chicken - Starting at $95 for 20 pieces" prices the whole group:
-   give each dish under it base_price 95, price_unit "piece", min_order 20.
+5. "STARTING AT" IS A FLOOR, NOT A PRICE — DO NOT PUT IT ON A DISH. A heading like
+   "Chicken - Starting at $95 for 20 pieces" prices the whole GROUP, and the word
+   "starting" says outright that the dishes under it do NOT all cost that. Leave
+   base_price, price_unit and price_qty EMPTY on every dish in such a group, and put
+   the wording in description instead ("Group price: from $95 for 20 pieces"). Still
+   set min_order from it. An honest gap beats a number that is wrong for most of the
+   dishes carrying it.
 
 6. DO NOT EMIT NON-DISHES. Skip package descriptions and policy prose entirely:
    "Starting at $38 for one salad, rolls with butter...", "Add upgrades for total
@@ -190,6 +200,25 @@ const PROMPT_DOCX_STRUCTURE = `
       upcharge. Never guess the missing figure.
 `;
 
+// Splices the source-specific finding rules into the shared core, in place of the
+// missing rule 2.
+//
+// It THROWS when the anchor is absent rather than returning the core unchanged, which
+// is the whole point: a silent miss ships a prompt with no layout rules at all and the
+// only symptom is a quietly worse parse. That already happened once — rule 3 was
+// reworded without updating the anchor, and nothing complained.
+const PROMPT_ANCHOR = "3. base_price BUYS";
+
+function assembled(sourceRules: string): string {
+  if (!PROMPT_CORE.includes(PROMPT_ANCHOR)) {
+    throw new Error(
+      `Prompt anchor "${PROMPT_ANCHOR}" not found in PROMPT_CORE — the source-specific ` +
+      `rules would be dropped. Fix the anchor before parsing anything.`
+    );
+  }
+  return PROMPT_CORE.replace(PROMPT_ANCHOR, sourceRules + "\n" + PROMPT_ANCHOR);
+}
+
 // Coerce one model-emitted dish into the table's shape. The model is the one part of
 // this path that can return anything at all, so every field is checked here rather
 // than trusted into the database: an out-of-range price_unit or season would be
@@ -221,6 +250,9 @@ function cleanDish(raw: any, page_fallback: number | null): DraftDish | null {
     upcharge: num(raw?.upcharge),
     base_price: num(raw?.base_price),
     price_unit: price_unit && PRICE_UNITS.includes(price_unit) ? price_unit : null,
+    // A missing or nonsensical quantity must fall back to 1, never 0 or null: the
+    // column is NOT NULL, and a 0 here would make any later per-unit division explode.
+    price_qty: (num(raw?.price_qty) ?? 1) > 0 ? num(raw?.price_qty) ?? 1 : 1,
     serves: int(raw?.serves),
     min_order: int(raw?.min_order),
   };
@@ -265,8 +297,8 @@ Deno.serve(async (req) => {
     const parseOnly = payload.parseOnly === true;
 
     const prompt = docHtml
-      ? PROMPT_CORE.replace("3. price_unit says", PROMPT_DOCX_STRUCTURE + "\n3. price_unit says")
-      : PROMPT_CORE.replace("3. price_unit says", PROMPT_PDF_LAYOUT + "\n3. price_unit says");
+      ? assembled(PROMPT_DOCX_STRUCTURE)
+      : assembled(PROMPT_PDF_LAYOUT);
 
     const parts = docHtml
       ? [{ text: prompt }, { text: `\n\nTHE MENU (HTML):\n${docHtml}` }]

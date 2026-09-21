@@ -426,6 +426,9 @@ function DishEditForm({ dish, busy, onSave, onCancel }) {
                             {PRICE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
                     </Field>
+                    <Field label="How many of that">
+                        <input className="input" inputMode="decimal" value={form.price_qty ?? 1} onChange={e => set('price_qty', e.target.value)} />
+                    </Field>
                     <Field label="Serves">
                         <input className="input" inputMode="numeric" value={form.serves ?? ''} onChange={e => set('serves', e.target.value)} />
                     </Field>

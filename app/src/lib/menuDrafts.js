@@ -33,7 +33,7 @@ export function isDocx(filename) {
 // The fields a reviewer can correct before confirming. Anything not listed here is
 // either identity (name, menu_source, season) or provenance (source_page) and is not
 // editable from the review list.
-export const EDITABLE_FIELDS = ['menu_section', 'description', 'upcharge', 'base_price', 'price_unit', 'serves', 'min_order']
+export const EDITABLE_FIELDS = ['menu_section', 'description', 'upcharge', 'base_price', 'price_unit', 'price_qty', 'serves', 'min_order']
 
 // Money and counts arrive from text inputs as strings; '' has to become null rather
 // than 0, or an unpriced dish silently claims to cost nothing.
@@ -58,6 +58,8 @@ export function normaliseDishEdits(dish) {
         upcharge: num(dish.upcharge),
         base_price: num(dish.base_price),
         price_unit: dish.price_unit || null,
+        // NOT NULL in the table, and a 0 would make any per-unit division explode.
+        price_qty: num(dish.price_qty) > 0 ? num(dish.price_qty) : 1,
         serves: int(dish.serves),
         min_order: int(dish.min_order),
     }
@@ -67,6 +69,12 @@ export function normaliseDishEdits(dish) {
 // (a supplement on a package vs. the dish's own price) and are never added together.
 export function priceLabel(dish) {
     if (dish.base_price !== null && dish.base_price !== undefined) {
+        // The quantity has to be visible. "$115" beside a 20-glass price reads as the
+        // price of one, which is how the hors d'oeuvres menu came out 20x too dear.
+        const qty = Number(dish.price_qty ?? 1)
+        if (dish.price_unit && qty > 1) {
+            return `$${Number(dish.base_price).toFixed(2)} / ${qty} ${dish.price_unit}`
+        }
         const unit = dish.price_unit ? `/${dish.price_unit}` : ''
         return `$${Number(dish.base_price).toFixed(2)}${unit}`
     }
