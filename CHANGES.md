@@ -163,52 +163,11 @@
 - 09-15 — Session Housekeeping: CHANGES.md Repair, Docs and Vendor Data Committed — the changelog had been truncated mid-entry and was rebuilt from git; `claudedocs/` and the 13 vendor order guides committed. `BEOs/` stays gitignored for PII. → [full](docs/changelog/2026-09.md#2026-09-15--session-housekeeping-changesmd-repair-docs-and-vendor-data-committed)
 - 09-16 — Catalog Baseline Re-Measured and Confirmed — merged the 13 raw exports independently: **1,381 products / 394 price-varies / 6 unpriced**, matching the design on all three. The two master copies held identical product data (14 cells differ, all cached Index-sheet floats), so the 09-15 duplicate-file caution was a false alarm. PowerShell `git show >` corrupts binaries — use Bash. → [full](docs/changelog/2026-09.md#2026-09-16--catalog-baseline-re-measured-and-confirmed-closes-the-09-15-open-item)
 - 09-17 — Supplier Catalog: Ingestion + Product Search (order guide **P1**) — `/office/catalog` loads the 13 PFG exports into `supplier_products`: **1,381 / 394 varies / 6 unpriced / 219 catch-weight**. Parsing lives in a pure module so the shipped code ran headless against the real files. `case_price` derives at INGEST; `category` is sticky because the upsert omits the column. A reflection pass caught that the upload BUTTON had never run — the harness had retyped the payload instead of importing it, and the two had drifted. → [full](docs/changelog/2026-09.md#2026-09-17--supplier-catalog-ingestion--product-search-order-guide-p1)
+- 09-17 — Catalog Categories Seeded From the Master List — all 1,381 products carry a category + item group, and `/office/catalog` gained a category filter. Seeding is its OWN action, not part of ingestion: **one RPC** (`seed_supplier_categories`) instead of ~352 round trips, filling only NULLs so a re-run can never overwrite a curated value — proven by a second run reporting 0 seeded / 1,381 skipped. → [full](docs/changelog/2026-09.md#2026-09-17--catalog-categories-seeded-from-the-master-list)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-17 — Catalog Categories Seeded From the Master List
-
-**File(s) Changed:** `app/src/lib/catalogParse.js`,
-`app/src/components/CategorySeedPanel.jsx` (new), `app/src/pages/SupplierCatalog.jsx`,
-`app/src/index.css`, `supabase/migrations/20260917000000_seed_supplier_categories.sql` (new)
-**Type:** `feature` — closes the open item on the P1 entry. **Committed, NOT pushed.**
-**Summary:** All 1,381 products now carry a category and item group, and the catalog page
-has a category filter beside its search box.
-
-**Details:**
-
-- **The raw exports have no category; only the master list does**, filing every product
-  across 20 sheets with an `Item Group` column. Seeding is therefore its OWN action, not
-  part of ingestion — the design keeps the merge on raw exports only.
-- **A separate panel, deliberately.** Dropping the master into the order-guide uploader
-  would feed it to the price merge; keeping two inputs in one drop zone invites exactly
-  that. (The uploader already refuses it — the master has no `Product List Report` sheet —
-  but a clear second control beats relying on an error message.)
-- **One RPC instead of ~352 round trips.** The data holds 352 distinct
-  (category, item_group) pairs, so a per-pair UPDATE from the browser would be that many
-  requests and could leave the catalog half-categorised. `seed_supplier_categories(jsonb)`
-  does it in one statement via `jsonb_to_recordset`, atomically.
-- **The RPC fills only NULL categories**, which is what makes `category` sticky in
-  practice rather than only in intent — re-running can never overwrite a curated value. It
-  returns `seeded / skipped / unmatched` so a no-op is visible instead of looking like
-  success.
-- **Verified through the shipped parser and the real RPC** (imported, not retyped):
-  1,381 parsed → **1,381 seeded, 0 skipped, 0 unmatched**; all 1,381 rows now have both a
-  category and an item group; 20 categories whose counts sum to 1,381. **Re-ran it: 0
-  seeded, 1,381 skipped** — the sticky rule proven, not asserted.
-- **Data checks before writing any code:** every one of the 1,381 master rows has a product
-  number, none has a blank item group, and **no product appears under two categories** — so
-  the seed is not order-dependent. The parser reports a conflict count anyway rather than
-  letting a future master resolve it by sheet order.
-- **`supplier_categories()` backs the filter dropdown** — 20 rows with counts, instead of
-  pulling all 1,381 products to the browser to dedupe client-side.
-- **Untested:** the panel's own button. The categories were already seeded by the harness,
-  so clicking it now correctly reports 0 seeded / 1,381 already set — which looks like a
-  no-op. Clearing categories first would let that path be exercised properly.
-
----
 
 ### 2026-09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide P2)
 
