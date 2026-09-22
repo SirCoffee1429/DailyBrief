@@ -454,3 +454,52 @@ count of the source.**
   `season='fall'` — **the same identity as the already-confirmed Seasonal-Fall PDF rows**,
   so loading it would mix two menu versions under one key. Which version is current is
   the owner's call.
+
+---
+
+### 2026-09-21 — Menus Wiped; Price Quantity Bug Fixed Before Reload
+
+**File(s) Changed:** `supabase/migrations/20260921000000_menu_dish_price_qty.sql` (new),
+`supabase/functions/process-menu/index.ts`, `app/src/lib/menuDrafts.js`,
+`app/src/pages/MenuDishes.jsx`
+**Type:** `fix` — `process-menu` deployed v8. **Not pushed.**
+**Summary:** The owner reported the prices were wrong across every menu. One systematic
+bug was ours and is fixed; the rest is that every source document parsed so far was an
+old version. All 232 rows wiped at his instruction, ready for the correct files.
+
+**Details:**
+
+- **Hors d'oeuvres were 20x too expensive, on 27 of 28 rows.** The menu prints
+  "Vegetarian — Starting at $85 for 20 pieces" and prompt rule 5 said to store
+  `base_price 85, price_unit 'piece'` on every dish in the group — which reads as **$85
+  PER PIECE** against a real $4.25. Two distinct errors were tangled in that one rule:
+  - **Nothing could express "a price that buys several."** `price_qty` now records it
+    (`base_price` buys `price_qty x price_unit`), so "$115 for 20 glasses" is
+    representable at all. Defaults to 1, so no existing row changes meaning.
+  - **"Starting at" is a group FLOOR, not a dish price** — the word says outright the
+    dishes do not all cost that. Those prices are now left empty with the wording kept
+    in description. An honest gap beats a number wrong for most of the dishes carrying
+    it. Rule 5 is also now **silent when a dish carries its own price**, since the new
+    hors d'oeuvres menu prices each item individually.
+  - **A quantity basis on a SECTION HEADING now carries down onto each dish**, the way a
+    minimum already did — the new hors d'oeuvres state "per 20 pieces" once on the
+    heading, not on every line.
+- **The confirm gate held.** All 28 affected rows were still drafts; nothing wrong had
+  reached confirmed data.
+- **A silent-failure hazard found while testing, and closed.** The prompt splices its
+  source-specific rules in at an anchor string, and rewording rule 3 broke that anchor —
+  the only symptom would have been a quietly worse parse with **no layout rules at all**.
+  Assembly now throws when the anchor is missing, and a local Deno harness asserts both
+  paths splice correctly **against the real file** (it slices the actual source rather
+  than retyping it).
+- **Local had drifted from deployed** — the anchor was corrected in the deploy payload
+  but not in the file on disk. Caught by grepping rather than assuming. Both now match.
+- **All 232 rows deleted at the owner's explicit instruction**, including 124 he had
+  confirmed and the 3 `is_price_rule` flags. Table, constraints, RPCs and the
+  `orderable_menu_dishes` view are untouched — only data. This was necessary because the
+  confirmed-dish protection would otherwise have **refused the corrected prices** and
+  reported it only as `skipped_confirmed`.
+- **A verification lesson worth keeping.** The earlier claim "80/80 exact, every upcharge
+  correct" compared the parse against the SAME PDF it came from. That is a fidelity
+  check, and it was reported as a correctness check. It cannot detect a stale document or
+  a wrong price on the page, and the owner found what it could not.

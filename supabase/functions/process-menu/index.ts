@@ -97,8 +97,18 @@ RULES — read carefully, several of these are the whole point of using a model 
    - "$90/tray"                                -> 90,  qty 1,  "tray"
    - "+$115 for 20 glasses"                    -> 115, qty 20, "each"
    - "Charcuterie Board $200" with "Serves 20" -> 200, qty 1,  null unit, serves 20
-   price_qty is 1 unless the menu explicitly says the price covers several. price_unit
-   is null when there is no base_price or the unit is not one of those five.
+   price_qty is 1 unless the menu says the price covers several. price_unit is null
+   when there is no base_price or the unit is not one of those five.
+
+   A QUANTITY BASIS STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT, exactly
+   the way a minimum does in rule 4. The hors d'oeuvres are priced per 20 pieces, and
+   the menu may say so ONCE on the heading rather than on every line:
+     "Hors d'Oeuvres — priced per 20 pieces"
+        "Bacon-Wrapped Scallops   $115"   -> 115, qty 20, "piece"
+        "Caprese Skewer            $85"   ->  85, qty 20, "piece"
+   Carry that basis down onto each dish. Do NOT store 115 with qty 1 — that claims $115
+   for one scallop. If a heading gives a basis and a dish states its own different one,
+   the DISH wins.
 
 4. A MINIMUM OR YIELD STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT.
    "Breakfast Sandwiches - Minimum 20 pieces/type" is a heading: give each sandwich
@@ -106,13 +116,14 @@ RULES — read carefully, several of these are the whole point of using a model 
    of 10 per sandwich type" and "Bagel Bar - Minimum 12". Copy the value down onto
    each dish; do not emit the heading itself as a dish.
 
-5. "STARTING AT" IS A FLOOR, NOT A PRICE — DO NOT PUT IT ON A DISH. A heading like
-   "Chicken - Starting at $95 for 20 pieces" prices the whole GROUP, and the word
-   "starting" says outright that the dishes under it do NOT all cost that. Leave
-   base_price, price_unit and price_qty EMPTY on every dish in such a group, and put
-   the wording in description instead ("Group price: from $95 for 20 pieces"). Still
-   set min_order from it. An honest gap beats a number that is wrong for most of the
-   dishes carrying it.
+5. "STARTING AT" IS A FLOOR, NOT A PRICE — and it only matters when the dish has no
+   price of its own. Apply this rule ONLY to a dish that states no price anywhere:
+   a heading like "Chicken - Starting at $95 for 20 pieces" prices the whole GROUP, and
+   the word "starting" says outright the dishes under it do NOT all cost that, so leave
+   base_price, price_unit and price_qty EMPTY and put the wording in description
+   ("Group price: from $95 for 20 pieces"). Still set min_order from it.
+   **If the dish DOES carry its own price, that price wins and this rule is silent** —
+   use the dish's figure with the heading's quantity basis, per rule 3.
 
 6. DO NOT EMIT NON-DISHES. Skip package descriptions and policy prose entirely:
    "Starting at $38 for one salad, rolls with butter...", "Add upgrades for total
