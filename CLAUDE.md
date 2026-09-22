@@ -34,9 +34,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 ## Key Design Decisions
 
 - Office password (`chef21`) hardcoded in `OfficeGate.jsx` — client-side only, no real auth
-- Category is `text[]`, with legacy string parsing for older records
-- Voice = Web Speech API (long-press 1.5s the center nav button); weather defaults to
-  Columbia, MO if geolocation is denied
+- Category is `text[]`, with legacy string parsing for older records. Voice = Web Speech
+  API (long-press 1.5s the center nav button); weather defaults to Columbia, MO
 - Models via `v1beta`: `gemini-embedding-001` (embeddings), `gemini-3-flash-preview`
   (generation, 9 call sites). Both trail Google's GA line, but the owner reviewed this
   2026-09-17 and **chose NOT to upgrade** — the parse is stable. Don't re-propose unasked.
@@ -44,21 +43,26 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   `gemini-2.5-flash`, measured — 3-flash-preview took 25s on ONE page and blew the 130s
   gateway margin on four. Time a new PDF path on the LARGEST file; 1 page hides it
 - Recipes are a FIXED Excel template in `workbook_sheets.rows` (row 1 `RECIPE:`|name, rows
-  3–23 ingredients, row 24 `Assembly:`, 25–32 method). **There is NO yield field** — 494
-  sheets, 0 say "serves": an absolute batch that CANNOT scale to a headcount
+  3–23 ingredients, row 24 `Assembly:`). **NO yield field** — 494 sheets, 0 say "serves":
+  an absolute batch that CANNOT scale to a headcount
 - Dates: use `lib/dates.js` for a local "today", never `toISOString().split()` — UTC rolls
-  over at 7pm Central and drops the current day from queries
-- Briefings: `briefings.date` is the day it SHOWS, not when written; same-day posts stack
-  (newest first, author + time byline). `defaultBriefingDate()` picks today before 5pm
-  local and tomorrow after — posts are written after dinner service
+  over 7pm Central and drops the current day
+- Briefings: `briefings.date` is the day it SHOWS, not when written; same-day posts stack.
+  `defaultBriefingDate()` picks today before 5pm local, tomorrow after — posts are written
+  after dinner service
 - Catalog (`supplier_products`): highest-price-wins is scoped to ONE upload batch — across
   uploads it is a ratchet. `case_price` derives at INGEST (219 catch-weight items; a
   read-time branch gets forgotten and prints ~50x low). `category` seeds via an RPC
-  filling only NULLs — a re-upload can't clobber it
-- Menus (`menu_dishes`, P2): the 8 catering PDFs are hand-designed marketing layouts, so
-  a MODEL reads them, not coordinates — on Breakfast the price column extracts as a
-  detached run and only the rendered page says which price is whose. Safe because it
-  drafts once behind a human gate; the per-BEO path stays arithmetic
+  filling only NULLs
+- Menus (`menu_dishes`, P2): catering menus are hand-designed marketing layouts, so a
+  MODEL reads them, not coordinates — the price column can extract detached from its dish.
+  `.docx` is accepted, converted to HTML **in the browser** (Gemini cannot read .docx, and
+  `npm:mammoth` in the edge function blew the 130s cold-start margin). Safe because it
+  drafts behind a human gate; the per-BEO path stays arithmetic
+- **`base_price` buys `price_qty` x `price_unit`.** "$85 for 20 pieces" stored as 85/piece
+  is 20x too dear and looks normal — it shipped that way on 27 rows. A quantity basis on a
+  SECTION HEADING carries down onto each dish; "Starting at" is a group FLOOR, never a
+  dish price
 - A dish name can appear TWICE on one menu in two sections at two prices (Breakfast
   "Yogurt Parfait Bar" = $10/ea item AND +$6 buffet upgrade), so identity is
   `(name, menu_source, menu_section, season)`, `nulls not distinct` because season is
@@ -70,40 +74,35 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   `is_price_rule` — ingredients on them would DOUBLE-ORDER, since the real dish is its
   own row. P3 must draw from the `orderable_menu_dishes` view. Separating the two kinds
   needs package composition = pricing = out of v1 scope
-- FOH shell is the cyan sidebar (`FOHLayout` + `.foh-v2`) — the office shell's hardcoded
-  orange bleeds through otherwise
+- FOH shell is the cyan sidebar (`FOHLayout` + `.foh-v2`), or the office orange bleeds in
 - `.wb-act-btn` is shared beyond the communication board — scope hover-reveal to
   `.wb-note .wb-act-btn`, never the bare class, or buttons go invisible app-wide
 - `receive-beo-email` is deliberately wide open (random-hash Postmark address; the review
-  queue protects live events). Do not "harden": forwarding rewrites `From` to
-  `ryan@oldhawthorne.com` so an allowlist refuses real BEOs, and a secret works only as
-  `https://user:SECRET@host` — as `https://SECRET@host` all mail is refused
+  queue protects live events). Do not "harden": forwarding rewrites `From` so an allowlist
+  refuses real BEOs, and a secret works only as `https://user:SECRET@host`
 - BEOs arrive as a **daily ReserveCloud packet emailed as a LINK, not an attachment**.
   `receive-beo-email` fetches it in two hops: `/web/token/process/<a>/<b>` 303s to a page
-  whose single href swaps `view` → `download`, no login on either. Attachments still win,
-  so fixing their attach option retires this path. Backgrounded, so the webhook acks ~2s
-- `EXCLUDED_EVENT_NAMES` drops recurring club events: WHOLE name, lowercased,
-  apostrophes stripped (the parser returns `Ladies League` or `Ladies' League` depending
-  on the glyph). Do NOT loosen to contains/startsWith — one packet holds `Ladies' League`
+  whose single href swaps `view` → `download`. Backgrounded, so the webhook acks ~2s
+- `EXCLUDED_EVENT_NAMES` drops recurring club events: WHOLE name, lowercased, apostrophes
+  stripped. Do NOT loosen to contains/startsWith — one packet holds `Ladies' League`
   (excluded) beside `Ladies' Night League` and `Ladies Night Out` (kept)
-- A BEO's `Event Date(s)` row ALWAYS prints a range (one day reads `08/21 - 08/21`); a
-  same-day end date is collapsed to null in CODE, before the mode split — prompt wording
-  never held, since it asks Gemini to contradict the page
-- **The BEO table is parsed from the PDF's coordinates, not by the model** (`process-beo`
-  v23, `beoGeometricParser.ts`): columns fixed (label x<=60, centre 60-500, qty ~538), and
-  **line spacing is the signal**, not font/centring — ~11pt wrapped, ~17pt row, ~25pt section
+- A BEO's `Event Date(s)` row ALWAYS prints a range (one day reads `08/21 - 08/21`); the
+  same-day end date is collapsed to null in CODE — prompt wording never held, since it
+  asks Gemini to contradict the page
+- **The BEO table is parsed from the PDF's coordinates, not the model** (`process-beo` v23,
+  `beoGeometricParser.ts`): columns fixed (label x<=60, centre 60-500, qty ~538), and
+  **line spacing is the signal**, not font — ~11pt wrapped, ~17pt row, ~25pt section
 - **A row starts an item on a qty OR a left-column label, never the qty alone** — the BEO
-  prints Qty once per section and omits it at headcount 0, so keying on it dropped whole
-  menus (Linkside 09/03: three dishes, no qty anywhere). Items may carry `qty: ""`
+  prints Qty once per section and omits it at headcount 0. Items may carry `qty: ""`
 - **The gate is a CONSERVATION check — never "restore" the old counter.** Every centre
-  line printed must survive into the output, indexed PER EVENT. Gemini is the fallback
-  when a line vanishes, the parse throws, or no footer is found (`engine`/`dropped` say
-  which and what). The old gate counted qty-bearing rows — the assembler's own definition
-  of a row — so it agreed by construction and passed a packet that lost three menus:
-  **sharing no code was the wrong safety property; what matters is sharing no premise**
+  line printed must survive into the output, indexed PER EVENT; Gemini is the fallback
+  (`engine`/`dropped` say which ran and what went missing). The old gate counted
+  qty-bearing rows — the assembler's own definition of a row — so it agreed by
+  construction and passed a packet that lost three menus: **sharing no code was the wrong
+  safety property; what matters is sharing no premise**
 - A stuck emailed BEO is swept by `sweepStuckBeoImports()` (`lib/usePendingBeoImports.js`)
-  via `useOfficeApprovalCounts`, so any office page triggers it — not `pg_cron`, because a
-  stuck import only matters once a human opens the app
+  via `useOfficeApprovalCounts` — not `pg_cron`, since it only matters once a human opens
+  the app
 
 ---
 
@@ -113,10 +112,11 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
-- Supplier order guide in BEO order lists — **P1 + P2 SHIPPED** (`/office/catalog`:
-  1,381 products; `/office/menus`: 232 dishes, 124 confirmed). P0 cancelled. **P3 next**:
-  `dish_ingredients` + `ingredient_products`. Inference stays OUT of the per-BEO path.
-  Phasing: `claudedocs/design_beo_order_guide_2026-09-15.md`
+- Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`, 1,381
+  products). **P2 built but menu_dishes is EMPTY**: every menu parsed was an old version,
+  so all 232 rows were wiped 2026-09-21 awaiting correct files. P0 cancelled. P3
+  (`dish_ingredients` + `ingredient_products`) waits on real menus. Inference stays OUT
+  of the per-BEO path. Phasing: `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---
 
@@ -156,7 +156,8 @@ For DailyBrief, the rules below win:
 ## Change Tracking & Session Init
 
 - All changes are logged at `CHANGES.md`; at the start of every session (or whenever a
-  new model is loaded) you MUST read all files in `.agentsules`
+  new model is loaded) you MUST read all files in `.agents
+ules`
 
 ## Your Behavior
 
