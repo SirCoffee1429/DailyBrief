@@ -338,7 +338,19 @@ function assemble(pages: Row[][]): BeoEventOut[] {
         continue;
       }
 
-      if (item) item.description = item.description ? item.description + "\n" + mid : mid;
+      if (item) { item.description = item.description ? item.description + "\n" + mid : mid; continue; }
+
+      // A centre line with no item open to join starts one rather than vanishing. A
+      // SUMMARY take-out page ("Homecoming Take Out" 10/03) prints a whole priced menu with
+      // no left label and no qty on any row, so nothing above ever opened an item. The
+      // lines stay in print order in one description — the page prints 9 prices for 8
+      // dishes, so splitting it per dish would have to guess which price is whose.
+      if (!category) {
+        category = { name: lastLabel || section.meal_type || "Items", items: [] };
+        section.categories.push(category);
+      }
+      item = { label: lastLabel || category.name, description: mid, qty: "" };
+      category.items.push(item);
     }
 
     ev.sections.forEach((s) => { s.categories = s.categories.filter((c) => c.items.length); });
