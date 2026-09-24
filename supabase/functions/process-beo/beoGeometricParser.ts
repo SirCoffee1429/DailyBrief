@@ -93,9 +93,22 @@ const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 
 // The club's own page header is reprinted on every page. On a continuation page of a
 // multi-page BEO the table resumes at the top and these lines interleave with it, so the
-// reconciliation scan sees them as table content. They are furniture, correctly ignored
-// by the assembler, and must not count as dropped rows.
+// reconciliation scan sees them as table content. They are furniture, ignored by the
+// assembler, and must not count as dropped rows.
 const PAGE_FURNITURE = /^(Club Contact:|E:\s*\S+@|Printed:|The Club at Old Hawthorne$)/;
+
+// A page of an event either opens with the event's own header block (contacts,
+// headcount, timeline) and starts its table afresh, or CONTINUES the table from the page
+// before without reprinting a section header. Eurofins 09/24 prints its cocktail hour on
+// page 1 and the whole plated dinner — courses, entrées, desserts — on page 2 under the
+// page-1 "Dinner" header. Treating every page as fresh threw those pages away, and the
+// reconciliation, which also waited for a Qty header, never looked at them either.
+const FRESH_PAGE = new Set(["Event Headcount", "Start Date", "Primary Contact"]);
+const isFreshPage = (rows: Row[]) => rows.some((r) => r.cells.some((c) => FRESH_PAGE.has(c.text)));
+// A continuation page reprints the title, location and club contact at the top; its table
+// resumes on the row after the "Club Contact:" line.
+const bodyStart = (rows: Row[]) =>
+  rows.findIndex((r) => r.cells.some((c) => c.text.startsWith("Club Contact:"))) + 1;
 
 // Reconciliation: every centre-column line printed inside a section must survive into
 // the output — as a category name, an item label, or a line of a description. Lines
@@ -137,13 +150,16 @@ function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
   }
 
   const missing: string[] = [];
+  // Where the previous page of each event left off, so a continuation page is checked
+  // from its first table row rather than skipped until a Qty header that never comes.
+  const carry = new Map<string, { qtyX: number | null; notes: boolean }>();
   for (const page of pages) {
     const key = page.find(isFooter)?.cells.find((c) => c.text.includes("/#"))?.text;
     if (!key) continue;
     const hay = keptFor.get(key) ?? "";
-    let qtyX: number | null = null;
-    let notes = false;
-    for (const r of page) {
+    const fresh = isFreshPage(page) || !carry.has(key);
+    let { qtyX, notes } = fresh ? { qtyX: null as number | null, notes: false } : carry.get(key)!;
+    for (const r of page.slice(fresh ? 0 : bodyStart(page))) {
       if (isFooter(r)) break;
       const h = r.cells.find((c) => c.text === "Qty" && c.x > 400);
       if (h) { qtyX = h.x + 2; notes = false; continue; }
@@ -153,6 +169,7 @@ function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
       const t = midText(r, qtyX);
       if (t && !PAGE_FURNITURE.test(t) && !hay.includes(norm(t))) missing.push(t);
     }
+    carry.set(key, { qtyX, notes });
   }
   return missing;
 }
@@ -179,8 +196,21 @@ function isCategoryHeader(rows: Row[], i: number, qtyX: number | null): boolean 
   return false;
 }
 
+interface TableState {
+  section: BeoSection | null;
+  category: BeoCategory | null;
+  item: BeoItem | null;
+  lastLabel: string;
+  qtyX: number | null;
+  notes: boolean;
+}
+const freshState = (): TableState =>
+  ({ section: null, category: null, item: null, lastLabel: "", qtyX: null, notes: false });
+
 function assemble(pages: Row[][]): BeoEventOut[] {
   const events = new Map<string, BeoEventOut>();
+  // Where each event's table stood at the foot of its last page (see isFreshPage).
+  const tables = new Map<string, TableState>();
 
   for (const rows of pages) {
     // The footer names the event and its BEO number — the key for merging an event
@@ -243,15 +273,22 @@ function assemble(pages: Row[][]): BeoEventOut[] {
       }
     }
 
-    let section: BeoSection | null = null;
-    let category: BeoCategory | null = null;
-    let item: BeoItem | null = null;
-    let lastLabel = "";
-    let qtyX: number | null = null;
-    let notes = false;
+    const fresh = isFreshPage(rows) || !tables.has(key);
+    let { section, category, item, lastLabel, qtyX, notes } = fresh ? freshState() : tables.get(key)!;
 
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
+    // A continuation page is read from below its page header, minus the contact e-mail
+    // line that interleaves with the resumed table. Its first table row is measured as a
+    // new row, as the top of any page is: its gap to the e-mail line above is small, and
+    // read as a wrapped line it glued the page's opening category header ("Beverage
+    // Services", "Course One - Pre-set During Cocktail Hour") onto the item before.
+    let body = rows;
+    if (!fresh) {
+      body = rows.slice(bodyStart(rows)).filter((r) => !PAGE_FURNITURE.test(midText(r)));
+      if (body.length) body[0] = { ...body[0], gap: 99 };
+    }
+
+    for (let i = 0; i < body.length; i++) {
+      const row = body[i];
       if (isFooter(row)) break;
 
       if (isSectionHeader(row)) {
@@ -319,17 +356,17 @@ function assemble(pages: Row[][]): BeoEventOut[] {
         continue;
       }
 
-      if (isCategoryHeader(rows, i, qtyX)) {
+      if (isCategoryHeader(body, i, qtyX)) {
         // Keep the wrapped remainder of a multi-line header rather than discarding it:
         // "Quick Lunch Bites" / "Minimum order of 10 per item" is one header, and the
         // second line is a real instruction to the kitchen.
         let name = mid;
         while (
-          i + 1 < rows.length && rows[i + 1].gap < NEW_ROW_GAP &&
-          !leftCell(rows[i + 1]) && !qtyCell(rows[i + 1], qtyX)
+          i + 1 < body.length && body[i + 1].gap < NEW_ROW_GAP &&
+          !leftCell(body[i + 1]) && !qtyCell(body[i + 1], qtyX)
         ) {
           i++;
-          const more = midText(rows[i], qtyX);
+          const more = midText(body[i], qtyX);
           if (more) name += " " + more;
         }
         category = { name, items: [] };
@@ -353,10 +390,13 @@ function assemble(pages: Row[][]): BeoEventOut[] {
       category.items.push(item);
     }
 
-    ev.sections.forEach((s) => { s.categories = s.categories.filter((c) => c.items.length); });
+    tables.set(key, { section, category, item, lastLabel, qtyX, notes });
   }
 
   for (const ev of events.values()) {
+    // Only once every page is read: a category opened at the foot of one page gets its
+    // items on the next.
+    ev.sections.forEach((s) => { s.categories = s.categories.filter((c) => c.items.length); });
     // Every page of a multi-page event reprints the timeline table, so keep one of each.
     const seen = new Set<string>();
     ev.timeline = ev.timeline.filter((t) => {
