@@ -133,20 +133,30 @@ function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
   // dishes — so a pooled index lets the surviving copy vouch for the lost one and hides
   // exactly the failure this guards against.
   //
-  // Matched by containment, not equality: the assembler legitimately joins several
-  // printed lines into one string (a header wrapped over two lines becomes one category
-  // name), so a surviving line is often only part of a kept value. Joined on a newline
-  // so a match cannot straddle two unrelated values.
-  const keptFor = new Map<string, string>();
+  // Each printed line must be CONSUMED by exactly one kept line of a description, counted
+  // with repeats. Mere presence was not enough: "per dozen", "serves 20" and "N pieces"
+  // repeat across items, so one surviving copy vouched for a lost one — deleting single
+  // lines from real output went unnoticed 278 times in 1508 (33 whole items in 596,
+  // among them a Beverages x300). Those are the lines the order list reads quantities
+  // from. Only category names fall back to containment: the assembler joins a header
+  // wrapped over two lines into one name, so each printed line is just part of it.
+  // Joined on a newline so a match cannot straddle two unrelated names.
+  const linesFor = new Map<string, Map<string, number>>();
+  const headsFor = new Map<string, string>();
   for (const ev of events) {
-    const kept: string[] = [];
+    const lines = new Map<string, number>();
+    const heads: string[] = [];
     for (const s of ev.sections) {
       for (const c of s.categories) {
-        kept.push(norm(c.name));
-        for (const it of c.items) kept.push(norm(it.label), norm(it.description));
+        heads.push(norm(c.name));
+        for (const it of c.items) {
+          for (const l of it.description.split("\n")) lines.set(norm(l), (lines.get(norm(l)) ?? 0) + 1);
+        }
       }
     }
-    keptFor.set(`${ev.event_name}/#${ev.beo_number}`, kept.join("\n"));
+    const key = `${ev.event_name}/#${ev.beo_number}`;
+    linesFor.set(key, lines);
+    headsFor.set(key, heads.join("\n"));
   }
 
   const missing: string[] = [];
@@ -156,8 +166,15 @@ function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
   for (const page of pages) {
     const key = page.find(isFooter)?.cells.find((c) => c.text.includes("/#"))?.text;
     if (!key) continue;
-    const hay = keptFor.get(key) ?? "";
+    const lines = linesFor.get(key) ?? new Map<string, number>();
+    const heads = headsFor.get(key) ?? "";
     const fresh = isFreshPage(page) || !carry.has(key);
+    // bodyStart reads 0 when the "Club Contact:" line is missing, and the page title and
+    // location would then be read as menu text — kept, so no line looks lost. Both
+    // halves share that rule, so the gate cannot catch it; refuse the page instead.
+    if (!fresh && bodyStart(page) === 0) {
+      missing.push(`continuation page of ${key} has no "Club Contact:" header line`);
+    }
     let { qtyX, notes } = fresh ? { qtyX: null as number | null, notes: false } : carry.get(key)!;
     for (const r of page.slice(fresh ? 0 : bodyStart(page))) {
       if (isFooter(r)) break;
@@ -167,7 +184,10 @@ function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
       if (r.cells.length === 1 && r.cells[0].text === "Notes") { notes = true; continue; }
       if (notes) continue;   // the notes block is free text, not table content
       const t = midText(r, qtyX);
-      if (t && !PAGE_FURNITURE.test(t) && !hay.includes(norm(t))) missing.push(t);
+      if (!t || PAGE_FURNITURE.test(t)) continue;
+      const left = lines.get(norm(t)) ?? 0;
+      if (left > 0) lines.set(norm(t), left - 1);
+      else if (!heads.includes(norm(t))) missing.push(t);
     }
     carry.set(key, { qtyX, notes });
   }
