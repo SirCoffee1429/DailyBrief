@@ -89,17 +89,17 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - A BEO's `Event Date(s)` row ALWAYS prints a range (one day reads `08/21 - 08/21`); the
   same-day end date is collapsed to null in CODE — prompt wording never held, since it
   asks Gemini to contradict the page
-- **The BEO table is parsed from the PDF's coordinates, not the model** (`process-beo` v23,
+- **The BEO table is parsed from the PDF's coordinates, not the model** (`process-beo` v26,
   `beoGeometricParser.ts`): columns fixed (label x<=60, centre 60-500, qty ~538), and
   **line spacing is the signal**, not font — ~11pt wrapped, ~17pt row, ~25pt section
-- **A row starts an item on a qty OR a left-column label, never the qty alone** — the BEO
-  prints Qty once per section and omits it at headcount 0. Items may carry `qty: ""`
-- **The gate is a CONSERVATION check — never "restore" the old counter.** Every centre
-  line printed must survive into the output, indexed PER EVENT; Gemini is the fallback
-  (`engine`/`dropped` say which ran and what went missing). The old gate counted
-  qty-bearing rows — the assembler's own definition of a row — so it agreed by
-  construction and passed a packet that lost three menus: **sharing no code was the wrong
-  safety property; what matters is sharing no premise**
+- **An item starts on a qty OR a left-column label** (Qty prints once per section, none at
+  headcount 0); a centre line with neither opens one, never vanishes (SUMMARY take-out pages)
+- **Page 2+ of a BEO CONTINUES its table with no section header** — state carries across an
+  event's pages; only a page reprinting `Event Headcount`/`Start Date` restarts it
+- **The gate is a CONSERVATION check — never "restore" the old counter.** Each printed line
+  must be CONSUMED once per event (counted: mere presence let a repeated `per dozen` vouch
+  for a lost one). It passed broken parses twice by sharing the parser's premise — **share
+  no premise, not just no code** — so measure it by deleting output, not by clean passes
 - A stuck emailed BEO is swept by `sweepStuckBeoImports()` (`lib/usePendingBeoImports.js`)
   via `useOfficeApprovalCounts` — not `pg_cron`, since it only matters once a human opens
   the app

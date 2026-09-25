@@ -164,94 +164,11 @@
 - 09-16 — Catalog Baseline Re-Measured and Confirmed — merged the 13 raw exports independently: **1,381 products / 394 price-varies / 6 unpriced**, matching the design on all three. The two master copies held identical product data (14 cells differ, all cached Index-sheet floats), so the 09-15 duplicate-file caution was a false alarm. PowerShell `git show >` corrupts binaries — use Bash. → [full](docs/changelog/2026-09.md#2026-09-16--catalog-baseline-re-measured-and-confirmed-closes-the-09-15-open-item)
 - 09-17 — Supplier Catalog: Ingestion + Product Search (order guide **P1**) — `/office/catalog` loads the 13 PFG exports into `supplier_products`: **1,381 / 394 varies / 6 unpriced / 219 catch-weight**. Parsing lives in a pure module so the shipped code ran headless against the real files. `case_price` derives at INGEST; `category` is sticky because the upsert omits the column. A reflection pass caught that the upload BUTTON had never run — the harness had retyped the payload instead of importing it, and the two had drifted. → [full](docs/changelog/2026-09.md#2026-09-17--supplier-catalog-ingestion--product-search-order-guide-p1)
 - 09-17 — Catalog Categories Seeded From the Master List — all 1,381 products carry a category + item group, and `/office/catalog` gained a category filter. Seeding is its OWN action, not part of ingestion: **one RPC** (`seed_supplier_categories`) instead of ~352 round trips, filling only NULLs so a re-run can never overwrite a curated value — proven by a second run reporting 0 seeded / 1,381 skipped. → [full](docs/changelog/2026-09.md#2026-09-17--catalog-categories-seeded-from-the-master-list)
+- 09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide **P2**) — the catering menu PDFs are read into `menu_dishes` **drafts** and confirmed by a human at `/office/menus`, building the dish vocabulary BEO lines get matched against in P4. A MODEL reads these menus, not coordinates: they are hand-designed marketing layouts where a price column can sit detached from its dish. Safe only because nothing reaches confirmed data without the confirm gate. → [full](docs/changelog/2026-09.md#2026-09-17--menu-dishes-pdf-drafting--confirm-ui-order-guide-p2)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide P2)
-
-**File(s) Changed:** `supabase/migrations/20260918000000_create_menu_dishes.sql` (new),
-`supabase/functions/process-menu/index.ts` (new), `supabase/config.toml`,
-`app/src/lib/menuDrafts.js` (new), `app/src/components/MenuUploadPanel.jsx` (new),
-`app/src/pages/MenuDishes.jsx` (new), `app/src/App.jsx`,
-`app/src/components/OfficeLayout.jsx`, `app/src/index.css`
-**Type:** `feature` — P2 of the order guide design. **Not committed, not pushed.**
-**Summary:** The 8 catering menu PDFs can be read into `menu_dishes` drafts and confirmed
-at `/office/menus`. This builds the dish vocabulary a BEO line will be matched against in
-P4; nothing about BEOs or order lists changed yet.
-
-**Details:**
-
-- **A model reads these menus, and that is the right call — for a reason worth keeping.**
-  `process-beo` reads its table from PDF coordinates because a BEO is a generated grid.
-  These menus are hand-designed marketing layouts, and the difference is concrete: on
-  Breakfast the **price column extracts as a detached run** — eight dish names, then eight
-  prices, in separate blocks — so linear text cannot say which price belongs to which
-  dish. Aligning them needs to see the page. A geometric parser here would be the same
-  tool applied to a problem that does not have the property it depends on.
-- **Non-determinism is contained, not tolerated.** This runs once per menu, writes
-  `status='draft'` only, and nothing downstream may use a dish until a human confirms it.
-  The per-BEO path stays arithmetic, which is the whole architecture.
-- **Verified against the source, dish by dish, not by eyeballing.** Plated Dinners: **80
-  dishes**, matching a hand count of all five pages section by section (10 salads/soups,
-  8 starch, 7 veg, 7 chicken, 9 beef-pork-lamb, 7 seafood, 3 pasta, 2 veg entrées, 14
-  sauces, 13 desserts), every upcharge correct including `+$2.5` and the malformed `+3`
-  on Local Sauteed Mushrooms. Page 1 — RSVP and seating-chart policy prose — correctly
-  produced zero dishes. Custom Buffets: **44 dishes**, likewise an exact match.
-- **One real parse error found, and left in place.** On Breakfast, 9 of 10 priced rows are
-  right — including `$ ? /ea` correctly read as no price, `$90/tray`, and both
-  section-level minimums copied down onto each dish beneath them — but "Sausage, Egg,
-  Arugula, & Gouda Croissant" prints **no** price and was given `$9` from the row above
-  it. Verified by reading the rendered page, since the text layer cannot settle it.
-  Not prompt-tweaked away: a fix I cannot prove across all 8 menus is a fix I am guessing
-  at, and this is exactly the class of error the confirm gate exists to catch.
-- **Two deliberate departures from the design's §8 schema**, both from the real files:
-  - **Added `price_unit`.** The menus state a price four different ways — `$8/ea`,
-    `$18/person`, `$30/doz`, `$90/tray` — and `base_price` alone cannot tell P4 which,
-    so the arithmetic would have to guess at the last moment.
-  - **Omitted `effective_start`/`effective_end`.** Fall is Sept–Nov and Winter Dec–Feb
-    **every year**; an absolute date range expires. `season` is stored; resolving a BEO's
-    date to a season is P4's job, and P4 can add the shape it actually needs.
-- **`unique nulls not distinct (name, menu_source, season)`** — not cosmetic. `season` is
-  null on the six year-round menus, and under the default NULLS DISTINCT every re-parse
-  of those menus would insert a full duplicate set instead of conflicting.
-- **Re-drafting can never overwrite a confirmed dish**, and that rule lives in the
-  database, not the caller. `upsert_menu_dish_drafts(jsonb)` is one statement whose
-  `ON CONFLICT ... DO UPDATE ... WHERE status = 'draft'` makes the stickiness
-  unforgettable, and it cannot leave a menu half-written. Proven, not asserted: a
-  confirmed row whose re-draft carried a **different** upcharge kept its own value, a
-  draft row updated, a new row inserted, and a dish repeated inside one payload deduped
-  rather than throwing `cannot affect row a second time`. Returns
-  `inserted / updated / skipped_confirmed` so a no-op is visible instead of silent.
-- **The model swap was measured, not assumed.** `gemini-3-flash-preview` took 25s on the
-  **one-page** Platters menu and blew the 130s gateway margin on 4-page Custom Buffets.
-  `gemini-2.5-flash` does the 5-page Plated Dinners in 64s. This is the same conclusion
-  `process-beo` reached for the same job on 2026-05-30, and is **not** a re-proposal of
-  the P0 upgrade the owner cancelled — it is the model that finishes in time for this
-  one function.
-- **Confirmation volume was the design's top risk, so the list is keyboard-driven:**
-  j/k or arrows to move, `c` to confirm and advance, `e` to edit, plus a per-dish
-  "Not a dish" discard for a heading the model mistook for food. Bulk confirm is scoped
-  to **what is on screen**, never "all drafts everywhere" — confirming a menu nobody read
-  is the exact mistake the gate exists to prevent.
-- **Identity is not editable in the review UI.** Changing `name`/`menu_source`/`season`
-  would either collide with another dish's unique key or orphan the row from the menu it
-  was drafted off. A misread name is a discard-and-redraft.
-- **Verified end to end through the deployed function**, which is the shipped code path:
-  Custom Buffets wrote 44 read / 44 inserted / 0 skipped. `menuSourceFromFilename` was
-  run against the real 8 filenames — the two seasonal files correctly collapse to one
-  `menu_source` separated by season, which is what the unique key needs.
-- **Not verified:** the browser UI itself. The upload panel, the confirm/edit/discard
-  mutations and the keyboard nav have only been compiled (`npm run build` passes), never
-  clicked — the same gap that P1 hit, and it is not closed until someone drafts a menu
-  from the page and a `menu_dishes` row changes status as a result.
-- **Open:** three pricing-rule lines on Custom Buffets ("Additional Salad +$5",
-  "Additional side +$4", "additional dessert +$4") draft as dishes and should be
-  discarded; Breakfast's "Omelet Station" puts its **$100 flat setup fee** in `upcharge`,
-  which is a per-person field, and lands under the wrong section.
-
----
 
 ### 2026-09-18 — Remaining 6 Menus Drafted; menu_dishes Identity Corrected
 
@@ -462,3 +379,56 @@ old version. All 232 rows wiped at his instruction, ready for the correct files.
   correct" compared the parse against the SAME PDF it came from. That is a fidelity
   check, and it was reported as a correctness check. It cannot detect a stale document or
   a wrong price on the page, and the owner found what it could not.
+
+---
+
+### 2026-09-23 → 09-25 — BEO Parser: Three Silent Losses Found and Fixed
+
+**File(s) Changed:** `supabase/functions/process-beo/beoGeometricParser.ts`
+**Type:** `fix` — `process-beo` deployed v23→**v26**. Commits `9b2168b`, `3fc2286`,
+`9f37624`. **Not pushed.**
+**Summary:** Reported as "Gemini API timeout 500". The timeout was a symptom: the
+geometric parser refused the 09-23 packet, and the Gemini fallback cannot finish a
+42-page packet in 130s. Chasing it surfaced two more losses the gate had been passing.
+
+**Details:**
+
+- **v24 — a page with no label and no qty.** `SUMMARY: Homecoming Take Out` (10/03)
+  prints a priced "One Dozen …  $26/Doz." menu with neither, so no item ever opened and
+  all 24 lines vanished. The gate caught it (correctly); the fallback then timed out and
+  took 33 good events down with it. An orphan centre line now opens an item. Kept as ONE
+  block in print order — the page prints 9 prices for 8 dishes, so splitting would guess.
+- **v25 — continuation pages were thrown away, on every packet since v22.** A BEO that
+  runs onto page 2 continues its table there WITHOUT reprinting a section header. The
+  assembler reset per page and waited for a Qty header; **the gate waited for the same
+  header**, so it never looked either. Lost: Eurofins 09/24's entire plated dinner
+  (courses, 53/3/4 entrées, desserts), Kid's Culinary Club's beverage station, ESS Golf
+  Classic's bar, beverages and desserts. Table state now carries across an event's
+  pages; a page reprinting the event header block (`Event Headcount` / `Start Date` /
+  `Primary Contact`) still starts fresh. The first row below the page header is measured
+  as a new row — read as a wrapped line it glued each page's opening category header
+  onto the item before.
+- **v26 — the gate matched by presence, so repeats vouched for losses.** Measured by
+  deleting parts of real output one at a time and asking the gate: it missed **278 of
+  1508** single lines and **33 of 596** items (Beverages x300, Plated Entrée x23). The
+  most-missed lines were `per dozen`, `N pieces`, `serves N` — the order basis. Each
+  printed line is now consumed once by a description line (counted); only category
+  names keep containment. Misses: 13 lines / 3 items; **0 false alarms on 7 packets**.
+  A continuation page missing its `Club Contact:` line is now refused outright.
+- **Every version was checked the same way:** parse output diffed old-vs-new on every
+  packet (all prior items identical; only recovered items added), then the DEPLOYED
+  function's output compared byte-for-byte with the local run.
+- **Data repaired.** The 09-23 packet was re-queued and approved; Eurofins, Kid's
+  Culinary Club and ESS were re-queued as a 3-event import after v25 and approved —
+  verified in `banquet_event_orders` (15 / 6 / 41 items).
+- **Twice today the gate agreed with a broken parse because it shared the parser's
+  premise** (waiting for a Qty header; "text appears somewhere"). A mutation test —
+  delete, then ask the gate — is what measures a gate; a clean pass on real data can't.
+
+**Open:**
+- Events approved from packets BEFORE v25 may still be missing their page 2+. The PDFs
+  are in `beo-emails`; a re-parse-and-diff against live rows is the next job.
+- The Gemini fallback still cannot parse a full daily packet inside 130s.
+- 3 items the gate still misses: a line whose text is also a category name in the event.
+- The gate checks lines SURVIVE, not where they land — misgrouping passes (the SUMMARY
+  block; "Course Two" absorbing its price note). The approval queue is the only check.
