@@ -3,15 +3,15 @@
 // Kept out of the components (same reason as catalogParse.js) so the rules can be run
 // and checked headlessly against the real filenames rather than only through the UI.
 
-// 'fall' | 'winter' are the two seasonal menus; everything else is year-round.
+// 'spring' | 'summer' | 'fall' | 'winter' are the seasonal menus; everything else is year-round.
 // Underscores are word characters, so \b does NOT fire between "_" and "Fall" —
 // 'Old_Hawthorne_Fall_Menu.docx' would silently come through with no season. The
 // separator class is spelled out instead of relying on \b.
 const SEP = '(?:^|[^A-Za-z0-9])'
-const SEASON_PATTERNS = [
-    { season: 'fall', re: new RegExp(`${SEP}fall(?![A-Za-z0-9])`, 'i') },
-    { season: 'winter', re: new RegExp(`${SEP}winter(?![A-Za-z0-9])`, 'i') },
-]
+const SEASON_PATTERNS = ['spring', 'summer', 'fall', 'winter'].map(season => ({
+    season,
+    re: new RegExp(`${SEP}${season}(?![A-Za-z0-9])`, 'i'),
+}))
 
 // A file's name IS its menu identity, so this has to be deterministic — the model is
 // never asked which menu it is reading. 'Seasonal - Fall.pdf' is the Fall menu, not a

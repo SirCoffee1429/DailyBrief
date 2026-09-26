@@ -42,8 +42,8 @@ const GEMINI_ENDPOINT =
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-const PRICE_UNITS = ['each', 'person', 'dozen', 'tray', 'piece'];
-const SEASONS = ['fall', 'winter'];
+const PRICE_UNITS = ['each', 'person', 'dozen', 'tray', 'piece', 'lb'];
+const SEASONS = ['spring', 'summer', 'fall', 'winter'];
 
 interface DraftDish {
   name: string;
@@ -73,11 +73,12 @@ Each element:
   "source_page": number|null, // 1-based page the dish is printed on, null if unknowable
   "upcharge": number|null,    // a "+$N" ADDED to a package price. "Chopped Cobb +$5" -> 5
   "base_price": number|null,  // the dish's OWN standalone price. "Cheeseburger  $7" -> 7
-  "price_unit": "each"|"person"|"dozen"|"tray"|"piece"|null,
+  "price_unit": "each"|"person"|"dozen"|"tray"|"piece"|"lb"|null,
   "price_qty": number,        // how many price_unit the base_price BUYS. Almost always
                               // 1. "$115 for 20 glasses" -> base_price 115, qty 20.
   "serves": number|null,      // "Serves 20" / "(serves 20)" -> 20
-  "min_order": number|null    // "Minimum 20 pieces/type", "(min. order 12)" -> 20 / 12
+  "min_order": number|null    // "Minimum 20 pieces/type", "(min. order 12)" -> 20 / 12,
+                              // counted in the SAME unit as price_unit (see rule 4)
 }
 
 RULES — read carefully, several of these are the whole point of using a model here.
@@ -96,9 +97,10 @@ RULES — read carefully, several of these are the whole point of using a model 
    - "$30/doz", "$24/doz"                      -> 30,  qty 1,  "dozen"
    - "$90/tray"                                -> 90,  qty 1,  "tray"
    - "+$115 for 20 glasses"                    -> 115, qty 20, "each"
+   - "Beef Tenderloin $180 / 4lbs"             -> 180, qty 4,  "lb"
    - "Charcuterie Board $200" with "Serves 20" -> 200, qty 1,  null unit, serves 20
    price_qty is 1 unless the menu says the price covers several. price_unit is null
-   when there is no base_price or the unit is not one of those five.
+   when there is no base_price or the unit is not one of those six.
 
    A QUANTITY BASIS STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT, exactly
    the way a minimum does in rule 4. The hors d'oeuvres are priced per 20 pieces, and
@@ -110,11 +112,23 @@ RULES — read carefully, several of these are the whole point of using a model 
    for one scallop. If a heading gives a basis and a dish states its own different one,
    the DISH wins.
 
-4. A MINIMUM OR YIELD STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT.
+4. A PER-ITEM MINIMUM STATED ON A SECTION HEADING APPLIES TO EVERY DISH UNDER IT.
    "Breakfast Sandwiches - Minimum 20 pieces/type" is a heading: give each sandwich
    beneath it min_order 20. Same for "Individually Wrapped Sandwiches - Minimum order
    of 10 per sandwich type" and "Bagel Bar - Minimum 12". Copy the value down onto
    each dish; do not emit the heading itself as a dish.
+
+   ONLY copy it down when the minimum is per item / per type / per selection, or the
+   section holds a single dish. A minimum on the WHOLE section is not a per-dish
+   minimum: "Minimum order - 30 pizzas" is 30 pizzas in any mix, so give each pizza
+   min_order null and put "Station minimum: 30 pizzas" in its description.
+   Likewise a headcount minimum for a package ("Minimum of 20 people to order") is
+   not a dish minimum — leave min_order null.
+
+   COUNT min_order IN THE SAME UNIT AS price_unit. "Minimum Order 2 Dozen Per Item"
+   on a dish priced "$45/doz" is min_order 2, NOT 24 — a 24 beside a per-dozen price
+   reads as 24 dozen, twelve times too many. The same heading over dishes priced
+   "$10/piece" is min_order 24, because the unit there is the piece.
 
 5. "STARTING AT" IS A FLOOR, NOT A PRICE — and it only matters when the dish has no
    price of its own. Apply this rule ONLY to a dish that states no price anywhere:
@@ -147,7 +161,32 @@ RULES — read carefully, several of these are the whole point of using a model 
    "Stuﬀed" -> "Stuffed", "T omato" -> "Tomato", "Buﬀet" -> "Buffet".
    Otherwise preserve the menu's own capitalisation and wording exactly.
 
-10. Do not wrap the output in markdown code fences.
+10. A NAMED PACKAGE WITH ITS OWN PRICE IS ONE DISH, NOT MANY. A themed buffet prints
+    its name and price, then the foods it includes:
+      "Southern BBQ  $41"
+        House Smoked Brisket / Shredded Pork / Buns & BBQ Sauce / ... / Strawberry
+        Crumble Bars
+    Emit ONE dish "Southern BBQ", base_price 41, price_unit "person", with the
+    included foods listed in description. Do NOT emit the included foods as dishes —
+    they have no price of their own, and splitting them loses the package price.
+    An OPTIONAL SUBSTITUTION inside a package ("Optional: Sub Grilled Chicken for Both
+    Hotdogs & Brats") is not an extra food: keep it in the package's description and
+    never emit it as a dish, or it would be ordered on top of what it replaces.
+    This is different from a "pick one / choose 2" section, whose dishes ARE separate
+    rows because the host chooses between them — and the price lines that sit over
+    such a section ("1-Entrée Buffet Package: $30.00 / person", "Starting at $38 for
+    one salad...") are still skipped per rule 6.
+
+11. SPLIT "A OR B" WHEN A AND B ARE DIFFERENT DISHES. "Old Hawthorne House Garden
+    Salad or Classic Caesar Salad" is two dishes the host chooses between: emit
+    "Old Hawthorne House Garden Salad" and "Classic Caesar Salad" as two rows, each
+    carrying the shared description and price. Same for "Core New York Cheesecake or
+    Triple Chocolate Mousse Cake" and "Chicago Style Hotdogs or Bratwursts".
+    Do NOT split a flavour list under one dish (rule 8), and do NOT split a "/"
+    between two proteins of ONE preparation ("Blackened Mahi Mahi / Tropical
+    Snapper") — that is one dish whose fish varies; keep the name as printed.
+
+12. Do not wrap the output in markdown code fences.
 `;
 
 // A rendered PDF page: position carries the meaning, and the model can see it.
@@ -190,24 +229,21 @@ const PROMPT_DOCX_STRUCTURE = `
 
    c. "(pick one)", "(pick two)", "(pick from)" state how many selections the package
       includes. They are package composition, NOT dishes and NOT part of a name.
-
-   d. A NAMED PACKAGE WITH ITS OWN PER-PERSON PRICE IS ONE DISH, not many:
+      A named package with its own price follows rule 10: in markup it looks like
         <p><strong>Southern BBQ   $41/person</strong></p>
         <p><em>House smoked brisket, shredded pork, elote corn, baked beans</em></p>
-      Emit ONE dish "Southern BBQ", base_price 41, price_unit "person", components in
-      description. Do NOT emit the components as separate dishes.
 
-   e. QUALIFY THE SECTION WITH THE MENU PART IT SITS UNDER. One document holds several
+   d. QUALIFY THE SECTION WITH THE MENU PART IT SITS UNDER. One document holds several
       parts — "Custom Buffet", "Themed Buffets", "Plated Dinner" — each with its own
       "Salads" and "Dessert". Return menu_section as "Plated Dinner — Dessert", not
       bare "Dessert", or two different desserts collapse into one row.
       Ignore the repeated club-name banner ("THE CLUB AT OLD HAWTHORNE") entirely.
 
-   f. Callout boxes and tables hold real dishes. A single-cell box headed
+   e. Callout boxes and tables hold real dishes. A single-cell box headed
       "THIS FALL — CHEF'S SEASONAL SELECTIONS" is a normal part of the menu: emit its
       dishes, qualifying menu_section with that box's heading.
 
-   g. A price written but INCOMPLETE — a bare "+$" with no number — gets a null
+   f. A price written but INCOMPLETE — a bare "+$" with no number — gets a null
       upcharge. Never guess the missing figure.
 `;
 
@@ -315,27 +351,41 @@ Deno.serve(async (req) => {
       ? [{ text: prompt }, { text: `\n\nTHE MENU (HTML):\n${docHtml}` }]
       : [{ text: prompt }, { inline_data: { mime_type: "application/pdf", data: pdfBase64 } }];
 
+    // ONE deadline for all attempts, not one per attempt: the gateway kills the request
+    // at ~150s whatever we do, so a retry must never start a fresh 130s clock.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 130000);
+    const started = Date.now();
 
     let geminiRes;
     try {
-      geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            response_mime_type: "application/json",
-            // Same reasoning as process-beo: unset this defaults to 1.0 and the model
-            // re-decides an ambiguous layout on every run. Greedy decoding is not a
-            // determinism guarantee, but it removes the worst of the churn — and here
-            // a human confirms every row anyway.
-            temperature: 0,
-          },
-        }),
-      });
+      // Gemini answers "503: model is currently experiencing high demand" (and 429)
+      // within ~2s, and on 2026-09-23 it did so for 10 of 15 menus on the first try —
+      // every one succeeded on a later attempt. Those two codes are the only ones worth
+      // retrying; anything else is a real error. Retries stop after 40s so a slow
+      // successful read still fits inside the deadline.
+      for (let attempt = 1; ; attempt++) {
+        geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              response_mime_type: "application/json",
+              // Same reasoning as process-beo: unset this defaults to 1.0 and the model
+              // re-decides an ambiguous layout on every run. Greedy decoding is not a
+              // determinism guarantee, but it removes the worst of the churn — and here
+              // a human confirms every row anyway.
+              temperature: 0,
+            },
+          }),
+        });
+        const overloaded = geminiRes.status === 503 || geminiRes.status === 429;
+        if (!overloaded || attempt >= 5 || Date.now() - started > 40000) break;
+        console.warn(`Gemini ${geminiRes.status} on attempt ${attempt}; retrying`);
+        await new Promise(r => setTimeout(r, 3000 * attempt));
+      }
     } catch (fetchErr: any) {
       if (fetchErr.name === 'AbortError') {
         throw new Error("Gemini timed out after 130 seconds reading this menu.");

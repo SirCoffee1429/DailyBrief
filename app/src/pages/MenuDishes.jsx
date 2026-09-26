@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import MenuUploadPanel from '../components/MenuUploadPanel.jsx'
 import { normaliseDishEdits, priceLabel } from '../lib/menuDrafts.js'
 
-const PRICE_UNITS = ['each', 'person', 'dozen', 'tray', 'piece']
+const PRICE_UNITS = ['each', 'person', 'dozen', 'tray', 'piece', 'lb']
 
 // The catering menus, as dishes a BEO line can eventually be matched to.
 //
