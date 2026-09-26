@@ -113,10 +113,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`, 1,381
-  products). **P2 built but menu_dishes is EMPTY**: every menu parsed was an old version,
-  so all 232 rows were wiped 2026-09-21 awaiting correct files. P0 cancelled. P3
-  (`dish_ingredients` + `ingredient_products`) waits on real menus. Inference stays OUT
-  of the per-BEO path. Phasing: `claudedocs/design_beo_order_guide_2026-09-15.md`
+  products). **P2 DONE: 15 current menus, 368 dishes CONFIRMED** (2026-09-26,
+  `process-menu` v9; 4 price rules, 364 orderable). P0 cancelled. P3 (`dish_ingredients` +
+  `ingredient_products`) reads only confirmed dishes (`orderable_menu_dishes`); inference
+  stays OUT of the per-BEO path. Phasing: `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---
 
