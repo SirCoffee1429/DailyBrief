@@ -166,56 +166,11 @@
 - 09-17 — Catalog Categories Seeded From the Master List — all 1,381 products carry a category + item group, and `/office/catalog` gained a category filter. Seeding is its OWN action, not part of ingestion: **one RPC** (`seed_supplier_categories`) instead of ~352 round trips, filling only NULLs so a re-run can never overwrite a curated value — proven by a second run reporting 0 seeded / 1,381 skipped. → [full](docs/changelog/2026-09.md#2026-09-17--catalog-categories-seeded-from-the-master-list)
 - 09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide **P2**) — the catering menu PDFs are read into `menu_dishes` **drafts** and confirmed by a human at `/office/menus`, building the dish vocabulary BEO lines get matched against in P4. A MODEL reads these menus, not coordinates: they are hand-designed marketing layouts where a price column can sit detached from its dish. Safe only because nothing reaches confirmed data without the confirm gate. → [full](docs/changelog/2026-09.md#2026-09-17--menu-dishes-pdf-drafting--confirm-ui-order-guide-p2)
 - 09-18 — Remaining 6 Menus Drafted; menu_dishes Identity Corrected — the unique key `(name, menu_source, season)` silently dropped a dish name that appears twice on one menu at two prices (Breakfast "Yogurt Parfait Bar" $10/ea vs +$6 buffet upgrade); caught only by the RPC's `read` vs `inserted` counters. Key widened to include `menu_section`. → [full](docs/changelog/2026-09.md#2026-09-18--remaining-6-menus-drafted-menu_dishes-identity-corrected)
+- 09-19 — "Additional Salad" Is a Price Rule, Not a Dish — the three "Additional X" rows on Custom Buffets state a positional surcharge (the 2nd salad, whichever it is), not food; ingredients on them would **double-order**, since the real dish is its own row. Flagged `is_price_rule` (sticky: absent from the upsert's SET list) and excluded by the `orderable_menu_dishes` view, where P3 draws its work. → [full](docs/changelog/2026-09.md#2026-09-19--additional-salad-is-a-price-rule-not-a-dish)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-19 — "Additional Salad" Is a Price Rule, Not a Dish
-
-**File(s) Changed:**
-`supabase/migrations/20260919000000_menu_dishes_price_rule_flag.sql` (new),
-`app/src/pages/MenuDishes.jsx`
-**Type:** `fix` — **not pushed.**
-**Summary:** The three "Additional X" rows on Custom Buffets state a selection
-surcharge, not food. They are now flagged so P3 can never give them ingredients.
-
-**Details:**
-
-- **The owner's explanation (2026-09-19):** the $38 buffet covers one salad, two sides,
-  two entrees and one dessert. Anything past that count costs extra, and **which dish it
-  is stays unknown until the event is ordered** — pick Caesar and Pasta Salad, and the
-  Pasta Salad becomes the +$5 one, even though Pasta Salad carries no upcharge of its
-  own.
-- **Why this is a correctness problem and not bookkeeping:** the real second salad is
-  ALREADY its own row and gets ordered on its own. Ingredients attached to "Additional
-  Salad" as well would order that food **twice**.
-- **`upcharge` conflates two different things**, now recorded rather than left to be
-  rediscovered as a bug: an INTRINSIC premium (Chopped Cobb is +$5 whenever chosen) and
-  a POSITIONAL surcharge (any second salad is +$5 wherever it lands). Separating them
-  needs the package composition, which is pricing — explicitly out of v1 scope, since
-  the order guide buys food rather than quoting menu prices.
-- **`is_price_rule` is curated and sticky**, like `supplier_products.category`: it is
-  absent from the upsert's ON CONFLICT SET list, so a re-draft cannot reset a human
-  judgement. **Proven on the weak case, not the easy one** — a *draft* row carrying the
-  flag, where the update actually runs: upcharge went 4 → 99 and source_page → 3 while
-  `is_price_rule` held. Testing only the confirmed row would have proved nothing, since
-  the status guard alone would explain it.
-- **`orderable_menu_dishes` view** is where P3 draws its work: confirmed AND not a price
-  rule. The exclusion lives in the database so it cannot be forgotten at a call site —
-  the same argument that put the confirmed-dish protection into the RPC.
-- **A case-sensitivity bug caught by checking the result.** The first UPDATE used an
-  exact `IN` list and flagged only 2 of 3 rows: the PDF prints "additional dessert" in
-  lowercase and the model stored "Additional dessert". Re-run case-insensitively; the
-  migration file carries the corrected form and a note saying why.
-- **Owner confirmed the printed menu is right at +$4** for an additional side (he had
-  said $5 in conversation). No data change — $4 was already what the parse stored.
-- **Reconciles:** 232 dishes = 121 orderable food + 3 price rules + 108 still to confirm.
-- **The review UI now has three outcomes** instead of two: Confirm (real food), Price
-  rule (`p` — real money, no ingredients, row kept), Not a dish (deletes noise the model
-  misread). Compiled, not clicked.
-
----
 
 ### 2026-09-19 — Menu Upload Accepts Word (.docx)
 
@@ -487,3 +442,32 @@ opens the week nearest today, so a misdated schedule was effectively lost and re
 **Open:** the 7 misdated rows are left for the owner to fix with the new button (his call):
 move 2020-09-28 → 2026-09-28 and 2024-09-21 → 2026-09-21, delete the duplicate 2024-10-21
 upload and the four small 2024 test rows. Until then the crew sees 09-14 as "this week".
+
+---
+
+### 2026-09-27 — Menu Follow-ups: Prompt Test Committed, Entrée Units, Design Doc
+
+**File(s) Changed:** `supabase/functions/process-menu/prompt_test.ts` (new),
+`claudedocs/design_beo_order_guide_2026-09-15.md`, `docs/changelog/2026-09.md`, data (`menu_dishes`)
+**Type:** `refactor` + `fix` — findings 1, 3, 4 of the 09-26 validation pass.
+**Summary:** The prompt check now lives in the repo instead of a session scratch folder,
+the seasonal plated entrées carry one consistent unit, and the design doc says what was
+actually built.
+
+**Details:**
+
+- **`prompt_test.ts`** (`deno test --allow-read supabase/functions/process-menu/prompt_test.ts`):
+  slices the prompt out of the REAL `index.ts` and asserts every rule 1-12 is present and
+  in order, the source rules land as rule 2, and the unit list matches the table's CHECK.
+  The harness had been lost with the scratch folder twice. **Measured by mutation, not by
+  a clean pass:** 6/6 on the real file; renaming rule 11, renumbering rule 10, dropping
+  `lb`, and splicing rule 2 after rule 3 each fail exactly 2 tests. Not bundled on
+  deploy (only what `index.ts` imports ships).
+- **13 seasonal "Composed Plated Entrées"** (Fall 5, Spring 4, Winter 4) set to
+  `price_unit = person`, matching Summer. Label consistency only; no price changed.
+- **Design doc** marked superseded where it still said `season` is null/fall/winter with
+  `effective_start`/`effective_end` (dropped 2026-09-18; spring/summer added 09-23).
+- **Archive:** the 09-19 "Additional Salad" entry moved verbatim to `docs/changelog/2026-09.md`
+  to keep this file under 500 lines. The first attempt searched for LF separators in a
+  CRLF file, took 212 lines (four entries) and left no summaries — caught by the line
+  count, restored from git, redone with a one-entry guard.

@@ -76,6 +76,7 @@ Everything below was measured this session, not assumed.
   supply a denominator the recipe library lacks.
 - **Seasonal menus are date-scoped**: Fall = Sept–Nov, Winter = Dec–Feb. Dish specs
   need a season dimension. *New requirement, not in the requirements doc.*
+  *(2026-09-23: Spring = Mar–May and Summer = Jun–Aug menus added — see §5.)*
 
 ### Live BEOs (23 events, 42 item lines)
 
@@ -183,6 +184,11 @@ unit, so an unconvertible spec cannot be created.
 **Seasonal handling:** a dish carries `season` (null / fall / winter) plus
 `effective_start`/`effective_end`. A BEO dated in November resolves to the Fall
 variant when one exists.
+
+> **Superseded (as built):** `effective_start`/`effective_end` were dropped on
+> 2026-09-18 — seasons recur by MONTH every year, so an absolute date range expires.
+> The 2026 menu set added Spring (Mar–May) and Summer (Jun–Aug), so `season` is
+> null / spring / summer / fall / winter since 2026-09-23. See CHANGES.md.
 
 **Scale is the main risk.** ~250–300 distinct items across 18 pages. NFR-4 said the
 setup should take one or two sittings; at this size that is not true, and the honest
