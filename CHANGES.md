@@ -165,60 +165,11 @@
 - 09-17 — Supplier Catalog: Ingestion + Product Search (order guide **P1**) — `/office/catalog` loads the 13 PFG exports into `supplier_products`: **1,381 / 394 varies / 6 unpriced / 219 catch-weight**. Parsing lives in a pure module so the shipped code ran headless against the real files. `case_price` derives at INGEST; `category` is sticky because the upsert omits the column. A reflection pass caught that the upload BUTTON had never run — the harness had retyped the payload instead of importing it, and the two had drifted. → [full](docs/changelog/2026-09.md#2026-09-17--supplier-catalog-ingestion--product-search-order-guide-p1)
 - 09-17 — Catalog Categories Seeded From the Master List — all 1,381 products carry a category + item group, and `/office/catalog` gained a category filter. Seeding is its OWN action, not part of ingestion: **one RPC** (`seed_supplier_categories`) instead of ~352 round trips, filling only NULLs so a re-run can never overwrite a curated value — proven by a second run reporting 0 seeded / 1,381 skipped. → [full](docs/changelog/2026-09.md#2026-09-17--catalog-categories-seeded-from-the-master-list)
 - 09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide **P2**) — the catering menu PDFs are read into `menu_dishes` **drafts** and confirmed by a human at `/office/menus`, building the dish vocabulary BEO lines get matched against in P4. A MODEL reads these menus, not coordinates: they are hand-designed marketing layouts where a price column can sit detached from its dish. Safe only because nothing reaches confirmed data without the confirm gate. → [full](docs/changelog/2026-09.md#2026-09-17--menu-dishes-pdf-drafting--confirm-ui-order-guide-p2)
+- 09-18 — Remaining 6 Menus Drafted; menu_dishes Identity Corrected — the unique key `(name, menu_source, season)` silently dropped a dish name that appears twice on one menu at two prices (Breakfast "Yogurt Parfait Bar" $10/ea vs +$6 buffet upgrade); caught only by the RPC's `read` vs `inserted` counters. Key widened to include `menu_section`. → [full](docs/changelog/2026-09.md#2026-09-18--remaining-6-menus-drafted-menu_dishes-identity-corrected)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-18 — Remaining 6 Menus Drafted; menu_dishes Identity Corrected
-
-**File(s) Changed:**
-`supabase/migrations/20260918000001_menu_dish_identity_includes_section.sql` (new)
-**Type:** `fix` + data load. **Not committed, not pushed.**
-**Summary:** Custom Buffets and Plated Dinners were confirmed by the owner (124 dishes).
-Drafting the remaining menus exposed a real bug in P2's unique key, which was silently
-dropping dishes; the key now includes `menu_section`.
-
-**Details:**
-
-- **P1 of this session's verification closed itself:** all 124 dishes came back
-  `confirmed`, every one with a timestamp, across **96 distinct seconds** in two
-  sittings — the signature of a human working down the list, not a bulk UPDATE. The
-  review page's confirm path is verified. Nothing was discarded, so the three
-  pricing-rule lines ("Additional Salad +$5", "Additional side +$4", "additional
-  dessert +$4") are now confirmed as dishes and may want removing.
-- **The bug: `(name, menu_source, season)` cannot hold one dish name twice on one
-  menu.** Breakfast read 22 dishes and stored 21; Seasonal-Fall read 27 and stored 26.
-  Both were genuine, and both the same shape — a name that legitimately appears in two
-  sections at two prices:
-  - Breakfast "Yogurt Parfait Bar" — standalone under *Fruit & Yogurt* at `$10/ea`
-    min 12, **and** a *Custom Breakfast Buffet* upgrade at `+$6`. The $10 item was lost.
-  - Fall "Shaved Brussels Sprout & Honeycrisp Apple Salad" — a plated *Starter Course*
-    **and** a *Buffet Salad*. The buffet one was lost.
-- **What made it dangerous was that it was silent.** The RPC's payload dedupe exists to
-  stop `ON CONFLICT` throwing "cannot affect row a second time", and it cannot tell a
-  duplicate *reading* of one dish from two different dishes sharing a name. Nothing in
-  the UI would ever have shown the loss — **only the `read` vs `inserted` counters
-  caught it**, which is the argument for having the RPC return all three numbers
-  instead of a bare success.
-- **Fixed by widening the key to include `menu_section`.** This splits the two real
-  cases while still collapsing the one the dedupe was built for: the cold hors
-  d'oeuvres repeat verbatim across both pages under the *same* heading, so they stay
-  one row. Widening a unique key cannot conflict existing rows, so the 124 confirmed
-  dishes were unaffected.
-- **The cost, accepted deliberately:** identity now depends on a model-generated field,
-  so a re-draft that renames a section ("Entrées" vs "Entrees") inserts a second row
-  rather than updating the first. That is a duplicate a human can see and discard —
-  strictly better than a dish that silently disappears.
-- **Loaded:** Breakfast 22, Hors d'Oeuvres 28, Platters 6, Seasonal-Fall 27,
-  Seasonal-Winter 25.
-- **Still not exercised:** the upload panel's own button. Every menu so far was drafted
-  by the harness calling the deployed function — the same edge function the browser
-  calls, but `MenuUploadPanel.jsx` itself (file read, base64, the sequential loop,
-  season from filename) has never run. **Quick Lunch Bites was deliberately left
-  unloaded** so that path can be tested by doing real work rather than by a no-op.
-
----
 
 ### 2026-09-19 — "Additional Salad" Is a Price Rule, Not a Dish
 
@@ -497,3 +448,42 @@ of the review items still open; corrected at his instruction.
 - **"Prosciutto, Tomato, Balsamic Drizzle"** deleted as a dish and appended to Burrata
   Crostini's description (it is that dish's topping — a stray bullet on the menu).
 - Result: **368 dishes, all confirmed; 4 price rules; 364 orderable** for P3.
+
+---
+
+### 2026-09-26 — Change a Saved Schedule's Week; Parser Stops Guessing the Year
+
+**File(s) Changed:** `app/src/pages/SchedulePage.jsx`, `supabase/functions/process-schedule/index.ts`,
+`claudedocs/requirements_schedule_date_edit_2026-09-26.md` (new)
+**Type:** `feature` + `fix` — `process-schedule` deployed v11→**v12**.
+**Summary:** Schedule sheets print month/day but no year, and the parser was told neither
+today's date nor the file name, so it guessed: **7 of 25 saved schedules were filed under
+2020 or 2024**, and none existed for the current week (09-21) or the next (09-28). The page
+opens the week nearest today, so a misdated schedule was effectively lost and re-uploaded.
+
+**Details:**
+
+- **Change Week** (office only, beside the trash button): the picked date snaps to its
+  Monday and every shift moves by the same number of days (`handleChangeWeekDate`, helpers
+  `mondayOf` / `addDaysTo` / `daysBetween`). A week that already has a schedule is refused
+  by the existing `week_start` UNIQUE constraint (`23505`) with a message; nothing changes.
+- **Realtime follows a moved schedule** — the old week no longer exists, so an UPDATE
+  whose row id is the one on screen now loads the row's new week instead of falling back
+  to "nearest today".
+- **Parser gets today's date** (America/Chicago) and is told to pick the year closest to
+  it. File names were rejected as the signal: `photo_2026-09-26_…` is when the photo was
+  taken, not the week, and `IMG8389….jpg` has no date at all.
+- **Review modal**: week picker snaps to Monday; a red warning shows when the week is more
+  than 30 days from today (`WEEK_WARNING_DAYS`).
+- **Verified:** the two misdated uploads re-parsed through deployed v12 → 2026-09-28 (was
+  2020) and 2026-09-21 (was 2024), shifts inside the week; one run each. In the browser a
+  junk 2024 row was moved via a Thursday (snapped to Monday; DB showed all 25 shifts
+  03-04→03-10), refused onto 2026-09-14 with the message, then moved back — `md5` of its
+  `schedule_data` identical to before. Phone width: editor wraps, no horizontal scroll.
+  `npm run build` passes.
+- **Not browser-tested:** the review-modal warning and Monday snap — they only render
+  after a real upload, which writes files to storage. The next real upload exercises them.
+
+**Open:** the 7 misdated rows are left for the owner to fix with the new button (his call):
+move 2020-09-28 → 2026-09-28 and 2024-09-21 → 2026-09-21, delete the duplicate 2024-10-21
+upload and the four small 2024 test rows. Until then the crew sees 09-14 as "this week".

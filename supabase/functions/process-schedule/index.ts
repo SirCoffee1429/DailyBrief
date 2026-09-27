@@ -41,15 +41,20 @@ Deno.serve(async (req) => {
 
     console.log(`Starting weekly BOH schedule parsing for ${files.length} file(s): ${files.map((f: ScheduleFile) => f.fileName || 'Unnamed').join(', ')}...`);
 
+    // Today's date on the club's calendar (en-CA formats as YYYY-MM-DD). The sheets print
+    // month/day but no year; left to guess, the model filed schedules under 2020 and 2024.
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+
     const prompt = `
 You are an expert at parsing weekly Back of House (BOH) kitchen shift schedules for a country club.
 The country club schedule week starts on MONDAY and ends on SUNDAY.
+Today's date is ${today}. Schedules are uploaded within a few weeks of the week they cover, and the sheet usually shows month and day but NOT the year. Choose the year that puts "week_start" closest to today, and make sure "week_start" is a Monday in that year.
 
 Analyze the uploaded file(s) (which could be one or multiple pages/documents of the same weekly schedule) and extract/merge the structured BOH weekly schedule.
 You must return a single, unified JSON object with this exact schema:
 
 {
-  "week_start": "YYYY-MM-DD",  // The calendar date of the MONDAY that starts this schedule week. Even if the sheet says 'Week of May 17' (a Sunday), calculate and write the starting MONDAY's date (e.g. '2026-05-18').
+  "week_start": "YYYY-MM-DD",  // The calendar date of the MONDAY that starts this schedule week. Even if the sheet says 'Week of May 17' (a Sunday), calculate and write the starting MONDAY's date (e.g. 'Week of May 17' in 2026 -> '2026-05-18'). Pick the year as described above.
   "shifts": [
     {
       "employee_name": "string", // Full name of the BOH crew member (e.g., 'Jane Smith')

@@ -1,6 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
+import { localDateString } from '../lib/dates.js'
+
+// A misdated week this far from today gets a warning in the verify modal.
+const WEEK_WARNING_DAYS = 30
+
+// Whole days from one YYYY-MM-DD to another (rounded, so a DST hour can't shave a day).
+function daysBetween(fromStr, toStr) {
+    const diff = new Date(toStr + 'T00:00:00').getTime() - new Date(fromStr + 'T00:00:00').getTime()
+    return isNaN(diff) ? 0 : Math.round(diff / (1000 * 60 * 60 * 24))
+}
+
+// Shifts a YYYY-MM-DD by N days on the local calendar; an unparseable date is returned as-is.
+function addDaysTo(dateStr, days) {
+    const d = new Date(dateStr + 'T00:00:00')
+    if (isNaN(d.getTime())) return dateStr
+    d.setDate(d.getDate() + days)
+    return localDateString(d)
+}
+
+// The Monday of the week containing a YYYY-MM-DD (schedule weeks run Mon–Sun); '' if invalid.
+function mondayOf(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00')
+    if (isNaN(d.getTime())) return ''
+    return addDaysTo(dateStr, -((d.getDay() + 6) % 7))
+}
 
 const PARSING_MESSAGES = [
     "Decoding management's chicken scratch...",
@@ -178,6 +203,10 @@ export default function SchedulePage({ officeMode = false }) {
     const [modalAnnouncements, setModalAnnouncements] = useState('')
     const [uploadMode, setUploadMode] = useState('new') // 'new' or 'merge'
 
+    // Change-week editor on a saved schedule: the picked date, or null when closed
+    const [weekDateDraft, setWeekDateDraft] = useState(null)
+    const [savingWeekDate, setSavingWeekDate] = useState(false)
+
     // UI States
     const [isViewingOriginal, setIsViewingOriginal] = useState(false)
     const [lightboxFileIndex, setLightboxFileIndex] = useState(0)
@@ -191,6 +220,9 @@ export default function SchedulePage({ officeMode = false }) {
     const names = (isViewingOriginal && activeSchedule && activeSchedule.file_name) ? activeSchedule.file_name.split(',') : []
     const activeUrl = urls[lightboxFileIndex] || ''
     const activeName = names[lightboxFileIndex] || 'Original Schedule'
+
+    // Row id of the schedule on screen; realtime uses it to follow a week-date change
+    const activeScheduleId = activeSchedule ? activeSchedule.id : null
 
 
     // Load list of all schedule weeks
@@ -253,6 +285,7 @@ export default function SchedulePage({ officeMode = false }) {
     // Load full details for the active week start
     useEffect(() => {
         setExtraEmployees([]) // Reset extra employees when changing weeks
+        setWeekDateDraft(null) // Close the change-week editor when changing weeks
         if (!activeWeekStart) {
             setActiveSchedule(null)
             return
@@ -296,7 +329,9 @@ export default function SchedulePage({ officeMode = false }) {
                     if (activeWeekStart && payload.new && payload.new.week_start === activeWeekStart) {
                         setActiveSchedule(payload.new)
                     }
-                    loadScheduleWeeks(activeWeekStart)
+                    // Follow the viewed schedule if its week date was changed; its old week no longer exists
+                    const movedViewed = payload.new && payload.new.id === activeScheduleId
+                    loadScheduleWeeks(movedViewed ? payload.new.week_start : activeWeekStart)
                 }
             })
             .subscribe()
@@ -304,7 +339,7 @@ export default function SchedulePage({ officeMode = false }) {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [loadScheduleWeeks, activeWeekStart])
+    }, [loadScheduleWeeks, activeWeekStart, activeScheduleId])
 
     // Generate Monday to Sunday dates for the active week
     const getWeekDays = useCallback(() => {
@@ -977,6 +1012,47 @@ export default function SchedulePage({ officeMode = false }) {
         }
     }
 
+    // Move a saved schedule to another week (fixes a year the parser guessed wrong).
+    // The picked date snaps to its Monday and every shift moves by the same number of days.
+    // week_start is UNIQUE, so a week that already has a schedule is refused by the database.
+    const handleChangeWeekDate = async () => {
+        const newStart = mondayOf(weekDateDraft)
+        if (!newStart || !activeSchedule) return
+        if (newStart === activeSchedule.week_start) {
+            setWeekDateDraft(null)
+            return
+        }
+
+        const dayShift = daysBetween(activeSchedule.week_start, newStart)
+        const scheduleData = activeSchedule.schedule_data || {}
+        const movedShifts = (scheduleData.shifts || []).map(sh => ({ ...sh, date: addDaysTo(sh.date, dayShift) }))
+        const newLabel = new Date(newStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+
+        try {
+            setSavingWeekDate(true)
+            const { error: moveErr } = await supabase
+                .from('schedules')
+                .update({ week_start: newStart, schedule_data: { ...scheduleData, shifts: movedShifts } })
+                .eq('id', activeSchedule.id)
+
+            if (moveErr) {
+                if (moveErr.code === '23505') {
+                    alert(`The week of ${newLabel} already has a schedule. Delete that one first if this one should replace it.`)
+                    return
+                }
+                throw moveErr
+            }
+
+            setWeekDateDraft(null)
+            loadScheduleWeeks(newStart)
+        } catch (err) {
+            console.error('Error changing schedule week:', err)
+            alert(`Failed to change the week: ${err.message}`)
+        } finally {
+            setSavingWeekDate(false)
+        }
+    }
+
 
 
     const weekDays = getWeekDays()
@@ -1197,7 +1273,84 @@ export default function SchedulePage({ officeMode = false }) {
                             </h2>
                         </div>
                         
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {/* Change the week this schedule is filed under (Office mode) */}
+                            {officeMode && (weekDateDraft === null ? (
+                                <button
+                                    onClick={() => setWeekDateDraft(activeSchedule.week_start)}
+                                    className="btn"
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid #27272a',
+                                        color: '#e4e4e7',
+                                        borderRadius: '6px',
+                                        padding: '8px 16px',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}
+                                    title="Move this schedule to a different week"
+                                >
+                                    <i className="fa-regular fa-calendar" />
+                                    <span>Change Week</span>
+                                </button>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                        type="date"
+                                        value={weekDateDraft}
+                                        onChange={(e) => setWeekDateDraft(e.target.value)}
+                                        aria-label="New week start"
+                                        style={{
+                                            background: '#0f1014',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            padding: '7px 10px',
+                                            color: '#e4e4e7',
+                                            fontSize: '0.85rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={handleChangeWeekDate}
+                                        disabled={savingWeekDate || !mondayOf(weekDateDraft)}
+                                        className="btn"
+                                        style={{
+                                            background: '#f97316',
+                                            border: 'none',
+                                            color: '#fff',
+                                            borderRadius: '6px',
+                                            padding: '8px 14px',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            cursor: savingWeekDate ? 'wait' : 'pointer',
+                                            opacity: savingWeekDate || !mondayOf(weekDateDraft) ? 0.6 : 1
+                                        }}
+                                    >
+                                        {savingWeekDate ? 'Saving…' : 'Save'}
+                                    </button>
+                                    <button
+                                        onClick={() => setWeekDateDraft(null)}
+                                        disabled={savingWeekDate}
+                                        className="btn"
+                                        style={{
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            color: '#a1a1aa',
+                                            borderRadius: '6px',
+                                            padding: '8px 12px',
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            ))}
+
                             {/* View original file */}
                             {activeSchedule.file_url && (
                                 <button
@@ -1956,7 +2109,7 @@ export default function SchedulePage({ officeMode = false }) {
                                 <input
                                     type="date"
                                     value={modalWeekStart}
-                                    onChange={(e) => setModalWeekStart(e.target.value)}
+                                    onChange={(e) => setModalWeekStart(mondayOf(e.target.value))}
                                     style={{
                                         background: '#0f1014',
                                         border: '1px solid #27272a',
@@ -1971,6 +2124,15 @@ export default function SchedulePage({ officeMode = false }) {
                                 <p style={{ fontSize: '11px', color: '#71717a', marginTop: '6px' }}>
                                     Detected Monday: <strong>{pendingData.week_start ? new Date(pendingData.week_start + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'None'}</strong>
                                 </p>
+                                {/* Wrong-year guard: the sheets print no year, so a far-off week is almost always a misread */}
+                                {modalWeekStart && Math.abs(daysBetween(localDateString(), modalWeekStart)) > WEEK_WARNING_DAYS && (
+                                    <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '6px', background: 'rgba(248, 113, 113, 0.1)', border: '1px solid rgba(248, 113, 113, 0.4)', color: '#f87171', fontSize: '0.8rem', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <i className="fa-solid fa-triangle-exclamation" />
+                                        <span>
+                                            This week is {Math.abs(daysBetween(localDateString(), modalWeekStart))} days {modalWeekStart < localDateString() ? 'ago' : 'away'} — check the year before saving.
+                                        </span>
+                                    </div>
+                                )}
 
 
                             </div>
