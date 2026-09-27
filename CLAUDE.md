@@ -54,20 +54,20 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   uploads it is a ratchet. `case_price` derives at INGEST (219 catch-weight items; a
   read-time branch gets forgotten and prints ~50x low). `category` seeds via an RPC
   filling only NULLs
-- Menus (`menu_dishes`, P2): catering menus are hand-designed marketing layouts, so a
-  MODEL reads them, not coordinates — the price column can extract detached from its dish.
-  `.docx` is accepted, converted to HTML **in the browser** (Gemini cannot read .docx, and
-  `npm:mammoth` in the edge function blew the 130s cold-start margin). Safe because it
-  drafts behind a human gate; the per-BEO path stays arithmetic
+- Menus (`menu_dishes`, P2): hand-designed marketing layouts, so a MODEL reads them, not
+  coordinates. `.docx` converts to HTML **in the browser** (Gemini can't read .docx;
+  `npm:mammoth` in the edge fn blew the 130s cold start). Safe only behind the confirm gate
 - **`base_price` buys `price_qty` x `price_unit`.** "$85 for 20 pieces" stored as 85/piece
   is 20x too dear and looks normal — it shipped that way on 27 rows. A quantity basis on a
   SECTION HEADING carries down onto each dish; "Starting at" is a group FLOOR, never a
   dish price
-- A dish name can appear TWICE on one menu in two sections at two prices (Breakfast
-  "Yogurt Parfait Bar" = $10/ea item AND +$6 buffet upgrade), so identity is
-  `(name, menu_source, menu_section, season)`, `nulls not distinct` because season is
-  null on six menus. A narrower key made the RPC's dedupe silently eat real dishes —
-  caught ONLY by its `read` vs `inserted` counters, never by the UI
+- A priced package ("Southern BBQ $41") is ONE dish or its price is lost; a minimum counts
+  in the PRICE's unit ("2 dozen" beside $/doz = 2, not 24). v8 invented prices and v9 still
+  ignored a rule — check the CONFIRMED rows, never just the confirm count
+- A dish name can appear TWICE on one menu at two prices (Breakfast "Yogurt Parfait Bar"
+  $10/ea AND +$6 upgrade): identity is `(name, menu_source, menu_section, season)`,
+  `nulls not distinct`. A narrower key made the RPC's dedupe silently eat real dishes —
+  caught ONLY by its `read` vs `inserted` counters
 - `upcharge` conflates an INTRINSIC premium (Chopped Cobb +$5 always) with a POSITIONAL
   surcharge ("Additional Salad +$5" = the 2nd salad, whichever it is; the $38 buffet
   covers 1 salad/2 sides/2 entrees/1 dessert). Rule rows name no food and are flagged
@@ -137,7 +137,7 @@ For DailyBrief, the rules below win:
 - **Testing:** there is no test runner installed on `main` — the quality gate is
   `npm run build` plus browser verification. Do not demand 80% coverage,
   integration tests, or E2E tests; adding a test framework is the owner's call.
-  (The `auto-scheduler` branch does have a real Deno suite for the solver.)
+  Deno tests exist: `process-menu/prompt_test.ts` on main, the solver suite on `auto-scheduler`.
 - **Agents:** never spawn sub-agents automatically — the developer orchestrates; use one
   only when asked. The global agents table names agents that are NOT installed.
 - **Toolset:** SuperClaude is the primary command/agent/skill set — `/sc:*` in
