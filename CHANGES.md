@@ -463,3 +463,26 @@ functions **Type:** `config` — items 5-7 of the 09-27 audit, owner's decisions
   is** by the owner's choice: no live page calls it. `16318f6` stays undeployed.
 - **Schema baseline (item 5) still open:** needs `supabase login` + Docker Desktop. The stale
   `SUPABASE_ACCESS_TOKEN` Windows User env var overrides a fresh login.
+
+---
+
+### 2026-09-28 — Schema Baseline: the Live Database's Structure Is Now in the Repo
+
+**File(s) Changed:** `supabase/schema_baseline.sql` (new) **Type:** `config` — drift-audit item 5.
+**Summary:** `supabase db dump --linked` of production's structure (no rows), so the repo holds
+a complete definition of the database for the first time — the migration files cannot rebuild
+it. **Not a migration; never run it against prod.**
+
+**Details:**
+
+- **Verified complete against live:** 32 tables, 3 views (all `security_invoker`), 12
+  functions, 52 RLS policies, 0 table triggers — every count equal. No `COPY`/`INSERT`, no
+  token-like strings. The dropped `handle_new_user` is correctly absent.
+- **One object a schema dump skips:** the database-wide event trigger `ensure_rls` (auto-RLS on
+  new tables). Its exact definition is in the file's header, to recreate by hand.
+- **Why the CLI finally worked:** the stale `SUPABASE_ACCESS_TOKEN` was a Windows *User* env var.
+  `supabase login` with that variable present **skips the browser and saves the env token**, so
+  the first two logins re-saved the stale one. Fixed by removing the variable, `supabase logout`,
+  and logging in from a fresh window. Processes started before the change (this session) still
+  carry it, so commands here run as `env -u SUPABASE_ACCESS_TOKEN supabase …`.
+- Regenerating needs Docker Desktop running (`db dump` runs `pg_dump` in a container).

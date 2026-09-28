@@ -7,9 +7,8 @@ Mid-Missouri, serving kitchen crew, front of house, and office/management throug
 separate password-protected dashboards. Live at https://brief-club.vercel.app —
 **Supabase project ref `chajwmoohmiugdgvqjyo`**.
 
-Stack, dependencies, routes, pages, components, tables, and edge functions are all
-derivable from the repo — read `package.json`, `app/src/`, and `supabase/functions/`.
-Only the non-obvious bits are recorded below.
+Stack, routes, pages, tables and edge functions are derivable from the repo (`package.json`,
+`app/src/`, `supabase/functions/`); only the non-obvious bits are recorded below.
 
 ---
 
@@ -105,7 +104,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - **New `public` tables get RLS switched on automatically** (event trigger `ensure_rls`, not
   in the repo) — create the policy in the same migration or the app reads nothing. Views
   are `security_invoker`; CREATE OR REPLACE resets that unless its WITH clause repeats it.
-  Repo migrations CANNOT rebuild prod (3 of 54 match) — never `supabase db push`/`db reset`
+  Migrations CANNOT rebuild prod (3 of 54 match) — never `db push`/`db reset`; the full
+  structure is `supabase/schema_baseline.sql` (09-28 dump; header says how to regenerate)
 
 ---
 
