@@ -169,63 +169,11 @@
 - 09-19 — "Additional Salad" Is a Price Rule, Not a Dish — the three "Additional X" rows on Custom Buffets state a positional surcharge (the 2nd salad, whichever it is), not food; ingredients on them would **double-order**, since the real dish is its own row. Flagged `is_price_rule` (sticky: absent from the upsert's SET list) and excluded by the `orderable_menu_dishes` view, where P3 draws its work. → [full](docs/changelog/2026-09.md#2026-09-19--additional-salad-is-a-price-rule-not-a-dish)
 - 09-19 — Menu Upload Accepts Word (.docx) — Gemini cannot read a .docx, so it is converted to HTML **in the browser** (mammoth behind a dynamic import): `npm:mammoth` in the edge function blew the 130s gateway on every cold start, the normal case for a once-a-season upload. The prompt became a shared core plus one source-specific section; in the Word menus `·` SEPARATES dishes while `•` PREFIXES one. Rule 7 now dedupes within a section only (it had eaten a real Plated Dinner side). → [full](docs/changelog/2026-09.md#2026-09-19--menu-upload-accepts-word-docx)
 - 09-21 — Menus Wiped; Price Quantity Bug Fixed Before Reload — hors d'oeuvres were **20x too expensive** on 27 of 28 rows: "Starting at $85 for 20 pieces" was stored as $85 per piece. Added `price_qty` (`base_price` buys `price_qty x price_unit`); "Starting at" became a group FLOOR left empty; a heading's quantity basis now carries down. Prompt assembly now THROWS on a missing splice anchor. All 232 rows wiped at the owner's instruction. Lesson: comparing a parse to its own PDF is fidelity, not correctness. → [full](docs/changelog/2026-09.md#2026-09-21--menus-wiped-price-quantity-bug-fixed-before-reload)
+- 09-23→25 — BEO Parser: Three Silent Losses Found and Fixed (`process-beo` v26) — a "Gemini timeout 500" was the gate rightly refusing a packet the fallback cannot finish in 130s. v24: a centre line with no label and no qty opens an item (SUMMARY take-out page lost 24 lines). v25: **page 2+ of a BEO continues its table with no section header** — every multi-page BEO since v22 had lost it (Eurofins' whole plated dinner). v26: the gate now CONSUMES each printed line once; matching by presence missed 278/1508 deleted lines. Lesson: measure a gate by mutation, not by clean passes. → [full](docs/changelog/2026-09.md#2026-09-23--09-25--beo-parser-three-silent-losses-found-and-fixed)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-23 → 09-25 — BEO Parser: Three Silent Losses Found and Fixed
-
-**File(s) Changed:** `supabase/functions/process-beo/beoGeometricParser.ts`
-**Type:** `fix` — `process-beo` deployed v23→**v26**. Commits `9b2168b`, `3fc2286`,
-`9f37624`. **Not pushed.**
-**Summary:** Reported as "Gemini API timeout 500". The timeout was a symptom: the
-geometric parser refused the 09-23 packet, and the Gemini fallback cannot finish a
-42-page packet in 130s. Chasing it surfaced two more losses the gate had been passing.
-
-**Details:**
-
-- **v24 — a page with no label and no qty.** `SUMMARY: Homecoming Take Out` (10/03)
-  prints a priced "One Dozen …  $26/Doz." menu with neither, so no item ever opened and
-  all 24 lines vanished. The gate caught it (correctly); the fallback then timed out and
-  took 33 good events down with it. An orphan centre line now opens an item. Kept as ONE
-  block in print order — the page prints 9 prices for 8 dishes, so splitting would guess.
-- **v25 — continuation pages were thrown away, on every packet since v22.** A BEO that
-  runs onto page 2 continues its table there WITHOUT reprinting a section header. The
-  assembler reset per page and waited for a Qty header; **the gate waited for the same
-  header**, so it never looked either. Lost: Eurofins 09/24's entire plated dinner
-  (courses, 53/3/4 entrées, desserts), Kid's Culinary Club's beverage station, ESS Golf
-  Classic's bar, beverages and desserts. Table state now carries across an event's
-  pages; a page reprinting the event header block (`Event Headcount` / `Start Date` /
-  `Primary Contact`) still starts fresh. The first row below the page header is measured
-  as a new row — read as a wrapped line it glued each page's opening category header
-  onto the item before.
-- **v26 — the gate matched by presence, so repeats vouched for losses.** Measured by
-  deleting parts of real output one at a time and asking the gate: it missed **278 of
-  1508** single lines and **33 of 596** items (Beverages x300, Plated Entrée x23). The
-  most-missed lines were `per dozen`, `N pieces`, `serves N` — the order basis. Each
-  printed line is now consumed once by a description line (counted); only category
-  names keep containment. Misses: 13 lines / 3 items; **0 false alarms on 7 packets**.
-  A continuation page missing its `Club Contact:` line is now refused outright.
-- **Every version was checked the same way:** parse output diffed old-vs-new on every
-  packet (all prior items identical; only recovered items added), then the DEPLOYED
-  function's output compared byte-for-byte with the local run.
-- **Data repaired.** The 09-23 packet was re-queued and approved; Eurofins, Kid's
-  Culinary Club and ESS were re-queued as a 3-event import after v25 and approved —
-  verified in `banquet_event_orders` (15 / 6 / 41 items).
-- **Twice today the gate agreed with a broken parse because it shared the parser's
-  premise** (waiting for a Qty header; "text appears somewhere"). A mutation test —
-  delete, then ask the gate — is what measures a gate; a clean pass on real data can't.
-
-**Open:**
-- Events approved from packets BEFORE v25 may still be missing their page 2+. The PDFs
-  are in `beo-emails`; a re-parse-and-diff against live rows is the next job.
-- The Gemini fallback still cannot parse a full daily packet inside 130s.
-- 3 items the gate still misses: a line whose text is also a category name in the event.
-- The gate checks lines SURVIVE, not where they land — misgrouping passes (the SUMMARY
-  block; "Course Two" absorbing its price note). The approval queue is the only check.
-
----
 
 ### 2026-09-23 → 09-26 — 15 Current Menus Loaded as Drafts; Parser v9
 
@@ -496,3 +444,22 @@ added with `verify_jwt = false`, matching how they are deployed; a redeploy that
 config's default (`true`) could have flipped them. Checked by script: all 16 deployed functions
 now match (5 by the default). `llm.ts` was the pre-hybrid scheduler's model boundary, swept
 onto `main` by a 07-25 docs commit; nothing imports it and `auto-scheduler` never had it.
+
+---
+
+### 2026-09-28 — Drift-Audit Decisions: parse-recipe Deleted, Scheduler Left As Is
+
+**File(s) Changed:** `docs/archive/edge-functions/parse-recipe.ts` (new, `05d1fe7`); prod edge
+functions **Type:** `config` — items 5-7 of the 09-27 audit, owner's decisions.
+**Summary:**
+- **`parse-recipe` deleted from production** (by the owner in the dashboard; verified gone —
+  15 functions remain). Its deployed source was archived first, outside `supabase/functions/`
+  so it cannot be redeployed by accident; it was never in git and its only caller lived for
+  one day (2026-03-16).
+- **Scheduler: nothing deployed, nothing removed.** The owner wants none of the auto-scheduler
+  live, but the pieces built on `main` before the branch existed (06-10→06-14) are in real
+  use — Crew Availability (31 people, 93 changes in 30 days), Roster — and stay, with the
+  Rules/Coverage screens. The one branch leak, `generate-schedule` v17, is **left deployed as
+  is** by the owner's choice: no live page calls it. `16318f6` stays undeployed.
+- **Schema baseline (item 5) still open:** needs `supabase login` + Docker Desktop. The stale
+  `SUPABASE_ACCESS_TOKEN` Windows User env var overrides a fresh login.

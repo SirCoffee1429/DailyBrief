@@ -36,7 +36,9 @@ DROPPED (migration 20260927010000, dropped SQL kept in its comments) · 3
 orderable_menu_dishes → security_invoker (20260927010001; anon still sees 364; linter
 ERROR gone). CHANGES.md: P3 entry logged late + DB-fix entry; 09-21 entry archived.
 4 DONE: config.toml + get-weather/generate-order-items (all 16 deployed fns match),
-llm.ts deleted. STILL OPEN: 5 schema baseline
+llm.ts deleted. 09-28 DECISIONS: 6 = do NOT deploy 16318f6; generate-schedule v17 LEFT AS IS
+(owner; no live page calls it). Pre-branch scheduler pieces on main (Availability — daily
+use — Roster, Rules, Coverage) stay. 7 = parse-recipe DELETED by owner in dashboard (verified gone; archived 05d1fe7). STILL OPEN: 5 schema baseline
 (needs `! supabase login`) · 6 deploy 16318f6 after re-test · 7 keep/delete parse-recipe.
 Proven in a rolled-back txn: CREATE OR REPLACE VIEW without WITH resets security_invoker.
 

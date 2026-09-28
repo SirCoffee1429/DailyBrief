@@ -128,9 +128,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 
 - **`main`** — primary workspace and Vercel's production branch. Non-scheduler work here.
 - **`auto-scheduler`** — slow-moving side feature (BOH schedule generator), worked in
-  bursts. **Local only, never pushed**, deliberately. Prod `generate-schedule` v17 is its
-  07-02 commit `7dfe506`; later fixes are NOT deployed. Never merge or push unasked. Merge
-  `main` INTO it at the start of a scheduler session.
+  bursts. **Local only, never pushed**, deliberately. Prod `generate-schedule` v17 (`7dfe506`)
+  stays deployed as is (owner, 09-28) — deploy nothing newer unasked. Never merge or push
+  unasked. Merge `main` INTO it at the start of a scheduler session.
 
 ---
 
