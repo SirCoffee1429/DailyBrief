@@ -480,9 +480,10 @@ it. **Not a migration; never run it against prod.**
   token-like strings. The dropped `handle_new_user` is correctly absent.
 - **One object a schema dump skips:** the database-wide event trigger `ensure_rls` (auto-RLS on
   new tables). Its exact definition is in the file's header, to recreate by hand.
-- **Why the CLI finally worked:** the stale `SUPABASE_ACCESS_TOKEN` was a Windows *User* env var.
-  `supabase login` with that variable present **skips the browser and saves the env token**, so
-  the first two logins re-saved the stale one. Fixed by removing the variable, `supabase logout`,
-  and logging in from a fresh window. Processes started before the change (this session) still
-  carry it, so commands here run as `env -u SUPABASE_ACCESS_TOKEN supabase …`.
+- **Why the CLI finally worked:** a stale `SUPABASE_ACCESS_TOKEN` sat in the Windows *User* env
+  (removed by the owner). The login from a fresh PowerShell window works once its verification
+  code is entered — the 401 right after it was simply a test run before the code was in (owner's
+  correction). A Claude Code process started before the variable was removed still carries it
+  and fails unless run as `env -u SUPABASE_ACCESS_TOKEN supabase …`. (An earlier claim that
+  `supabase login` silently re-saves an env token was a guess, never verified.)
 - Regenerating needs Docker Desktop running (`db dump` runs `pg_dump` in a container).

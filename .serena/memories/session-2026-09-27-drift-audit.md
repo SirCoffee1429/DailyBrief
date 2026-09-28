@@ -56,7 +56,9 @@ Commits this session: dd66a62 (P3) · cc24a9b (trigger drop + view invoker) · e
 parallel session's session-2026-09-27-schedule-week-redate.md (not ours, left out).
 Item 5 DONE 09-28 (de25e5d): supabase/schema_baseline.sql, verified equal to live;
 ensure_rls event trigger recorded in its header. ALL 7 AUDIT ITEMS CLOSED. CLI 401 root
-cause: stale SUPABASE_ACCESS_TOKEN user env var — `supabase login` with it set re-saves it. Lesson saved to auto-memory:
+cause: stale SUPABASE_ACCESS_TOKEN user env var (removed); the later 401 was testing before
+the login's verification code was entered (owner's correction). "login re-saves the env
+token" was my unverified guess — not a fact. Lesson saved to auto-memory:
 feedback-not-live-is-not-delete ("I don't want to delete it, I just don't want it live").
 
 ## Next
