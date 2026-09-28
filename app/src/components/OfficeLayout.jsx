@@ -82,6 +82,14 @@ export default function OfficeLayout({ children }) {
                         <i className="fa-solid fa-utensils office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Menus</span>
                     </NavLink>
+                    <NavLink to="/office/dish-specs" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                        <i className="fa-solid fa-list-check office-v2-nav-icon" />
+                        <span style={{ marginLeft: '0.75rem' }}>Dish Ingredients</span>
+                    </NavLink>
+                    <NavLink to="/office/ingredients" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                        <i className="fa-solid fa-link office-v2-nav-icon" />
+                        <span style={{ marginLeft: '0.75rem' }}>Ingredient Products</span>
+                    </NavLink>
                     <NavLink to="/office/history" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-check-square office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Tasks</span>

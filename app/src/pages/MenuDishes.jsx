@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 import MenuUploadPanel from '../components/MenuUploadPanel.jsx'
 import { normaliseDishEdits, priceLabel } from '../lib/menuDrafts.js'
+import { useKeyboardReview } from '../lib/useKeyboardReview.js'
 
 const PRICE_UNITS = ['each', 'person', 'dozen', 'tray', 'piece', 'lb']
 
@@ -179,8 +180,11 @@ export default function MenuDishes() {
     }
 
     useKeyboardReview({
-        dishes, selected, setSelected, editingId, setEditingId,
-        onConfirm: confirmDish, onPriceRule: markPriceRule, busy,
+        items: dishes, selected, setSelected, editingId, setEditingId, busy,
+        actions: {
+            c: dish => { if (dish.status === 'draft') confirmDish(dish) },
+            p: dish => { if (dish.status === 'draft') markPriceRule(dish) },
+        },
     })
 
     const draftCount = dishes.filter(d => d.status === 'draft').length
@@ -282,55 +286,6 @@ export default function MenuDishes() {
             )}
         </div>
     )
-}
-
-// j/k/arrows to move, c to confirm, e to edit. Bound to the window rather than to a row
-// so the list is navigable without clicking into it first, and disabled entirely while
-// an edit form is open so typing a "c" into a description does not confirm anything.
-function useKeyboardReview({ dishes, selected, setSelected, editingId, setEditingId, onConfirm, onPriceRule, busy }) {
-    // Everything the handler reads goes through a ref so the listener binds once on
-    // mount instead of being torn down and re-added on every render (onConfirm is a new
-    // function each time).
-    const state = useRef({})
-    state.current = { dishes, selected, editingId, busy, onConfirm, onPriceRule }
-
-    // Confirming the last row in a draft-filtered list shortens the list underneath the
-    // cursor, which would otherwise leave it pointing past the end with nothing selected.
-    useEffect(() => {
-        if (selected > dishes.length - 1) setSelected(Math.max(dishes.length - 1, 0))
-    }, [dishes.length, selected, setSelected])
-
-    useEffect(() => {
-        function onKeyDown(e) {
-            const { dishes, selected, editingId, busy, onConfirm, onPriceRule } = state.current
-            const tag = e.target.tagName
-            if (editingId || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-                if (e.key === 'Escape') setEditingId(null)
-                return
-            }
-            if (busy || dishes.length === 0) return
-
-            if (e.key === 'j' || e.key === 'ArrowDown') {
-                e.preventDefault()
-                setSelected(i => Math.min(i + 1, dishes.length - 1))
-            } else if (e.key === 'k' || e.key === 'ArrowUp') {
-                e.preventDefault()
-                setSelected(i => Math.max(i - 1, 0))
-            } else if (e.key === 'c') {
-                const dish = dishes[selected]
-                if (dish && dish.status === 'draft') onConfirm(dish)
-            } else if (e.key === 'p') {
-                const dish = dishes[selected]
-                if (dish && dish.status === 'draft') onPriceRule(dish)
-            } else if (e.key === 'e') {
-                e.preventDefault()
-                const dish = dishes[selected]
-                if (dish) setEditingId(dish.id)
-            }
-        }
-        window.addEventListener('keydown', onKeyDown)
-        return () => window.removeEventListener('keydown', onKeyDown)
-    }, [setSelected, setEditingId])
 }
 
 function DishRow({ dish, isSelected, isEditing, busy, onSelect, onEdit, onCancelEdit, onSave, onConfirm, onPriceRule, onDiscard }) {

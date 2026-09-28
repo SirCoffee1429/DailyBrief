@@ -7156,3 +7156,110 @@ tr.beo-completed td .beo-check {
     justify-content: flex-start;
   }
 }
+
+/* ============================================
+   Dish ingredients + ingredient products (P3)
+   ============================================ */
+
+.dish-spec-row {
+  align-items: flex-start;
+}
+
+/* What the spec knowingly leaves out. Styled as a warning so an under-costed dish
+   ("flavour ingredients not included") never reads as complete. */
+.dish-spec-note {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.8rem;
+  color: var(--warning, #b45309);
+  border-left: 2px solid var(--warning, #b45309);
+}
+
+.dish-spec-lines {
+  margin-top: var(--space-2);
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  width: 100%;
+}
+
+.dish-spec-lines td {
+  padding: 2px var(--space-3) 2px 0;
+  vertical-align: top;
+  color: var(--text-primary);
+}
+
+.dish-spec-qty {
+  white-space: nowrap;
+  text-align: right;
+  color: var(--text-secondary);
+  width: 1%;
+}
+
+.dish-spec-product {
+  color: var(--text-secondary) !important;
+  font-size: 0.75rem;
+}
+
+.dish-spec-gap {
+  color: var(--danger, #dc2626) !important;
+  font-size: 0.75rem;
+}
+
+.dish-spec-edit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.dish-spec-edit-row {
+  display: grid;
+  grid-template-columns: 80px 90px minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.ingredient-product-pick {
+  margin-top: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.ingredient-picker {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ingredient-picker-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ingredient-picker-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.ingredient-picker-result:hover {
+  border-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .dish-spec-edit-row {
+    grid-template-columns: 70px 80px minmax(0, 1fr) auto;
+  }
+}
