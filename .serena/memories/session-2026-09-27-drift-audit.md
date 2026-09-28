@@ -49,6 +49,14 @@ Proven in a rolled-back txn: CREATE OR REPLACE VIEW without WITH resets security
 - git show of CHANGES.md is LF, working file CRLF → compare with tr -d '\r'.
 - The migration-history name match can't see UNTRACKED migration files (git ls-tree).
 
+## Final state (09-28)
+Commits this session: dd66a62 (P3) · cc24a9b (trigger drop + view invoker) · e07a3ea
+(docs) · 1aa8e29 (config.toml + llm.ts) · 05d1fe7 (parse-recipe archive) · f7fde13
+(decisions). main 34 ahead of origin, NOT pushed (owner's call). Tree clean except the
+parallel session's session-2026-09-27-schedule-week-redate.md (not ours, left out).
+Only item 5 (schema baseline) open. Lesson saved to auto-memory:
+feedback-not-live-is-not-delete ("I don't want to delete it, I just don't want it live").
+
 ## Next
 Decide the open items; then P3's first real drafting batch on one small menu, checking
 the saved rows, not the success counts.
