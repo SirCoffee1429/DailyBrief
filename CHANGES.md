@@ -485,3 +485,14 @@ model drafts, a human confirms, nothing downstream reads a draft. **Built, not y
 - **Trap proven, not assumed:** in a rolled-back transaction, `CREATE OR REPLACE VIEW`
   without a `WITH` clause reset `security_invoker` to nothing — any redefinition of this
   view must repeat `with (security_invoker = on)`.
+
+---
+
+### 2026-09-27 — config.toml Covers Every Deployed Function; Dead llm.ts Deleted
+
+**File(s) Changed:** `supabase/config.toml`, `supabase/functions/generate-schedule/llm.ts` (deleted)
+**Type:** `config` — drift-audit item 4. **Summary:** `get-weather` and `generate-order-items`
+added with `verify_jwt = false`, matching how they are deployed; a redeploy that followed the
+config's default (`true`) could have flipped them. Checked by script: all 16 deployed functions
+now match (5 by the default). `llm.ts` was the pre-hybrid scheduler's model boundary, swept
+onto `main` by a 07-25 docs commit; nothing imports it and `auto-scheduler` never had it.

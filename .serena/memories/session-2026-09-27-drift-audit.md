@@ -35,7 +35,8 @@ DONE same evening (owner: "do those three first then I'll review"):
 DROPPED (migration 20260927010000, dropped SQL kept in its comments) · 3
 orderable_menu_dishes → security_invoker (20260927010001; anon still sees 364; linter
 ERROR gone). CHANGES.md: P3 entry logged late + DB-fix entry; 09-21 entry archived.
-STILL OPEN (owner reviewing): 4 config.toml entries + delete llm.ts · 5 schema baseline
+4 DONE: config.toml + get-weather/generate-order-items (all 16 deployed fns match),
+llm.ts deleted. STILL OPEN: 5 schema baseline
 (needs `! supabase login`) · 6 deploy 16318f6 after re-test · 7 keep/delete parse-recipe.
 Proven in a rolled-back txn: CREATE OR REPLACE VIEW without WITH resets security_invoker.
 
