@@ -54,7 +54,9 @@ Commits this session: dd66a62 (P3) · cc24a9b (trigger drop + view invoker) · e
 (docs) · 1aa8e29 (config.toml + llm.ts) · 05d1fe7 (parse-recipe archive) · f7fde13
 (decisions). main 34 ahead of origin, NOT pushed (owner's call). Tree clean except the
 parallel session's session-2026-09-27-schedule-week-redate.md (not ours, left out).
-Only item 5 (schema baseline) open. Lesson saved to auto-memory:
+Item 5 DONE 09-28 (de25e5d): supabase/schema_baseline.sql, verified equal to live;
+ensure_rls event trigger recorded in its header. ALL 7 AUDIT ITEMS CLOSED. CLI 401 root
+cause: stale SUPABASE_ACCESS_TOKEN user env var — `supabase login` with it set re-saves it. Lesson saved to auto-memory:
 feedback-not-live-is-not-delete ("I don't want to delete it, I just don't want it live").
 
 ## Next
