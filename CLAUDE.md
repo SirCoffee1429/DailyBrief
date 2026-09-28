@@ -45,11 +45,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Recipes are a FIXED Excel template in `workbook_sheets.rows` (row 1 `RECIPE:`|name, rows
   3–23 ingredients, row 24 `Assembly:`). **NO yield field** — 494 sheets, 0 say "serves":
   an absolute batch that CANNOT scale to a headcount
-- Dates: use `lib/dates.js` for a local "today", never `toISOString().split()` — UTC rolls
-  over 7pm Central and drops the current day
-- Briefings: `briefings.date` is the day it SHOWS, not when written; same-day posts stack.
-  `defaultBriefingDate()` picks today before 5pm local, tomorrow after — posts are written
-  after dinner service
+- Dates: `lib/dates.js` for local "today", never `toISOString().split()` (UTC flips 7pm Central).
+  Schedule `week_start` is a MONDAY; the grid matches shifts by exact date — re-date BOTH
+- Briefings: `briefings.date` is the day it SHOWS; same-day posts stack. `defaultBriefingDate()`
+  picks today before 5pm local, tomorrow after (posts are written after dinner service)
 - Catalog (`supplier_products`): highest-price-wins is scoped to ONE upload batch — across
   uploads it is a ratchet. `case_price` derives at INGEST (219 catch-weight items; a
   read-time branch gets forgotten and prints ~50x low). `category` seeds via an RPC
@@ -103,6 +102,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - A stuck emailed BEO is swept by `sweepStuckBeoImports()` (`lib/usePendingBeoImports.js`)
   via `useOfficeApprovalCounts` — not `pg_cron`, since it only matters once a human opens
   the app
+- **New `public` tables get RLS switched on automatically** (event trigger `ensure_rls`, not
+  in the repo) — create the policy in the same migration or the app reads nothing. Views
+  are `security_invoker`; CREATE OR REPLACE resets that unless its WITH clause repeats it.
+  Repo migrations CANNOT rebuild prod (3 of 54 match) — never `supabase db push`/`db reset`
 
 ---
 
@@ -114,9 +117,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`, 1,381
   products). **P2 DONE: 15 current menus, 368 dishes CONFIRMED** (2026-09-26,
-  `process-menu` v9; 4 price rules, 364 orderable). P0 cancelled. P3 (`dish_ingredients` +
-  `ingredient_products`) reads only confirmed dishes (`orderable_menu_dishes`); inference
-  stays OUT of the per-BEO path. Phasing: `claudedocs/design_beo_order_guide_2026-09-15.md`
+  `process-menu` v9; 4 price rules, 364 orderable). P0 cancelled. **P3 BUILT, not run**
+  (09-27: tables, `draft-dish-specs` v2, 2 review pages; 0 specs drafted yet); reads
+  only `orderable_menu_dishes`; inference stays OUT of the per-BEO path. Phasing:
+  `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---
 
@@ -124,8 +128,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 
 - **`main`** — primary workspace and Vercel's production branch. Non-scheduler work here.
 - **`auto-scheduler`** — slow-moving side feature (BOH schedule generator), worked in
-  bursts. **Local only, never pushed**, deliberately; its edge function is not deployed.
-  Never merge or push unasked. Merge `main` INTO it at the start of a scheduler session.
+  bursts. **Local only, never pushed**, deliberately. Prod `generate-schedule` v17 is its
+  07-02 commit `7dfe506`; later fixes are NOT deployed. Never merge or push unasked. Merge
+  `main` INTO it at the start of a scheduler session.
 
 ---
 
@@ -134,22 +139,17 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 The global `~/.claude/rules/` files assume conventions this repo does not follow.
 For DailyBrief, the rules below win:
 
-- **Testing:** there is no test runner installed on `main` — the quality gate is
-  `npm run build` plus browser verification. Do not demand 80% coverage,
-  integration tests, or E2E tests; adding a test framework is the owner's call.
-  Deno tests exist: `process-menu/prompt_test.ts` on main, the solver suite on `auto-scheduler`.
+- **Testing:** no test runner on `main` — the gate is `npm run build` plus browser
+  verification; no 80%-coverage/E2E demands (a framework is the owner's call). Deno tests: `process-menu/prompt_test.ts` on main, the solver suite on `auto-scheduler`.
 - **Agents:** never spawn sub-agents automatically — the developer orchestrates; use one
   only when asked. The global agents table names agents that are NOT installed.
-- **Toolset:** SuperClaude is the primary command/agent/skill set — `/sc:*` in
-  `~/.claude/commands/sc/` plus the 20 agents in `~/.claude/agents/` and this repo's
-  `feature-prioritizer`. The `everything-claude-code` bundle under `.claude/` is disabled
-  in `.claude/settings.local.json`; prefer the SuperClaude equivalent.
+- **Toolset:** SuperClaude (`/sc:*`, the 20 agents in `~/.claude/agents/`, this repo's
+  `feature-prioritizer`). The `everything-claude-code` bundle is disabled in
+  `.claude/settings.local.json`; prefer the SuperClaude equivalent.
 - **Commits:** no `Co-Authored-By` trailer — no commit in this repo has one.
-- **Codex is advisory only.** Codex/ChatGPT added `AGENTS.md`, `.codex/`, `.agents/skills/`
-  (all untracked). `AGENTS.md` is a converted copy of this file ending "do not make any
-  changes or create any files or folders" — deliberate (Codex explains, Claude Code edits
-  and deploys), and it does NOT apply here. Its `~/.Codex/...` paths don't exist; the real
-  ones are `~/.claude/...`.
+- **Codex is advisory only.** `AGENTS.md`, `.codex/`, `.agents/skills/` (untracked) are
+  Codex's; `AGENTS.md`'s "make no changes" rule is for Codex and does NOT apply here, and
+  its `~/.Codex/...` paths are really `~/.claude/...`.
 
 ---
 

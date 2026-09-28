@@ -167,126 +167,12 @@
 - 09-17 — Menu Dishes: PDF Drafting + Confirm UI (order guide **P2**) — the catering menu PDFs are read into `menu_dishes` **drafts** and confirmed by a human at `/office/menus`, building the dish vocabulary BEO lines get matched against in P4. A MODEL reads these menus, not coordinates: they are hand-designed marketing layouts where a price column can sit detached from its dish. Safe only because nothing reaches confirmed data without the confirm gate. → [full](docs/changelog/2026-09.md#2026-09-17--menu-dishes-pdf-drafting--confirm-ui-order-guide-p2)
 - 09-18 — Remaining 6 Menus Drafted; menu_dishes Identity Corrected — the unique key `(name, menu_source, season)` silently dropped a dish name that appears twice on one menu at two prices (Breakfast "Yogurt Parfait Bar" $10/ea vs +$6 buffet upgrade); caught only by the RPC's `read` vs `inserted` counters. Key widened to include `menu_section`. → [full](docs/changelog/2026-09.md#2026-09-18--remaining-6-menus-drafted-menu_dishes-identity-corrected)
 - 09-19 — "Additional Salad" Is a Price Rule, Not a Dish — the three "Additional X" rows on Custom Buffets state a positional surcharge (the 2nd salad, whichever it is), not food; ingredients on them would **double-order**, since the real dish is its own row. Flagged `is_price_rule` (sticky: absent from the upsert's SET list) and excluded by the `orderable_menu_dishes` view, where P3 draws its work. → [full](docs/changelog/2026-09.md#2026-09-19--additional-salad-is-a-price-rule-not-a-dish)
+- 09-19 — Menu Upload Accepts Word (.docx) — Gemini cannot read a .docx, so it is converted to HTML **in the browser** (mammoth behind a dynamic import): `npm:mammoth` in the edge function blew the 130s gateway on every cold start, the normal case for a once-a-season upload. The prompt became a shared core plus one source-specific section; in the Word menus `·` SEPARATES dishes while `•` PREFIXES one. Rule 7 now dedupes within a section only (it had eaten a real Plated Dinner side). → [full](docs/changelog/2026-09.md#2026-09-19--menu-upload-accepts-word-docx)
+- 09-21 — Menus Wiped; Price Quantity Bug Fixed Before Reload — hors d'oeuvres were **20x too expensive** on 27 of 28 rows: "Starting at $85 for 20 pieces" was stored as $85 per piece. Added `price_qty` (`base_price` buys `price_qty x price_unit`); "Starting at" became a group FLOOR left empty; a heading's quantity basis now carries down. Prompt assembly now THROWS on a missing splice anchor. All 232 rows wiped at the owner's instruction. Lesson: comparing a parse to its own PDF is fidelity, not correctness. → [full](docs/changelog/2026-09.md#2026-09-21--menus-wiped-price-quantity-bug-fixed-before-reload)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-19 — Menu Upload Accepts Word (.docx)
-
-**File(s) Changed:** `supabase/functions/process-menu/index.ts`,
-`app/src/components/MenuUploadPanel.jsx`, `app/src/lib/menuDrafts.js`,
-`app/package.json` (+ `mammoth`)
-**Type:** `feature` — **not pushed.** `process-menu` deployed v5.
-**Summary:** `/office/menus` now takes Word files as well as PDFs. Verified against the
-club's real `Old_Hawthorne_Fall_Menu.docx`: **87 dishes, every section matching a hand
-count of the source.**
-
-**Details:**
-
-- **Gemini cannot read a .docx at all.** Its document vision only meaningfully
-  understands PDF; other types are treated as plain text, and a .docx is a zip, so raw
-  bytes would arrive as garbage. Checked the Google docs rather than assuming. So the
-  file must be converted, and the only question was where.
-- **Converted in the BROWSER, not the edge function — and that was measured.** The first
-  build did it server-side with `npm:mammoth`; resolving it and its eight dependencies on
-  a cold start pushed the request past the 130s gateway and **failed the first upload
-  every time**, succeeding only on a retry (70-95s warm). A menu is loaded perhaps once a
-  season, so a cold function is the NORMAL case here, not the rare one. Mammoth now runs
-  client-side behind a dynamic `import()`, so it is a **separate 396 kB chunk (124 kB
-  gzipped) fetched only when a Word file is dropped** — the main bundle is unchanged, and
-  the function is back to zero npm dependencies, matching the PDF path it competes with
-  for latency.
-- **The prompt is now a shared core plus ONE swappable section.** Schema and semantics
-  are identical whatever the file was; only how a dish is FOUND differs. The PDF section
-  keeps the spatial rules; the Word section describes markup. Sending HTML with the
-  PDF's "align each price with the dish it is vertically level with" would have been
-  instructions about a page that no longer exists.
-- **Two characters mean opposite things in the same document, and guessing would have
-  been silent garbage.** `·` (middle dot) SEPARATES dishes in an inline run
-  (`Salads (pick one) — Garden Salad · Caesar Salad · Chopped Cobb +$5`), while `•`
-  PREFIXES a single dish name in the seasonal callout. My first draft named the wrong
-  one, having assumed "bullet" from the extracted text; **the real markup came from
-  running mammoth locally under Deno before deploying.**
-- **Rule 7 was dropping a real dish.** "A dish listed twice is one dish" made the model
-  discard "Country Style Green Beans" from *Plated Dinner — Vegetable Side* because it had
-  already emitted it under *Custom Buffet — Sides*. Those are different rows under the
-  identity fixed yesterday, and they are priced separately. Rule now dedupes **within a
-  section only**; the re-run went 86 → 87 dishes and Vegetable Side 3 → 4, matching the
-  page. Found by counting against the source, not by reading the output and nodding.
-- **Sections are qualified by menu part** ("Plated Dinner — Dessert", not "Dessert")
-  because one Word file holds Custom Buffet, Themed Buffets and Plated Dinner, each with
-  its own Salads and Dessert — bare names would collapse different dishes into one row.
-- **The source's own broken price survived as a gap:** the Fall menu prints
-  "Sliced Tenderloin +$" with no number, and it came back `null` rather than guessed.
-- **Fixed a latent season bug found on the way:** `fall` never matched
-  `Old_Hawthorne_Fall_Menu` because `_` is a word character, so an underscore-named
-  seasonal file would have been filed with no season at all. The separator class is now
-  explicit; "Waterfall" and "WinterfellFeast" still correctly do NOT match.
-- **Local Deno turned out to be installed**, which is what made it possible to test
-  mammoth's real API before deploying — `{buffer: Uint8Array}` works, `{arrayBuffer}`
-  fails with the unhelpful "Could not find file in options". `SUPABASE_ACCESS_TOKEN` is
-  set but **401s**, so deploys still go through the MCP tool.
-- **NOT loaded into the database.** Every run was `parseOnly`; `menu_dishes` still holds
-  the 232 rows from the PDFs. See the open question below before loading any Word menu.
-- **Open — these Word menus are a DIFFERENT menu from the PDFs already confirmed.**
-  `Old_Hawthorne_Fall_Menu.docx` carries six Themed Buffets (Southern BBQ $41/person,
-  Fiesta Feast $43 …) that appear nowhere in the PDFs, and a condensed Custom Buffet
-  (5 sides, against 13 in the PDF). Its filename resolves to `menu_source='Seasonal'`,
-  `season='fall'` — **the same identity as the already-confirmed Seasonal-Fall PDF rows**,
-  so loading it would mix two menu versions under one key. Which version is current is
-  the owner's call.
-
----
-
-### 2026-09-21 — Menus Wiped; Price Quantity Bug Fixed Before Reload
-
-**File(s) Changed:** `supabase/migrations/20260921000000_menu_dish_price_qty.sql` (new),
-`supabase/functions/process-menu/index.ts`, `app/src/lib/menuDrafts.js`,
-`app/src/pages/MenuDishes.jsx`
-**Type:** `fix` — `process-menu` deployed v8. **Not pushed.**
-**Summary:** The owner reported the prices were wrong across every menu. One systematic
-bug was ours and is fixed; the rest is that every source document parsed so far was an
-old version. All 232 rows wiped at his instruction, ready for the correct files.
-
-**Details:**
-
-- **Hors d'oeuvres were 20x too expensive, on 27 of 28 rows.** The menu prints
-  "Vegetarian — Starting at $85 for 20 pieces" and prompt rule 5 said to store
-  `base_price 85, price_unit 'piece'` on every dish in the group — which reads as **$85
-  PER PIECE** against a real $4.25. Two distinct errors were tangled in that one rule:
-  - **Nothing could express "a price that buys several."** `price_qty` now records it
-    (`base_price` buys `price_qty x price_unit`), so "$115 for 20 glasses" is
-    representable at all. Defaults to 1, so no existing row changes meaning.
-  - **"Starting at" is a group FLOOR, not a dish price** — the word says outright the
-    dishes do not all cost that. Those prices are now left empty with the wording kept
-    in description. An honest gap beats a number wrong for most of the dishes carrying
-    it. Rule 5 is also now **silent when a dish carries its own price**, since the new
-    hors d'oeuvres menu prices each item individually.
-  - **A quantity basis on a SECTION HEADING now carries down onto each dish**, the way a
-    minimum already did — the new hors d'oeuvres state "per 20 pieces" once on the
-    heading, not on every line.
-- **The confirm gate held.** All 28 affected rows were still drafts; nothing wrong had
-  reached confirmed data.
-- **A silent-failure hazard found while testing, and closed.** The prompt splices its
-  source-specific rules in at an anchor string, and rewording rule 3 broke that anchor —
-  the only symptom would have been a quietly worse parse with **no layout rules at all**.
-  Assembly now throws when the anchor is missing, and a local Deno harness asserts both
-  paths splice correctly **against the real file** (it slices the actual source rather
-  than retyping it).
-- **Local had drifted from deployed** — the anchor was corrected in the deploy payload
-  but not in the file on disk. Caught by grepping rather than assuming. Both now match.
-- **All 232 rows deleted at the owner's explicit instruction**, including 124 he had
-  confirmed and the 3 `is_price_rule` flags. Table, constraints, RPCs and the
-  `orderable_menu_dishes` view are untouched — only data. This was necessary because the
-  confirmed-dish protection would otherwise have **refused the corrected prices** and
-  reported it only as `skipped_confirmed`.
-- **A verification lesson worth keeping.** The earlier claim "80/80 exact, every upcharge
-  correct" compared the parse against the SAME PDF it came from. That is a fidelity
-  check, and it was reported as a correctness check. It cannot detect a stale document or
-  a wrong price on the page, and the owner found what it could not.
-
----
 
 ### 2026-09-23 → 09-25 — BEO Parser: Three Silent Losses Found and Fixed
 
@@ -471,3 +357,131 @@ actually built.
   to keep this file under 500 lines. The first attempt searched for LF separators in a
   CRLF file, took 212 lines (four entries) and left no summaries — caught by the line
   count, restored from git, redone with a one-entry guard.
+
+---
+
+### 2026-09-27 — Week of 09-28 Schedule Re-dated from 2020
+
+**File(s) Changed:** data only (`schedules` row `5352d2bf…`) **Type:** `fix`
+**Summary:** The current week's schedule had `week_start` 2026-09-27 (a Sunday) while all 115
+shifts were still dated 2020-09-28 → 10-04, so the grid (days built from `week_start`,
+shifts matched by exact date) had nothing to show. Fixed at the owner's instruction.
+
+**Details:**
+
+- `week_start` → **2026-09-28** (Monday); every shift date + 6 years, order preserved.
+  2020-09-28 and 2026-09-28 are both Mondays, so each shift keeps its weekday.
+- Verified: 115 shifts, Mon 9/28 → Sun 10/4 (9/13/16/20/21/20/16), 5 announcements intact.
+- The Change Week button could not do this: it shifts by `week_start`'s gap (1 day here),
+  which would have left the shifts in 2020.
+- Left as-is by the owner's choice: the past 9/21 week (filed as `2024-09-21`, a Saturday),
+  the `2024-10-21` duplicate and four small 2024 test rows. Not worth fixing now that the week is over.
+
+---
+
+### 2026-09-27 — Drift Audit: Every Deployed Function vs the Repo; Advisors; Migration History
+
+**File(s) Changed:** none in code, data or deploys — `CHANGES.md`, `docs/changelog/2026-09.md`,
+`CLAUDE.md`, memory. **Type:** read-only audit.
+**Summary:** Checked that what runs in production is what the repo says. It mostly is; the
+exceptions are listed below, and each fix is the owner's call.
+
+**Details:**
+
+- **P3 work in the tree (written ~3am, unlogged, still UNCOMMITTED) matches live exactly.**
+  `draft-dish-specs` v2 = local `index.ts`; `20260927000000_create_dish_specs.sql` holds BOTH
+  applied migrations (`create_dish_specs` + `dish_ingredient_names`) — all 5 function bodies
+  hash-equal live, tables/views/policies present, `orderable_menu_dishes` now carries
+  `price_qty` + `spec_*`. Data: 364 orderable dishes all `spec_status = none`, 0
+  `dish_ingredients`, 0 `ingredient_products`. `npm run build` passes.
+- **All 15 deployed edge functions diffed against the repo:** 12 identical;
+  `categorize-recipe` and `receive-beo-email` differ in comments/whitespace only.
+  **`generate-schedule` v17 = `auto-scheduler` commit `7dfe506` (07-02)** — the 08-03
+  double-book/fairness fix (`16318f6`) and pins & quotas (`86045f5`) were never deployed.
+  **`parse-recipe` is deployed with no source on any branch and no caller in the app.**
+- **Frontend:** Vercel production = `origin/main` = `04d8396`, 28 commits behind `main`. It
+  never references `menu_dishes`, so the backend changes since cannot have broken it.
+- **Advisors:** `handle_new_user` (trigger on `auth.users`) inserts into `public.profiles`,
+  **which does not exist** — any Supabase Auth sign-up would fail; not in the repo.
+  `rls_auto_enable` (event trigger `ensure_rls`) turns RLS on for every new public table —
+  not in the repo either. `orderable_menu_dishes` has been SECURITY DEFINER since 09-19; no
+  real exposure (`menu_dishes` is allow-all). "Anon can execute" on the two trigger functions
+  is moot — Postgres will not call a trigger function directly. 11 of the 12 mutable
+  `search_path` warnings are SECURITY INVOKER functions.
+- **Migration history cannot rebuild prod:** only 3 of 54 applied migrations match a repo
+  file by version+name; ~19 applied (mostly March–May) have no file on any branch; 9 repo
+  files were never applied under their own name; pre-migration base tables were never in
+  the repo. **Never `supabase db push` / `db reset`.** The scrapped `event_tasks.portion`
+  column is confirmed gone.
+- `config.toml` lacks `get-weather` and `generate-order-items` (deployed `verify_jwt=false`).
+  `supabase/functions/generate-schedule/llm.ts` on `main` is dead (old design, swept in by
+  a 07-25 docs commit, imports a file that does not exist on `main`).
+- **Method:** `SUPABASE_ACCESS_TOKEN` still 401s, so deployed source came from the MCP's
+  `get_edge_function`, copied to scratch and diffed with CR and trailing whitespace
+  ignored — copying drops trailing spaces, which showed as false diffs until normalised.
+  Outputs too large to return inline land as JSON on disk and were extracted by script.
+
+**Open (owner's call):** commit P3; drop the `handle_new_user` trigger (or create
+`profiles`) before real auth; `orderable_menu_dishes` → `security_invoker`; add the two
+`config.toml` entries and delete `llm.ts`; snapshot the live schema into the repo (needs
+`supabase login`); deploy `16318f6` after a re-test; keep or delete `parse-recipe`.
+
+---
+
+### 2026-09-27 — Dish Specs + Ingredient Mapping Built (order guide P3) — logged late
+
+**File(s) Changed:** `supabase/migrations/20260927000000_create_dish_specs.sql`,
+`supabase/functions/draft-dish-specs/index.ts`, `supabase/config.toml`,
+`app/src/pages/DishSpecs.jsx`, `app/src/pages/IngredientProducts.jsx`,
+`app/src/lib/orderUnits.js`, `app/src/lib/useKeyboardReview.js`, `app/src/App.jsx`,
+`app/src/components/OfficeLayout.jsx`, `app/src/pages/MenuDishes.jsx`, `app/src/index.css`
+**Type:** `feature` + `migration` — built in the early hours of 09-27, deployed
+(`draft-dish-specs` v2, both migrations applied) but not logged or committed until now.
+**Summary:** The P3 half of the order guide: what one serving of each confirmed dish is
+made of, and which catalog product each ingredient is bought as. Same shape as P2 — a
+model drafts, a human confirms, nothing downstream reads a draft. **Built, not yet run:**
+0 dishes specced, 0 ingredients mapped.
+
+**Details:**
+
+- **Schema:** `menu_dishes` gains `spec_basis` / `spec_status` / `spec_note` /
+  `spec_confirmed_at`; new `dish_ingredients` (portion per ONE basis unit, `oz|lb|floz|each`
+  only) and `ingredient_products` (one catalog product per ingredient name, confirm once).
+  RPCs `save_dish_spec` (refuses a non-orderable dish), `save_dish_spec_drafts` (never
+  overwrites a confirmed spec), `upsert_ingredient_product_drafts`, `dish_ingredient_names`,
+  `dish_spec_progress`; views `dish_ingredient_lines`, `ingredient_usage`. Re-running the
+  `orderable_menu_dishes` definition also restored its missing `price_qty` column.
+- **`draft-dish-specs`** (`verify_jwt=false`, gemini-3-flash-preview, no temperature —
+  temperature 0 looped into the 130s deadline): mode `ingredients` (≤12 dishes; basis is
+  DERIVED from the dish, never asked of the model) and mode `products` (≤60 names against
+  the paged 1,381-product catalog; an invented product number becomes null with a reason).
+- **Owner decisions (migration header):** raw ingredients as purchased; themed buffets
+  specced flat per guest; flavour-choice dishes as the shared base with `spec_note`.
+- **Pages:** `/office/dish-specs` ("Dish Ingredients") and `/office/ingredients`
+  ("Ingredient Products"). `orderUnits.js` holds the pure portion→pack arithmetic P4 will
+  reuse (no cross-class conversion — a gap with a reason). The keyboard review moved out of
+  `MenuDishes.jsx` into the shared `useKeyboardReview.js`; all three reviews use it.
+- **Verified:** deployed function and applied migrations byte/hash-identical to these files
+  (see the drift-audit entry); `npm run build` passes. **Not browser-tested.**
+
+---
+
+### 2026-09-27 — Orphan Sign-up Trigger Dropped; orderable_menu_dishes Runs as Caller
+
+**File(s) Changed:** `supabase/migrations/20260927010000_drop_orphan_handle_new_user.sql`,
+`supabase/migrations/20260927010001_orderable_menu_dishes_security_invoker.sql` (both new)
+**Type:** `migration` — applied to prod (recorded as `20260928040925` / `…040929`).
+**Summary:** Items 2 and 3 from the drift audit, at the owner's instruction.
+
+**Details:**
+
+- **Dropped `on_auth_user_created` + `public.handle_new_user()`**: an AFTER INSERT trigger on
+  `auth.users` writing to a `public.profiles` table that does not exist, so any Supabase
+  Auth sign-up would have failed. Never in the repo. The exact dropped definitions are kept
+  in the migration file. The one existing auth user is untouched.
+- **`orderable_menu_dishes` → `security_invoker = on`**, matching the two views that read
+  through it. Verified as the `anon` role: 364 rows before and after, equal to the base
+  table. The linter's only ERROR is gone; 11 low-risk warnings remain.
+- **Trap proven, not assumed:** in a rolled-back transaction, `CREATE OR REPLACE VIEW`
+  without a `WITH` clause reset `security_invoker` to nothing — any redefinition of this
+  view must repeat `with (security_invoker = on)`.
