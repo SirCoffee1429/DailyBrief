@@ -117,8 +117,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`, 1,381
   products). **P2 DONE: 15 current menus, 368 dishes CONFIRMED** (2026-09-26,
-  `process-menu` v9; 4 price rules, 364 orderable). P0 cancelled. **P3 BUILT, not run**
-  (09-27: tables, `draft-dish-specs` v2, 2 review pages; 0 specs drafted yet); reads
+  `process-menu` v9; 4 price rules, 364 orderable). P0 cancelled. **P3 IN PROGRESS** (10-01:
+  42/364 dishes specced, 14 confirmed; 116/122 ingredient→product matches confirmed); reads
   only `orderable_menu_dishes`; inference stays OUT of the per-BEO path. Phasing:
   `claudedocs/design_beo_order_guide_2026-09-15.md`
 

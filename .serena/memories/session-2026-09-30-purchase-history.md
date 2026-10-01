@@ -32,6 +32,16 @@ NO prices from it.
 - CLI deploy stores COMPILED JS → deployed-vs-repo byte diff fails; grep the download instead.
 - deno check fails on an openai type in Supabase's edge-runtime.d.ts (environment, not code).
 
+## 2026-10-01 — dishes shown on Ingredient Products (commit 1080aa6)
+- Owner: "I need it to show me what dish its for so I know what product to match it with."
+- Migration 20261001000000: ingredient_usage gains `dishes` jsonb (name, menu, season, qty,
+  unit, basis), appended; WITH security_invoker repeated. Verified 122/122 rows len(dishes) =
+  dish_count. Row shows 4 dishes + "+N more". BASIS_LABEL moved to orderUnits.js (shared with
+  DishSpecs). Owner checked it in the browser (office password gate: owner unlocks, not me).
+- Progress (owner): 42/364 dishes specced (Hors d'Oeuvres, Platters, Themed Buffets), 14
+  confirmed; 116/122 ingredient matches confirmed, 6 drafts.
+- Suggested, not built: give the AI matcher the same dish context ("cheese" for a board vs a dip).
+
 ## Next
 Owner drafts more menus; then run "Match products" on Ingredient Products and review the
 picks (watch for NOT BOUGHT BEFORE notes). Purchase-history xlsx left untracked (owner's call).

@@ -494,3 +494,5 @@ its dishes: name, menu (with season), and the portion, e.g. "1 oz per piece".
   Checked: 122/122 rows have one entry per dish, matching `dish_count`.
 - First 4 dishes shown, "+N more" expands. `BASIS_LABEL` moved to `orderUnits.js` and shared
   with Dish Ingredients instead of duplicated. Build passes; owner checked it in the browser.
+- **P3 progress (owner's review, as of 10-01):** 42/364 dishes specced — Hors d'Oeuvres, Platters,
+  Themed Buffets — 14 confirmed; 116 of 122 ingredient→product matches confirmed, 6 to review.
