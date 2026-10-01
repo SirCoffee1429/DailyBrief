@@ -43,5 +43,10 @@ NO prices from it.
 - Suggested, not built: give the AI matcher the same dish context ("cheese" for a board vs a dip).
 
 ## Next
+**AGREED NEXT TASK (owner, 10-01): pass each ingredient's dishes to the AI matcher** —
+draft-dish-specs products mode reads ingredient_usage (`ingredient_name, units,
+mapping_status`); add `dishes` to that select and to each ingredient line in the prompt
+(name + menu + portion), keeping the batch of 40 inside the 130s deadline. Redeploy (CLI from
+disk; verify by grepping the download — it is compiled JS). 6 mappings are still drafts.
 Owner drafts more menus; then run "Match products" on Ingredient Products and review the
 picks (watch for NOT BOUGHT BEFORE notes). Purchase-history xlsx left untracked (owner's call).
