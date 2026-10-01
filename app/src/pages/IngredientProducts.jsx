@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { useKeyboardReview } from '../lib/useKeyboardReview.js'
-import { unitFit, fitLabel } from '../lib/orderUnits.js'
+import { unitFit, fitLabel, BASIS_LABEL } from '../lib/orderUnits.js'
 import { formatDateOnly } from '../lib/dates.js'
 
 // 40 names per request against the whole catalog (~1,400 products) in the prompt.
@@ -223,6 +223,7 @@ function MappingRow({ row, isSelected, isEditing, busy, onSelect, onEdit, onCanc
                         <span className="badge badge-warning">Not bought from this catalog</span>
                     )}
                 </div>
+                <DishList dishes={row.dishes || []} />
 
                 {row.product_id && (
                     <div className="ingredient-product-pick">
@@ -270,6 +271,39 @@ function MappingRow({ row, isSelected, isEditing, busy, onSelect, onEdit, onCanc
                     )}
                 </div>
             </div>
+        </div>
+    )
+}
+
+// The dishes an ingredient is for, so the reviewer can pick the product the DISH needs:
+// "cheese" on a Charcuterie Board and in a Buffalo Chicken Dip are bought differently.
+// The first few are shown; the rest open on demand so a pantry staple used by dozens of
+// dishes does not bury the list.
+const DISHES_SHOWN = 4
+
+function DishList({ dishes }) {
+    const [expanded, setExpanded] = useState(false)
+    const shown = expanded ? dishes : dishes.slice(0, DISHES_SHOWN)
+    const hidden = dishes.length - shown.length
+
+    return (
+        <div className="ingredient-dishes">
+            {shown.map((d, i) => (
+                <div key={`${d.menu}-${d.season}-${d.name}-${i}`}>
+                    <span className="ingredient-dish-name">{d.name}</span>
+                    {' — '}{d.season ? `${d.menu} (${d.season})` : d.menu}
+                    {' · '}{Number(d.qty)} {d.unit === 'floz' ? 'fl oz' : d.unit} per {BASIS_LABEL[d.basis] || d.basis || 'serving'}
+                </div>
+            ))}
+            {dishes.length > DISHES_SHOWN && (
+                <button
+                    type="button"
+                    className="ingredient-dishes-more"
+                    onClick={e => { e.stopPropagation(); setExpanded(v => !v) }}
+                >
+                    {expanded ? 'Show fewer' : `+${hidden} more dish${hidden === 1 ? '' : 'es'}`}
+                </button>
+            )}
         </div>
     )
 }

@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { useKeyboardReview } from '../lib/useKeyboardReview.js'
-import { PORTION_UNIT_NAMES, specCost, lineGap, GAP_REASONS } from '../lib/orderUnits.js'
+import { PORTION_UNIT_NAMES, BASIS_LABEL, specCost, lineGap, GAP_REASONS } from '../lib/orderUnits.js'
 
 const BASES = ['person', 'each', 'piece', 'dozen', 'tray', 'lb']
-const BASIS_LABEL = { person: 'guest', each: 'each', piece: 'piece', dozen: 'dozen', tray: 'tray', lb: 'lb' }
 
 // 8 dishes per request: the 8 themed buffets (~20 ingredients each, the heaviest
 // dishes on any menu) drafted in 15s on 2026-09-27, far inside the 130s deadline. The

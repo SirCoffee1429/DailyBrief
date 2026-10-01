@@ -7219,6 +7219,30 @@ tr.beo-completed td .beo-check {
   width: 100%;
 }
 
+.ingredient-dishes {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ingredient-dish-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.ingredient-dishes-more {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
 .ingredient-product-pick {
   margin-top: var(--space-2);
   font-size: 0.85rem;

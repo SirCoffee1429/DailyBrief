@@ -479,3 +479,18 @@ the matcher and the hand picker both put what is bought first.
   so a deployed-vs-repo byte diff no longer works for this function (MCP deploys keep the
   original TypeScript). The Deno type check could not run (an `openai` type inside Supabase's
   own runtime declarations fails to resolve — unrelated to this code).
+
+---
+
+### 2026-10-01 — Ingredient Products Shows Which Dishes Use Each Ingredient
+
+**File(s) Changed:** `supabase/migrations/20261001000000_ingredient_usage_dishes.sql` (new),
+`app/src/pages/IngredientProducts.jsx`, `app/src/lib/orderUnits.js`, `app/src/pages/DishSpecs.jsx`,
+`app/src/index.css` **Type:** `feature` + `migration` (applied).
+**Summary:** Owner request — to pick the right product he needs to see what an ingredient is
+FOR ("cheese" on a Charcuterie Board vs in a Buffalo Chicken Dip). Each ingredient row now lists
+its dishes: name, menu (with season), and the portion, e.g. "1 oz per piece".
+- `ingredient_usage` gains a `dishes` jsonb column (appended; `security_invoker` repeated).
+  Checked: 122/122 rows have one entry per dish, matching `dish_count`.
+- First 4 dishes shown, "+N more" expands. `BASIS_LABEL` moved to `orderUnits.js` and shared
+  with Dish Ingredients instead of duplicated. Build passes; owner checked it in the browser.

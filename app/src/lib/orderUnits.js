@@ -18,6 +18,10 @@ const PORTION_UNITS = {
 
 export const PORTION_UNIT_NAMES = Object.keys(PORTION_UNITS)
 
+// How a dish's spec basis reads after "per": a portion is per one guest, one tray, etc.
+// Shared by the dish-spec and ingredient-product reviews so both say it the same way.
+export const BASIS_LABEL = { person: 'guest', each: 'each', piece: 'piece', dozen: 'dozen', tray: 'tray', lb: 'lb' }
+
 // Why a line cannot be costed, in words a reviewer can act on.
 export const GAP_REASONS = {
     unmapped: 'No product mapped yet',
