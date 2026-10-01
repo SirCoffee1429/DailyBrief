@@ -48,10 +48,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   Schedule `week_start` is a MONDAY; the grid matches shifts by exact date — re-date BOTH
 - Briefings: `briefings.date` is the day it SHOWS; same-day posts stack. `defaultBriefingDate()`
   picks today before 5pm local, tomorrow after (posts are written after dinner service)
-- Catalog (`supplier_products`): highest-price-wins is scoped to ONE upload batch — across
-  uploads it is a ratchet. `case_price` derives at INGEST (219 catch-weight items; a
-  read-time branch gets forgotten and prints ~50x low). `category` seeds via an RPC
-  filling only NULLs
+- Catalog (`supplier_products`): highest-price-wins is per upload BATCH (across uploads, a
+  ratchet). `case_price` derives at INGEST (219 catch-weight; read-time math prints ~50x low).
+  `category` seeds via an RPC filling only NULLs. `last_purchased_on` loads from PFG's purchase
+  worksheet — NEVER its prices (catch-weight shows the per-lb price, unmarked)
 - Menus (`menu_dishes`, P2): hand-designed marketing layouts, so a MODEL reads them, not
   coordinates. `.docx` converts to HTML **in the browser** (Gemini can't read .docx;
   `npm:mammoth` in the edge fn blew the 130s cold start). Safe only behind the confirm gate

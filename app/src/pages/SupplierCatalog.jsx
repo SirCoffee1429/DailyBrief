@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
 import CatalogUploadPanel from '../components/CatalogUploadPanel.jsx'
 import CategorySeedPanel from '../components/CategorySeedPanel.jsx'
+import PurchaseHistoryPanel from '../components/PurchaseHistoryPanel.jsx'
+import { formatDateOnly } from '../lib/dates.js'
 
 const PAGE_SIZE = 50
 
@@ -138,6 +140,7 @@ export default function SupplierCatalog() {
                 <>
                     <CatalogUploadPanel onCommitted={() => { setRefreshKey(k => k + 1); setPage(0); load() }} />
                     <CategorySeedPanel onSeeded={() => { setRefreshKey(k => k + 1); load() }} />
+                    <PurchaseHistoryPanel onRecorded={() => { setRefreshKey(k => k + 1); load() }} />
                 </>
             )}
 
@@ -186,7 +189,7 @@ function ProductRow({ product }) {
     const {
         description, custom_description, brand, product_number, pack_size,
         price, price_basis, case_price, price_varies, pack_total_base, base_unit, source_lists,
-        category, item_group,
+        category, item_group, last_purchased_on, last_purchase_qty, last_purchase_uom,
     } = product
 
     return (
@@ -200,6 +203,11 @@ function ProductRow({ product }) {
                     {pack_total_base && <span>{round(pack_total_base)} {base_unit}/case</span>}
                     {category && <span className="catalog-row-tag">{item_group || category}</span>}
                 </div>
+                {last_purchased_on && (
+                    <div className="catalog-row-lists">
+                        Last bought {formatDateOnly(last_purchased_on)} · {last_purchase_qty} {String(last_purchase_uom || '').toLowerCase()}
+                    </div>
+                )}
                 {source_lists?.length > 0 && (
                     <div className="catalog-row-lists">{source_lists.join(' · ')}</div>
                 )}

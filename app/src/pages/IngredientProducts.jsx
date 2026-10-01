@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { useKeyboardReview } from '../lib/useKeyboardReview.js'
 import { unitFit, fitLabel } from '../lib/orderUnits.js'
+import { formatDateOnly } from '../lib/dates.js'
 
 // 40 names per request against the whole catalog (~1,400 products) in the prompt.
 // The edge function refuses more than 60.
@@ -232,6 +233,9 @@ function MappingRow({ row, isSelected, isEditing, busy, onSelect, onEdit, onCanc
                             <span>{row.pack_size}</span>
                             {row.case_price != null && <span>${Number(row.case_price).toFixed(2)}/case</span>}
                             {row.price_varies && <span className="badge badge-warning">price varies</span>}
+                            {row.last_purchased_on
+                                ? <span>last bought {formatDateOnly(row.last_purchased_on)}</span>
+                                : <span className="dish-spec-gap">no purchase on record</span>}
                         </div>
                         <div className="catalog-row-meta">
                             {fits.map(({ unit, fit }) => (
@@ -286,7 +290,10 @@ function ProductPicker({ initial, busy, onPick, onCancel }) {
             setSearching(true)
             let request = supabase
                 .from('supplier_products')
-                .select('id, product_number, description, brand, pack_size, case_price, base_unit, category')
+                .select('id, product_number, description, brand, pack_size, case_price, base_unit, category, last_purchased_on')
+                // What the kitchen actually buys comes first, most recent first; the limit
+                // below would otherwise cut a bought product off behind 25 alphabetical ones.
+                .order('last_purchased_on', { ascending: false, nullsFirst: false })
                 .order('description')
                 .limit(25)
             for (const w of words) {
@@ -319,6 +326,7 @@ function ProductPicker({ initial, busy, onPick, onCancel }) {
                         <span className="catalog-row-meta">
                             #{p.product_number} · {p.pack_size}
                             {p.case_price != null && ` · $${Number(p.case_price).toFixed(2)}/case`}
+                            {p.last_purchased_on && ` · bought ${formatDateOnly(p.last_purchased_on)}`}
                         </span>
                     </button>
                 ))}

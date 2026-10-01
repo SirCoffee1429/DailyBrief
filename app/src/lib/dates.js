@@ -46,3 +46,12 @@ export function formatPostTime(timestamp) {
 export function formatBriefingByline(briefing) {
     return [briefing.author, formatPostTime(briefing.created_at)].filter(Boolean).join(' · ')
 }
+
+// A stored DATE column ("2026-09-28") shown as "9/28/2026", built from its own parts.
+// Never via new Date(): a bare date parses as UTC midnight and displays as the previous
+// day anywhere west of UTC.
+export function formatDateOnly(iso) {
+    if (!iso) return '—'
+    const [year, month, day] = String(iso).split('-')
+    return `${Number(month)}/${Number(day)}/${year}`
+}

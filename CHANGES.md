@@ -170,57 +170,11 @@
 - 09-19 — Menu Upload Accepts Word (.docx) — Gemini cannot read a .docx, so it is converted to HTML **in the browser** (mammoth behind a dynamic import): `npm:mammoth` in the edge function blew the 130s gateway on every cold start, the normal case for a once-a-season upload. The prompt became a shared core plus one source-specific section; in the Word menus `·` SEPARATES dishes while `•` PREFIXES one. Rule 7 now dedupes within a section only (it had eaten a real Plated Dinner side). → [full](docs/changelog/2026-09.md#2026-09-19--menu-upload-accepts-word-docx)
 - 09-21 — Menus Wiped; Price Quantity Bug Fixed Before Reload — hors d'oeuvres were **20x too expensive** on 27 of 28 rows: "Starting at $85 for 20 pieces" was stored as $85 per piece. Added `price_qty` (`base_price` buys `price_qty x price_unit`); "Starting at" became a group FLOOR left empty; a heading's quantity basis now carries down. Prompt assembly now THROWS on a missing splice anchor. All 232 rows wiped at the owner's instruction. Lesson: comparing a parse to its own PDF is fidelity, not correctness. → [full](docs/changelog/2026-09.md#2026-09-21--menus-wiped-price-quantity-bug-fixed-before-reload)
 - 09-23→25 — BEO Parser: Three Silent Losses Found and Fixed (`process-beo` v26) — a "Gemini timeout 500" was the gate rightly refusing a packet the fallback cannot finish in 130s. v24: a centre line with no label and no qty opens an item (SUMMARY take-out page lost 24 lines). v25: **page 2+ of a BEO continues its table with no section header** — every multi-page BEO since v22 had lost it (Eurofins' whole plated dinner). v26: the gate now CONSUMES each printed line once; matching by presence missed 278/1508 deleted lines. Lesson: measure a gate by mutation, not by clean passes. → [full](docs/changelog/2026-09.md#2026-09-23--09-25--beo-parser-three-silent-losses-found-and-fixed)
+- 09-23→26 — 15 Current Menus Loaded as Drafts; Parser v9 (`process-menu` v9) — the owner's corrected 2026 set, 369 drafts. Fixed: spring/summer seasons, an `lb` price unit, minimums counted in the price's unit, "A or B" splits, themed-buffet packages kept as ONE dish (8 prices had been lost), and two Breakfast prices the model **invented**. Gemini 503s retried within one 130s deadline. Every loaded price matched the checked parse. → [full](docs/changelog/2026-09.md#2026-09-23--09-26--15-current-menus-loaded-as-drafts-parser-v9)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-23 → 09-26 — 15 Current Menus Loaded as Drafts; Parser v9
-
-**File(s) Changed:** `supabase/functions/process-menu/index.ts`, `app/src/lib/menuDrafts.js`,
-`app/src/pages/MenuDishes.jsx`, `supabase/migrations/20260923000000_menu_dishes_spring_summer.sql`,
-`supabase/migrations/20260926000000_menu_dishes_price_unit_lb.sql` (both new),
-`New Catering and Event Menus 2026/` (owner's current menus: 7 new, 4 replaced, 1 renamed)
-**Type:** `fix` + `migration` — `process-menu` deployed v8→**v9**. **Not committed.**
-**Summary:** The owner's corrected 2026 menu set (15 PDFs) was read, checked line by line
-against the pages, the parser fixed where it was wrong, and **369 dishes loaded as
-drafts**. Nothing is confirmed yet — the owner reviews in `/office/menus`.
-
-**Details:**
-
-- **Spring & Summer seasons.** The set added two seasonal menus; the table, the function
-  and `menuSourceFromFilename` only knew fall/winter, so they would have filed as
-  year-round menus named "Seasonal - Spring". All three now take four seasons.
-- **Breakfast: two prices the parser invented.** The page prints four prices for five
-  sandwiches; v8 stored Ham, Egg & Cheddar at **$6** (on the page nowhere; really $8) and
-  gave the unpriced Gouda Croissant $8. v9 reads $8 and blank. A human gate still owns it.
-- **Themed Buffets: 8 package prices lost.** "Southern BBQ $41" became 8 unpriced
-  component rows (82 total). The one-package-one-dish rule lived only in the Word path;
-  moved to the shared core (rule 10). Now 8 dishes, all prices matching the page, and the
-  optional chicken swap stays in the description instead of ordering on top.
-- **`lb` price unit** (migration + review dropdown): "$180 / 4lbs" was "$180 for 4" of
-  nothing. The review page's own unit list needed it too, or editing the row blanks it.
-- **Minimums count in the price's unit** — "2 dozen" beside a per-dozen price is 2, not
-  24 (read as dozens, 24 is 12x). A station/package total is not a per-dish minimum.
-- **"A or B" splits** into two dishes (owner's call), e.g. "Garden Salad or Caesar".
-- **Gemini 503 retry**: 10 of 15 files failed first try on 09-23 with "high demand".
-  Retries 503/429 within one 130s deadline; the v9 runs had no failures.
-- **Verified three ways:** v9 parse diffed against v8 (every change accounted for, then
-  re-checked on the page); deployed source compared with local; the loaded rows diffed
-  against the checked parse — **every price identical**. The load is a fresh model read,
-  so a few non-price details differ from the checked run (listed below).
-
-**For the owner's review** (the parse matches the pages; whether the pages are right is
-his call): Gouda Croissant has no price on the menu; the 6 pizzas carry min 30 each but
-the minimum is station-wide (rule ignored — clear it); "Prosciutto, Tomato, Balsamic
-Drizzle" loaded as a row but is Burrata Crostini's topping (Not a dish); Omelet Station
-lost its "Minimum 20"; mark Additional Salad/side/dessert as price rules again (the wipe
-cleared the flags). Menu typos: "HOR D'OEURVRES", "Angle Food Cake", "Paltters".
-
-**Resolved from the entry above:** the re-check of events approved before `process-beo`
-v25 was done by the owner and passed (2026-09-26).
-
----
 
 ### 2026-09-26 — Menu Review Complete; Three Corrections After Confirm
 
@@ -487,3 +441,41 @@ it. **Not a migration; never run it against prod.**
   and fails unless run as `env -u SUPABASE_ACCESS_TOKEN supabase …`. (An earlier claim that
   `supabase login` silently re-saves an env token was a guess, never verified.)
 - Regenerating needs Docker Desktop running (`db dump` runs `pg_dump` in a container).
+
+---
+
+### 2026-09-30 — Purchase History: Ingredient Matching Prefers What the Kitchen Buys
+
+**File(s) Changed:** `supabase/migrations/20260930000000_supplier_purchase_history.sql` (new),
+`app/src/lib/catalogParse.js`, `app/src/components/PurchaseHistoryPanel.jsx` (new),
+`app/src/pages/SupplierCatalog.jsx`, `app/src/pages/IngredientProducts.jsx`, `app/src/lib/dates.js`,
+`supabase/functions/draft-dish-specs/index.ts` **Type:** `feature` + `migration` —
+`draft-dish-specs` deployed v2→**v3**; migration applied.
+**Summary:** P3's matcher chose from all 1,381 catalog products with no idea which ones the
+club orders. PFG's purchase-history worksheet now records each product's last purchase, and
+the matcher and the hand picker both put what is bought first.
+
+**Details:**
+
+- **Loaded by the owner from the new Catalog panel:** 631 products, last bought 2026-02-05 →
+  09-29; **611 updated, 20 added**. Checked in the table: 1,401 products, 631 dated, 0 prices
+  changed, 0 new products priced.
+- **Prices deliberately NOT taken.** The worksheet's Price is a bare number, and for
+  catch-weight items it is the **per-pound** price (Parmesan 5.38 against a $107.60 case;
+  a new beef tenderloin case at "11.85"). Read as case prices: 20–50x too cheap. The 20 new
+  products arrive **unpriced** until the next order-guide load.
+- `record_purchase_history` (one RPC): a last-purchase date never moves backwards; nothing
+  else on an existing product is touched. A third export shape, so its header is FOUND, not
+  assumed (it sits two rows lower than the order guides').
+- **Matcher (v3):** bought products listed first and marked `BOUGHT <date>` (or `BOUGHT` for
+  the order guides' older "Purchase History" list); new rule 3 picks a bought product when one
+  fits and opens the note `NOT BOUGHT BEFORE:` otherwise. **Not yet run on real ingredients.**
+- **Pages:** catalog rows show "Last bought 9/28/2026 · 13 cs"; the picker sorts bought first
+  (before its 25-row limit); a mapped product shows its last purchase or, in red, "no purchase
+  on record". New `formatDateOnly` in `lib/dates.js` (a bare DATE via `new Date()` shows a day early).
+- **Verified:** the shipped parser run headless on the real file (631 / 0 unreadable / same
+  range as an independent count); `npm run build` passes; the deployed v3 contains the new rule.
+- **Deploy note:** this was the first CLI deploy here. The CLI stores **compiled JavaScript**,
+  so a deployed-vs-repo byte diff no longer works for this function (MCP deploys keep the
+  original TypeScript). The Deno type check could not run (an `openai` type inside Supabase's
+  own runtime declarations fails to resolve — unrelated to this code).

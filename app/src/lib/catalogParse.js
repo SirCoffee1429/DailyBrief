@@ -209,6 +209,82 @@ export function parseMasterCategories({ sheetNames, sheetToRows }) {
     }
 }
 
+// "13 CS 9/28/2026 12:00 AM" -> the LAST purchase of a product: quantity, unit, date.
+// The date is rebuilt as YYYY-MM-DD from its own digits, never through a Date object —
+// a local-midnight timestamp shifted to UTC lands on the previous day after 7pm Central.
+const LAST_PURCHASE = /([\d.]+)\s+([A-Za-z]+)\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/
+
+export function parseLastPurchase(raw) {
+    const match = String(raw ?? '').match(LAST_PURCHASE)
+    if (!match) return null
+    const [, qty, uom, month, day, year] = match
+    return {
+        last_purchase_qty: parseFloat(qty),
+        last_purchase_uom: uom.toUpperCase(),
+        last_purchased_on: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
+    }
+}
+
+// Reads the "Inventory Worksheet" purchase-history export — a THIRD shape, unlike both the
+// order guides and the master list: sheet "Inventory Worksheet Report", a title block, and
+// a header carrying `Purchase History` (the last purchase) beside `Product Number`.
+//
+// The header is FOUND, not assumed at a fixed row: this export already sits two rows lower
+// than the order guides do, and a fixed offset would silently read the title block.
+//
+// Each row carries the product's own fields too, because a product bought but missing
+// from the catalog is ADDED by record_purchase_history. Its Price column is deliberately
+// ignored: for catch-weight items it is the per-pound price with no "/lb" marker.
+export function parsePurchaseHistory({ sheetNames, sheetToRows }, fileName) {
+    for (const name of sheetNames) {
+        const grid = (sheetToRows(name) || []).map((r) => (r || []).map((c) => String(c ?? '').trim()))
+        const headerRow = grid.findIndex((r) => r.includes('Product Number') && r.includes('Purchase History'))
+        if (headerRow === -1) continue
+
+        const header = grid[headerRow]
+        const col = (label) => header.indexOf(label)
+        const at = (row, label) => (col(label) === -1 ? '' : row[col(label)] || '')
+
+        const rows = []
+        const unparsed = []
+        for (const row of grid.slice(headerRow + 1)) {
+            const productNumber = at(row, 'Product Number')
+            if (!productNumber) continue
+            const purchase = parseLastPurchase(at(row, 'Purchase History'))
+            // A row whose purchase cannot be read is reported, never dropped quietly or
+            // given an invented date.
+            if (!purchase) {
+                unparsed.push({ product_number: productNumber, text: at(row, 'Purchase History') })
+                continue
+            }
+            const packSize = at(row, 'Pack Size')
+            rows.push({
+                product_number: productNumber,
+                description: at(row, 'Product Description'),
+                brand: at(row, 'Brand') || null,
+                custom_description: at(row, 'Custom Product Description') || null,
+                pack_size: packSize,
+                ...parsePackSize(packSize),
+                uom: at(row, 'UOM') || null,
+                ...purchase,
+            })
+        }
+
+        const dates = rows.map((r) => r.last_purchased_on).sort()
+        return {
+            rows,
+            unparsed,
+            stats: {
+                products: rows.length,
+                unparsed: unparsed.length,
+                earliest: dates[0] || null,
+                latest: dates[dates.length - 1] || null,
+            },
+        }
+    }
+    throw new Error(`${fileName}: no sheet has both a "Product Number" and a "Purchase History" column — is this the purchase-history worksheet export?`)
+}
+
 // The exact row shape written to `supplier_products`.
 //
 // This lives here, beside the merge, rather than inside the upload component so that a

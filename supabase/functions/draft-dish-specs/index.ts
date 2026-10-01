@@ -323,11 +323,16 @@ RULES
    SAME kind of unit: an ingredient used by "each" should be a product sold by count
    (a pack of N buns, eggs by the dozen); by "oz"/"lb" a product sold by weight; by
    "floz" a product sold by volume.
-3. When several products fit equally, prefer the general-purpose one over a specialty
+3. PREFER WHAT THIS KITCHEN ALREADY BUYS. Products marked "BOUGHT" are ones the kitchen
+   has ordered (a date is its last purchase). When a BOUGHT product fits rules 1-2,
+   choose it over an unmarked one, even if the unmarked one reads slightly closer. Choose
+   an unmarked product only when no BOUGHT product is a sensible purchase, and then begin
+   the note with "NOT BOUGHT BEFORE:" so a reviewer sees it.
+4. When several products fit equally, prefer the general-purpose one over a specialty
    cut, and the one that is not a children's or single-serve pack.
-4. Never pick a non-food item for a food, and never force a match: a wrong product is
+5. Never pick a non-food item for a food, and never force a match: a wrong product is
    worse than null, because null shows up as a gap and gets fixed.
-5. Do not wrap the output in markdown code fences.
+6. Do not wrap the output in markdown code fences.
 `;
 
 // PostgREST returns at most 1000 rows per request, and the catalog holds 1,381. An
@@ -338,7 +343,7 @@ async function loadCatalog(db: any) {
   for (let from = 0; ; from += 1000) {
     const { data, error } = await db
       .from('supplier_products')
-      .select('id, product_number, description, custom_description, brand, pack_size, category')
+      .select('id, product_number, description, custom_description, brand, pack_size, category, last_purchased_on, source_lists')
       .eq('is_active', true)
       .order('product_number')
       .range(from, from + 999);
@@ -370,9 +375,17 @@ async function draftProducts(db: any, payload: any) {
   const catalog = await loadCatalog(db);
   const byNumber = new Map(catalog.map((p: any) => [p.product_number, p]));
 
-  const catalogBlock = catalog.map((p: any) =>
+  // Bought products are listed first and marked, so the model meets them before the rest
+  // (prompt rule 3). Only bought products carry a mark — tagging the other half too would
+  // add tokens and no signal. "Bought" = a recorded last purchase, or membership of the
+  // order guides' own "Purchase History" list for a product the worksheet has not dated.
+  const boughtTag = (p: any) =>
+    p.last_purchased_on ? ` | BOUGHT ${p.last_purchased_on}`
+      : (p.source_lists || []).includes('Purchase History') ? ' | BOUGHT' : '';
+  const ordered = [...catalog].sort((a: any, b: any) => (boughtTag(a) ? 0 : 1) - (boughtTag(b) ? 0 : 1));
+  const catalogBlock = ordered.map((p: any) =>
     `#${p.product_number} | ${p.custom_description ? p.custom_description + ' / ' : ''}${p.description}` +
-    `${p.brand ? ' | ' + p.brand : ''} | ${p.pack_size} | ${p.category ?? ''}`
+    `${p.brand ? ' | ' + p.brand : ''} | ${p.pack_size} | ${p.category ?? ''}${boughtTag(p)}`
   ).join('\n');
   const ingredientBlock = todo.map((u: any) => `${u.ingredient_name}  (used in: ${(u.units || []).join(', ')})`).join('\n');
 
