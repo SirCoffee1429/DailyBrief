@@ -171,67 +171,12 @@
 - 09-21 — Menus Wiped; Price Quantity Bug Fixed Before Reload — hors d'oeuvres were **20x too expensive** on 27 of 28 rows: "Starting at $85 for 20 pieces" was stored as $85 per piece. Added `price_qty` (`base_price` buys `price_qty x price_unit`); "Starting at" became a group FLOOR left empty; a heading's quantity basis now carries down. Prompt assembly now THROWS on a missing splice anchor. All 232 rows wiped at the owner's instruction. Lesson: comparing a parse to its own PDF is fidelity, not correctness. → [full](docs/changelog/2026-09.md#2026-09-21--menus-wiped-price-quantity-bug-fixed-before-reload)
 - 09-23→25 — BEO Parser: Three Silent Losses Found and Fixed (`process-beo` v26) — a "Gemini timeout 500" was the gate rightly refusing a packet the fallback cannot finish in 130s. v24: a centre line with no label and no qty opens an item (SUMMARY take-out page lost 24 lines). v25: **page 2+ of a BEO continues its table with no section header** — every multi-page BEO since v22 had lost it (Eurofins' whole plated dinner). v26: the gate now CONSUMES each printed line once; matching by presence missed 278/1508 deleted lines. Lesson: measure a gate by mutation, not by clean passes. → [full](docs/changelog/2026-09.md#2026-09-23--09-25--beo-parser-three-silent-losses-found-and-fixed)
 - 09-23→26 — 15 Current Menus Loaded as Drafts; Parser v9 (`process-menu` v9) — the owner's corrected 2026 set, 369 drafts. Fixed: spring/summer seasons, an `lb` price unit, minimums counted in the price's unit, "A or B" splits, themed-buffet packages kept as ONE dish (8 prices had been lost), and two Breakfast prices the model **invented**. Gemini 503s retried within one 130s deadline. Every loaded price matched the checked parse. → [full](docs/changelog/2026-09.md#2026-09-23--09-26--15-current-menus-loaded-as-drafts-parser-v9)
+- 09-26 — Menu Review Complete; Three Corrections After Confirm — owner confirmed all 369 drafts; a check of the CONFIRMED rows found three review items still open: Additional Salad/side/dessert re-flagged `is_price_rule` (would have double-ordered), pizza `min_order` 30 cleared (read as 30 of EACH), a stray topping bullet folded into Burrata Crostini. Result 368 confirmed / 364 orderable. → [full](docs/changelog/2026-09.md#2026-09-26--menu-review-complete-three-corrections-after-confirm)
+- 09-26 — Change a Saved Schedule's Week; Parser Stops Guessing the Year — schedule sheets print no year and the parser guessed: **7 of 25 schedules filed under 2020/2024**. Office "Change Week" moves every shift by the same days (snaps to Monday, refused onto an occupied week); `process-schedule` v12 is told today's date (Chicago). File names rejected as the signal (photo date ≠ week). → [full](docs/changelog/2026-09.md#2026-09-26--change-a-saved-schedules-week-parser-stops-guessing-the-year)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-26 — Menu Review Complete; Three Corrections After Confirm
-
-**File(s) Changed:** data only (`menu_dishes`) **Type:** `fix`
-**Summary:** The owner confirmed all 369 drafts. A check of the confirmed rows found three
-of the review items still open; corrected at his instruction.
-
-**Details:**
-
-- **Additional Salad / side / dessert** flagged `is_price_rule` — confirmed as food, they
-  sat in `orderable_menu_dishes` and would have double-ordered in P3.
-- **Pizza minimum**: `min_order` 30 cleared on all 6 pizza rows (it read as 30 of EACH);
-  "Station minimum: 30 pizzas (any mix)" added to each description.
-- **"Prosciutto, Tomato, Balsamic Drizzle"** deleted as a dish and appended to Burrata
-  Crostini's description (it is that dish's topping — a stray bullet on the menu).
-- Result: **368 dishes, all confirmed; 4 price rules; 364 orderable** for P3.
-
----
-
-### 2026-09-26 — Change a Saved Schedule's Week; Parser Stops Guessing the Year
-
-**File(s) Changed:** `app/src/pages/SchedulePage.jsx`, `supabase/functions/process-schedule/index.ts`,
-`claudedocs/requirements_schedule_date_edit_2026-09-26.md` (new)
-**Type:** `feature` + `fix` — `process-schedule` deployed v11→**v12**.
-**Summary:** Schedule sheets print month/day but no year, and the parser was told neither
-today's date nor the file name, so it guessed: **7 of 25 saved schedules were filed under
-2020 or 2024**, and none existed for the current week (09-21) or the next (09-28). The page
-opens the week nearest today, so a misdated schedule was effectively lost and re-uploaded.
-
-**Details:**
-
-- **Change Week** (office only, beside the trash button): the picked date snaps to its
-  Monday and every shift moves by the same number of days (`handleChangeWeekDate`, helpers
-  `mondayOf` / `addDaysTo` / `daysBetween`). A week that already has a schedule is refused
-  by the existing `week_start` UNIQUE constraint (`23505`) with a message; nothing changes.
-- **Realtime follows a moved schedule** — the old week no longer exists, so an UPDATE
-  whose row id is the one on screen now loads the row's new week instead of falling back
-  to "nearest today".
-- **Parser gets today's date** (America/Chicago) and is told to pick the year closest to
-  it. File names were rejected as the signal: `photo_2026-09-26_…` is when the photo was
-  taken, not the week, and `IMG8389….jpg` has no date at all.
-- **Review modal**: week picker snaps to Monday; a red warning shows when the week is more
-  than 30 days from today (`WEEK_WARNING_DAYS`).
-- **Verified:** the two misdated uploads re-parsed through deployed v12 → 2026-09-28 (was
-  2020) and 2026-09-21 (was 2024), shifts inside the week; one run each. In the browser a
-  junk 2024 row was moved via a Thursday (snapped to Monday; DB showed all 25 shifts
-  03-04→03-10), refused onto 2026-09-14 with the message, then moved back — `md5` of its
-  `schedule_data` identical to before. Phone width: editor wraps, no horizontal scroll.
-  `npm run build` passes.
-- **Not browser-tested:** the review-modal warning and Monday snap — they only render
-  after a real upload, which writes files to storage. The next real upload exercises them.
-
-**Open:** the 7 misdated rows are left for the owner to fix with the new button (his call):
-move 2020-09-28 → 2026-09-28 and 2024-09-21 → 2026-09-21, delete the duplicate 2024-10-21
-upload and the four small 2024 test rows. Until then the crew sees 09-14 as "this week".
-
----
 
 ### 2026-09-27 — Menu Follow-ups: Prompt Test Committed, Entrée Units, Design Doc
 
@@ -496,3 +441,50 @@ its dishes: name, menu (with season), and the portion, e.g. "1 oz per piece".
   with Dish Ingredients instead of duplicated. Build passes; owner checked it in the browser.
 - **P3 progress (owner's review, as of 10-01):** 42/364 dishes specced — Hors d'Oeuvres, Platters,
   Themed Buffets — 14 confirmed; 116 of 122 ingredient→product matches confirmed, 6 to review.
+
+---
+
+### 2026-10-01 → 10-03 — Product Matcher Sees Each Ingredient's Dishes; Miscopied Numbers Caught
+
+**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/match_test.ts` (new),
+`supabase/migrations/20261001000001_ingredient_usage_dish_companions.sql` (new), data (`dish_ingredients`,
+`ingredient_products`) **Type:** `feature` + `fix` + `migration` (applied) — `draft-dish-specs` v3→**v7**.
+**Summary:** The agreed next task: the AI matcher now gets the same dish context the owner sees
+on Ingredient Products. Testing it surfaced two more problems, both fixed.
+
+**Details:**
+
+- **Dish context (prompt rule 2):** each ingredient line lists up to 8 dishes — name, menu, season,
+  portion — and each dish's OTHER ingredients (`with:`, up to 12). Dish names alone made it pick a
+  pre-made bacon-wrapped scallop appetizer for "scallops" in 2 of 3 runs while the spec ordered bacon
+  separately; a wording rule alone fixed 1 of 3; with `with:` shown, 4 of 5. Migration adds `with`
+  inside `ingredient_usage.dishes` (no new column; `security_invoker` repeated). Checked: 305/305
+  entries equal an independent count.
+- **Bacon-Wrapped Scallops is bought pre-made (owner, 10-02).** The AI's pick was right and the SPEC
+  was wrong: the ingredients prompt assumes scratch and splits anything into raw parts. Spec is now one
+  line, `bacon-wrapped scallops` 1 each per piece → #256278 (both drafts, via the drafting RPCs); the
+  orphaned `scallops` draft mapping deleted. **Owner: it is the ONLY pre-made item** — every other
+  dish stays specced from scratch.
+- **Miscopied product numbers.** For watermelon (#52193) the model returned #52167 PEACH TRAY-PACK and
+  #522183 BUTTERNUT SQUASH — real numbers, so the not-in-catalog check passed them with a note still
+  reading "Seedless watermelon". Smoked salmon got an invented number 8 of 8 runs. The model now also
+  copies the product's description; a pick is kept only when 60% of its words are on the numbered
+  product (`describesProduct`), else saved empty with a note naming both. `match_test.ts` slices the
+  shipped helper (4 tests; mutation in both directions fails them).
+- **Verified live:** 5 `parseOnly` runs on the 5 draft ingredients after v7 — **25/25 correct**,
+  smoked salmon included. The check never fired: asking for the description apparently made the copy
+  accurate. Its rejection path is proven by the test only, not seen in production.
+- **Not measured:** whether the dish lines changed the miscopy rate (the local old-vs-new A/B was
+  refused by the permission check — it copied API keys into a scratch file). Runs take 3–6s for 5–6
+  ingredients; a full batch of 40 has not been timed with the longer prompt.
+- **Confirmed at the owner's instruction (10-03):** the 6 ingredient drafts (bacon-wrapped scallops,
+  salmon, seaweed salad, smoked salmon, watermelon, wonton wrappers) and the Bacon-Wrapped Scallops spec.
+  Smoked salmon's stored draft was the old v3 result — EMPTY (invented #256256) — so it was re-drafted
+  through v7 first (→ #256125 cold-smoked sliced, bought 07-25). **Ingredient matches: 122/122
+  confirmed.** Dish specs: 15 confirmed, 27 drafts, 322 unspecced of 364.
+- **Review fix (10-03), `draft-dish-specs` v7→v8:** the 60% word share passed a miscopy onto a SIBLING
+  size (described SCALLOP 30-40, numbered #252182 SCALLOP 60-80 — 10 of 12 words), the likeliest
+  slip since PFG numbers sizes side by side. Now every word holding a digit (30, 40, 4X4) must be on the
+  product too. Test written first and seen failing; removing the rule fails it again; 11/11 pass.
+  Not run live — every ingredient is confirmed, so the matcher has nothing to match (v8 boots and
+  answers). A leftover local test server (old v3 on `0.0.0.0:8000`, keys in memory) was stopped.

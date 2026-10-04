@@ -52,6 +52,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ratchet). `case_price` derives at INGEST (219 catch-weight; read-time math prints ~50x low).
   `category` seeds via an RPC filling only NULLs. `last_purchased_on` loads from PFG's purchase
   worksheet — NEVER its prices (catch-weight shows the per-lb price, unmarked)
+- Product matcher (`draft-dish-specs`): the model miscopies product numbers onto REAL wrong items
+  (peach for watermelon), so it also copies the description and a pick stands only if they agree,
+  digits exact (PFG sizes sit side by side). Bacon-Wrapped Scallops is the ONLY pre-made dish
 - Menus (`menu_dishes`, P2): hand-designed marketing layouts, so a MODEL reads them, not
   coordinates. `.docx` converts to HTML **in the browser** (Gemini can't read .docx;
   `npm:mammoth` in the edge fn blew the 130s cold start). Safe only behind the confirm gate
@@ -98,9 +101,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   must be CONSUMED once per event (counted: mere presence let a repeated `per dozen` vouch
   for a lost one). It passed broken parses twice by sharing the parser's premise — **share
   no premise, not just no code** — so measure it by deleting output, not by clean passes
-- A stuck emailed BEO is swept by `sweepStuckBeoImports()` (`lib/usePendingBeoImports.js`)
-  via `useOfficeApprovalCounts` — not `pg_cron`, since it only matters once a human opens
-  the app
+- A stuck emailed BEO is swept by `sweepStuckBeoImports()` (`lib/usePendingBeoImports.js`) via
+  `useOfficeApprovalCounts` — not `pg_cron`, since it only matters once a human opens the app
 - **New `public` tables get RLS switched on automatically** (event trigger `ensure_rls`, not
   in the repo) — create the policy in the same migration or the app reads nothing. Views
   are `security_invoker`; CREATE OR REPLACE resets that unless its WITH clause repeats it.
@@ -115,12 +117,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
-- Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`, 1,381
-  products). **P2 DONE: 15 current menus, 368 dishes CONFIRMED** (2026-09-26,
-  `process-menu` v9; 4 price rules, 364 orderable). P0 cancelled. **P3 IN PROGRESS** (10-01:
-  42/364 dishes specced, 14 confirmed; 116/122 ingredient→product matches confirmed); reads
-  only `orderable_menu_dishes`; inference stays OUT of the per-BEO path. Phasing:
-  `claudedocs/design_beo_order_guide_2026-09-15.md`
+- Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`). **P2 DONE**: 368
+  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-03:
+  42/364 specced, 15 confirmed; 122/122 ingredient→product matches confirmed); reads only
+  `orderable_menu_dishes`; inference stays OUT of the per-BEO path. `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---
 
