@@ -313,26 +313,35 @@ kitchen should buy for it, or null when nothing in the catalog is a sensible pur
 Return ONLY a JSON array, one element per ingredient:
 { "ingredient_name": string,       // copied exactly from the input
   "product_number": string|null,   // the number after "#", copied exactly
+  "product_description": string|null, // the text after that number up to the next "|", copied exactly
   "note": string }                 // one short reason, or why nothing fits
 
 RULES
 1. Match the FORM a scratch kitchen buys: raw over fully-cooked, fresh over frozen
    unless the item is normally bought frozen, plain over breaded or marinated — unless
    the ingredient name itself says otherwise ("breaded chicken tenders").
-2. Each ingredient lists the portion units it is used in. Prefer a product sold in the
+2. Each ingredient lists the DISHES that use it, with their menu and portion. Read them to
+   decide what the ingredient IS: "cheese" on a charcuterie board and "cheese" in a hot
+   dip are different purchases. When its dishes need different forms, choose the one
+   that suits most of them and say so in the note. Each dish line ends "with: ..." —
+   the dish's OTHER ingredients, which are ordered on their own lines. So match this
+   ingredient ALONE, never a prepared product that already contains them: "chicken
+   breast" in Chicken Cordon Bleu "with: ham, swiss cheese" is plain chicken breast,
+   not a frozen cordon bleu, or the ham and swiss would be bought twice.
+3. Each ingredient lists the portion units it is used in. Prefer a product sold in the
    SAME kind of unit: an ingredient used by "each" should be a product sold by count
    (a pack of N buns, eggs by the dozen); by "oz"/"lb" a product sold by weight; by
    "floz" a product sold by volume.
-3. PREFER WHAT THIS KITCHEN ALREADY BUYS. Products marked "BOUGHT" are ones the kitchen
-   has ordered (a date is its last purchase). When a BOUGHT product fits rules 1-2,
+4. PREFER WHAT THIS KITCHEN ALREADY BUYS. Products marked "BOUGHT" are ones the kitchen
+   has ordered (a date is its last purchase). When a BOUGHT product fits rules 1-3,
    choose it over an unmarked one, even if the unmarked one reads slightly closer. Choose
    an unmarked product only when no BOUGHT product is a sensible purchase, and then begin
    the note with "NOT BOUGHT BEFORE:" so a reviewer sees it.
-4. When several products fit equally, prefer the general-purpose one over a specialty
+5. When several products fit equally, prefer the general-purpose one over a specialty
    cut, and the one that is not a children's or single-serve pack.
-5. Never pick a non-food item for a food, and never force a match: a wrong product is
+6. Never pick a non-food item for a food, and never force a match: a wrong product is
    worse than null, because null shows up as a gap and gets fixed.
-6. Do not wrap the output in markdown code fences.
+7. Do not wrap the output in markdown code fences.
 `;
 
 // PostgREST returns at most 1000 rows per request, and the catalog holds 1,381. An
@@ -354,6 +363,58 @@ async function loadCatalog(db: any) {
   return all;
 }
 
+// The dishes an ingredient is used in (prompt rule 2), one indented line each:
+//   - Bacon-Wrapped Scallops — Hors d'Oeuvres — 1.25 oz per piece — with: bacon, ...
+// "with" is the dish's other ingredients: without it the model matched "scallops" to a
+// pre-made bacon-wrapped appetizer, buying the bacon twice (2 of 3 runs, 2026-10-01).
+// Both lists are capped so a staple used across most menus (butter, salt) or a themed
+// buffet's long spec cannot crowd the batch. Same per-basis wording as the Ingredient
+// Products page (BASIS_LABEL in app/src/lib/orderUnits.js).
+const DISHES_IN_PROMPT = 8;
+const WITH_IN_PROMPT = 12;
+const BASIS_WORD: Record<string, string> = { person: 'guest', each: 'each', piece: 'piece', dozen: 'dozen', tray: 'tray', lb: 'lb' };
+
+function dishLines(dishes: any[]): string {
+  const lines = dishes.slice(0, DISHES_IN_PROMPT).map((d: any) => {
+    const others: string[] = d.with || [];
+    const withText = others.length === 0 ? ''
+      : ` — with: ${others.slice(0, WITH_IN_PROMPT).join(', ')}${others.length > WITH_IN_PROMPT ? `, and ${others.length - WITH_IN_PROMPT} more` : ''}`;
+    return `  - ${d.name} — ${[d.menu, d.season].filter(Boolean).join(', ')} — ` +
+      `${Number(d.qty)} ${d.unit === 'floz' ? 'fl oz' : d.unit} per ${BASIS_WORD[d.basis] || d.basis || 'serving'}${withText}`;
+  });
+  if (dishes.length > DISHES_IN_PROMPT) lines.push(`  - and ${dishes.length - DISHES_IN_PROMPT} more dishes`);
+  return lines.join('\n');
+}
+
+// The model copies a 5-6 digit product number out of ~1,400 lines, and it miscopies:
+// for "watermelon" (#52193) it returned #52167 PEACH TRAY-PACK and #522183 BUTTERNUT
+// SQUASH — REAL numbers, so the not-in-catalog check passed them, each with a note
+// still reading "Seedless watermelon" (2 of 5 runs, 2026-10-01). So it also copies the
+// description, and a pick is kept only when most of the words it wrote are on the
+// product it numbered. When they disagree there is no telling which half is wrong,
+// so the pick is dropped, never repaired. Tested by match_test.ts.
+//
+// Numbers must match outright: PFG numbers the sizes of one item side by side (#252175
+// SCALLOP 30-40, #252182 SCALLOP 60-80), so a miscopy onto a sibling shares every word
+// except its size, and the 60% share alone passed it. Every word the model wrote that
+// holds a digit (30, 40, 4X4, the 6 of "6 OUNCE") must be on the product.
+function words(s: string): string[] {
+  return s.toUpperCase().match(/[A-Z0-9]+/g) || [];
+}
+
+function describesProduct(said: string, product: any): boolean {
+  const saidWords = new Set(words(said));
+  if (saidWords.size === 0) return false;
+  const actual = new Set(words(`${product.custom_description ?? ''} ${product.description ?? ''} ${product.brand ?? ''}`));
+  let found = 0;
+  for (const w of saidWords) {
+    if (actual.has(w)) found++;
+    else if (/\d/.test(w)) return false;
+  }
+  return found / saidWords.size >= 0.6;
+}
+// end of match helpers
+
 async function draftProducts(db: any, payload: any) {
   const names: string[] = Array.isArray(payload.names)
     ? [...new Set(payload.names.map((n: any) => String(n).trim().toLowerCase()).filter(Boolean))] as string[]
@@ -363,7 +424,7 @@ async function draftProducts(db: any, payload: any) {
 
   const { data: usage, error: usageError } = await db
     .from('ingredient_usage')
-    .select('ingredient_name, units, mapping_status')
+    .select('ingredient_name, units, mapping_status, dishes')
     .in('ingredient_name', names);
   if (usageError) throw usageError;
 
@@ -376,7 +437,7 @@ async function draftProducts(db: any, payload: any) {
   const byNumber = new Map(catalog.map((p: any) => [p.product_number, p]));
 
   // Bought products are listed first and marked, so the model meets them before the rest
-  // (prompt rule 3). Only bought products carry a mark — tagging the other half too would
+  // (prompt rule 4). Only bought products carry a mark — tagging the other half too would
   // add tokens and no signal. "Bought" = a recorded last purchase, or membership of the
   // order guides' own "Purchase History" list for a product the worksheet has not dated.
   const boughtTag = (p: any) =>
@@ -387,7 +448,9 @@ async function draftProducts(db: any, payload: any) {
     `#${p.product_number} | ${p.custom_description ? p.custom_description + ' / ' : ''}${p.description}` +
     `${p.brand ? ' | ' + p.brand : ''} | ${p.pack_size} | ${p.category ?? ''}${boughtTag(p)}`
   ).join('\n');
-  const ingredientBlock = todo.map((u: any) => `${u.ingredient_name}  (used in: ${(u.units || []).join(', ')})`).join('\n');
+  const ingredientBlock = todo.map((u: any) =>
+    `${u.ingredient_name}  (used in: ${(u.units || []).join(', ')})\n${dishLines(u.dishes || [])}`
+  ).join('\n');
 
   const prompt = PRODUCTS_PROMPT +
     `\nINGREDIENTS:\n${ingredientBlock}\n\nCATALOG (${catalog.length} products):\n${catalogBlock}\n`;
@@ -402,14 +465,21 @@ async function draftProducts(db: any, payload: any) {
     if (!wanted.has(name) || rows.some(r => r.ingredient_name === name)) continue;
     const number = raw?.product_number == null ? null : String(raw.product_number).replace(/^#/, '').trim();
     const product = number ? byNumber.get(number) : null;
-    // A number that is not in the catalog is an invented product. It becomes null with
-    // the reason attached, never a guessed nearest match.
+    // A number that is not in the catalog is an invented product, and one whose
+    // description disagrees is a miscopy. Both become null with the reason attached,
+    // never a guessed nearest match.
     const note = typeof raw?.note === 'string' ? raw.note.trim() : null;
-    rows.push({
-      ingredient_name: name,
-      product_id: product ? product.id : null,
-      ai_note: number && !product ? `Model named #${number}, which is not in the catalog. ${note ?? ''}`.trim() : note,
-    });
+    const said = typeof raw?.product_description === 'string' ? raw.product_description.trim() : '';
+    let productId: string | null = product ? product.id : null;
+    let aiNote = note;
+    if (number && !product) {
+      aiNote = `Model named #${number}, which is not in the catalog. ${note ?? ''}`.trim();
+    } else if (product && !describesProduct(said, product)) {
+      productId = null;
+      aiNote = `Model named #${number} (${product.description}) but described "${said || 'nothing'}" — ` +
+        `not saved, pick by hand. ${note ?? ''}`.trim();
+    }
+    rows.push({ ingredient_name: name, product_id: productId, ai_note: aiNote });
   }
   const missing = [...wanted].filter(n => !rows.some(r => r.ingredient_name === n));
 
