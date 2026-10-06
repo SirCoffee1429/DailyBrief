@@ -64,11 +64,25 @@ export default function TimeOff({ officeMode = false }) {
         }
     }
 
-    // Takes the whole request, not just the id, so the notification can record
-    // who and when after the row is gone.
+    // Takes the whole request, not just the id, so the confirm can name it and the
+    // notification can record who and when after the row is gone.
     async function deleteRequest(request) {
-        if (!confirm('Delete this time off request?')) return
-        await supabase.from('time_off_requests').delete().eq('id', request.id)
+        const dates = formatDateRange(request.start_date, request.end_date)
+        if (!confirm(`Remove ${request.employee_name}'s time off (${dates})?`)) return
+
+        // .select() for the same reason as setRequestStatus: a blocked delete matches
+        // zero rows with NO error, and must not go on to announce a cancellation.
+        const { data, error } = await supabase
+            .from('time_off_requests')
+            .delete()
+            .eq('id', request.id)
+            .select()
+
+        if (error || !data || data.length === 0) {
+            console.error('Failed to delete request:', error || 'no rows deleted')
+            alert('Could not remove that request. Please try again.')
+            return
+        }
 
         // Cancellations are logged whoever does them. The trash button is office-only
         // (crew have no cancel path), but several managers share the one office login,
@@ -76,7 +90,7 @@ export default function TimeOff({ officeMode = false }) {
         notifyOffice({
             kind: NOTIFICATION_KINDS.TIME_OFF_CANCELLED,
             actorName: request.employee_name,
-            summary: formatDateRange(request.start_date, request.end_date),
+            summary: dates,
             link: '/office/time-off',
         })
     }
@@ -201,11 +215,16 @@ export default function TimeOff({ officeMode = false }) {
                             >
                                 <div className="time-off-day-number">{day.getDate()}</div>
                                 <div className="time-off-day-list">
+                                    {/* In the office a name removes its request. stopPropagation
+                                        keeps the click off the day button, which would open the
+                                        new-request form; the empty part of the day still does. */}
                                     {dayRequests.slice(0, 3).map(r => (
                                         <div
                                             key={r.id}
                                             className={`time-off-pill time-off-pill-${r.time_type}`}
-                                            title={formatRequestLabel(r)}
+                                            title={officeMode ? `${formatRequestLabel(r)} · click to remove` : formatRequestLabel(r)}
+                                            style={officeMode ? { cursor: 'pointer' } : undefined}
+                                            onClick={officeMode ? e => { e.stopPropagation(); deleteRequest(r) } : undefined}
                                         >
                                             {r.employee_name}
                                             <span className="time-off-pill-time">
