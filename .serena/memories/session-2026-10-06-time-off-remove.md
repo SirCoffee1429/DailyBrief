@@ -21,5 +21,7 @@ branch deleted. Docs commit `e6d0908` (CHANGES entry; 09-27 Menu Follow-ups arch
 Local main: 47 ahead of origin, 0 behind.
 
 ## Not done / noted
-- Past requests (167) still cannot be removed in the UI — owner did not ask.
+- CORRECTION (same day): past requests CAN be removed — the calendar shows every non-denied request
+  in any month you page to; the owner removed Feb/Mar/Nov-Dec ones right after deploy. Only a
+  DENIED request that has ended is unreachable (off the calendar, out of Upcoming).
 - "+N more" names beyond 3 per day are not clickable (Upcoming list covers future ones).
