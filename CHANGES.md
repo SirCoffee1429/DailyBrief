@@ -173,39 +173,11 @@
 - 09-23→26 — 15 Current Menus Loaded as Drafts; Parser v9 (`process-menu` v9) — the owner's corrected 2026 set, 369 drafts. Fixed: spring/summer seasons, an `lb` price unit, minimums counted in the price's unit, "A or B" splits, themed-buffet packages kept as ONE dish (8 prices had been lost), and two Breakfast prices the model **invented**. Gemini 503s retried within one 130s deadline. Every loaded price matched the checked parse. → [full](docs/changelog/2026-09.md#2026-09-23--09-26--15-current-menus-loaded-as-drafts-parser-v9)
 - 09-26 — Menu Review Complete; Three Corrections After Confirm — owner confirmed all 369 drafts; a check of the CONFIRMED rows found three review items still open: Additional Salad/side/dessert re-flagged `is_price_rule` (would have double-ordered), pizza `min_order` 30 cleared (read as 30 of EACH), a stray topping bullet folded into Burrata Crostini. Result 368 confirmed / 364 orderable. → [full](docs/changelog/2026-09.md#2026-09-26--menu-review-complete-three-corrections-after-confirm)
 - 09-26 — Change a Saved Schedule's Week; Parser Stops Guessing the Year — schedule sheets print no year and the parser guessed: **7 of 25 schedules filed under 2020/2024**. Office "Change Week" moves every shift by the same days (snaps to Monday, refused onto an occupied week); `process-schedule` v12 is told today's date (Chicago). File names rejected as the signal (photo date ≠ week). → [full](docs/changelog/2026-09.md#2026-09-26--change-a-saved-schedules-week-parser-stops-guessing-the-year)
+- 09-27 — Menu Follow-ups: Prompt Test Committed, Entrée Units, Design Doc — `process-menu/prompt_test.ts` committed: slices the prompt out of the real `index.ts` and checks rules 1-12 in order (6/6, and four mutations each fail it). 13 seasonal plated entrées set to `price_unit = person` like Summer — a label only, no price changed. Design doc's old `season`/`effective_*` model marked superseded. → [full](docs/changelog/2026-09.md#2026-09-27--menu-follow-ups-prompt-test-committed-entrée-units-design-doc)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-27 — Menu Follow-ups: Prompt Test Committed, Entrée Units, Design Doc
-
-**File(s) Changed:** `supabase/functions/process-menu/prompt_test.ts` (new),
-`claudedocs/design_beo_order_guide_2026-09-15.md`, `docs/changelog/2026-09.md`, data (`menu_dishes`)
-**Type:** `refactor` + `fix` — findings 1, 3, 4 of the 09-26 validation pass.
-**Summary:** The prompt check now lives in the repo instead of a session scratch folder,
-the seasonal plated entrées carry one consistent unit, and the design doc says what was
-actually built.
-
-**Details:**
-
-- **`prompt_test.ts`** (`deno test --allow-read supabase/functions/process-menu/prompt_test.ts`):
-  slices the prompt out of the REAL `index.ts` and asserts every rule 1-12 is present and
-  in order, the source rules land as rule 2, and the unit list matches the table's CHECK.
-  The harness had been lost with the scratch folder twice. **Measured by mutation, not by
-  a clean pass:** 6/6 on the real file; renaming rule 11, renumbering rule 10, dropping
-  `lb`, and splicing rule 2 after rule 3 each fail exactly 2 tests. Not bundled on
-  deploy (only what `index.ts` imports ships).
-- **13 seasonal "Composed Plated Entrées"** (Fall 5, Spring 4, Winter 4) set to
-  `price_unit = person`, matching Summer. Label consistency only; no price changed.
-- **Design doc** marked superseded where it still said `season` is null/fall/winter with
-  `effective_start`/`effective_end` (dropped 2026-09-18; spring/summer added 09-23).
-- **Archive:** the 09-19 "Additional Salad" entry moved verbatim to `docs/changelog/2026-09.md`
-  to keep this file under 500 lines. The first attempt searched for LF separators in a
-  CRLF file, took 212 lines (four entries) and left no summaries — caught by the line
-  count, restored from git, redone with a one-entry guard.
-
----
 
 ### 2026-09-27 — Week of 09-28 Schedule Re-dated from 2020
 
@@ -488,3 +460,27 @@ on Ingredient Products. Testing it surfaced two more problems, both fixed.
   product too. Test written first and seen failing; removing the rule fails it again; 11/11 pass.
   Not run live — every ingredient is confirmed, so the matcher has nothing to match (v8 boots and
   answers). A leftover local test server (old v3 on `0.0.0.0:8000`, keys in memory) was stopped.
+
+---
+
+### 2026-10-06 — Office Time Off: Remove a Request From the Calendar (shipped on its own)
+
+**File(s) Changed:** `app/src/pages/TimeOff.jsx` **Type:** `feature` — **pushed and live** (`461f12a`,
+Vercel production READY), shipped WITHOUT the 45 unpushed commits on `main`.
+**Summary:** Owner request: on `/office/time-off`, clicking a name on the calendar opened the
+new-request form and there was no way to remove it there. A trash button already existed, but only
+in the Upcoming list (requests not yet ended).
+
+**Details:**
+
+- Office mode only: clicking a calendar name asks "Remove <name>'s time off (<dates>)?" and deletes
+  it (`stopPropagation`, so the day's click no longer fires); the empty part of a day still opens
+  the form. The kitchen calendar is unchanged. The Upcoming trash button shares the named confirm.
+- `deleteRequest` now uses `.select()` and checks a row was removed, as the approve/deny path does:
+  a blocked delete returns no error, and it was going on to notify the office of a cancellation
+  that never happened. (The DB delete policy exists; nothing was failing — this closes the gap.)
+- **Shipping on its own:** branch from `origin/main` → commit → `git push origin time-off-remove:main`
+  (fast-forward of one commit) → `main` merged `origin/main` back (`caace3b`, merge — not a rebase,
+  which would have rewritten the 45 commits' hashes that the docs cite). Merged `main` builds.
+- **Verified:** `npm run build`; owner tested on a local dev server (confirm names the request,
+  Cancel leaves it, OK removes it, empty day still opens the form) — "yep it works".
