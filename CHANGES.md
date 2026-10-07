@@ -484,3 +484,9 @@ in the Upcoming list (requests not yet ended).
   which would have rewritten the 45 commits' hashes that the docs cite). Merged `main` builds.
 - **Verified:** `npm run build`; owner tested on a local dev server (confirm names the request,
   Cancel leaves it, OK removes it, empty day still opens the form) — "yep it works".
+- **Validated after deploy:** the live bundle contains the change and NONE of main's unpushed work
+  (no Purchase History / Ingredient Products / `describesProduct`). Owner's real removals right after
+  (6 cancellation notifications, 07:13–07:14 UTC; sent only on a confirmed delete) prove it in use.
+- **Past requests ARE removable** — the calendar shows every non-denied request in any month paged
+  to (an earlier note said otherwise; corrected). Only an ENDED DENIED request is unreachable.
+  Open, low: nothing signals on touch screens that names are tappable (hint is hover-only).
