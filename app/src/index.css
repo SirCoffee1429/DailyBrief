@@ -4971,9 +4971,12 @@ tr.beo-completed td .beo-check {
   margin-bottom: var(--space-3);
 }
 
+/* minmax(0, 1fr), not 1fr: a bare 1fr column can't shrink below its widest name,
+   so a long name widened its day column and the cells slid out from under these
+   separate weekday headers (Tue the 6th read as Wed). Both grids must match. */
 .time-off-weekday-row {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   margin-bottom: 4px;
 }
@@ -4990,7 +4993,7 @@ tr.beo-completed td .beo-check {
 
 .time-off-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
 }
 
