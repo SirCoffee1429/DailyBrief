@@ -5,10 +5,12 @@ import { PORTION_UNIT_NAMES, BASIS_LABEL, specCost, lineGap, GAP_REASONS } from 
 
 const BASES = ['person', 'each', 'piece', 'dozen', 'tray', 'lb']
 
-// 8 dishes per request: the 8 themed buffets (~20 ingredients each, the heaviest
-// dishes on any menu) drafted in 15s on 2026-09-27, far inside the 130s deadline. The
-// edge function refuses more than 12.
-const DRAFT_BATCH = 8
+// 4 dishes per request: the larger the batch, the more the model swaps a named food for
+// one already on its name list. Same 12 dishes, 6 runs each (2026-10-09): batches of 8
+// swapped Dijon for grain mustard in 2 runs, batches of 4 in none (12 runs). Time is
+// not the limit — 8 themed buffets drafted in 15s. The edge function refuses more than 12.
+// Measure a change here with supabase/functions/draft-dish-specs/drafter_check.ts.
+const DRAFT_BATCH = 4
 // dish_ingredient_lines is read in chunks of dishes: an id list for all 364 dishes
 // makes an over-long URL, and 30 dishes x ~25 lines stays under PostgREST's 1000-row cap.
 const LINES_CHUNK = 30

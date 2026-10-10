@@ -48,9 +48,27 @@ const UNIT_ALIASES: Record<string, string> = {
 // Gemini — one deadline for all attempts, retrying only the overload codes.
 // ---------------------------------------------------------------------------------
 
+// Gemini now and then returns malformed JSON (2 of ~60 calls, 2026-10-09) and the whole
+// batch 500s. A fresh call parses, so it is retried ONCE — only a parse failure, never an
+// API error or a timeout, and only inside the same 130s budget, so the retry can never
+// carry a request past the gateway limit. Tested by retry_test.ts.
+const GEMINI_BUDGET_MS = 130000;
+
 async function callGemini(prompt: string): Promise<any> {
+  const started = Date.now();
+  try {
+    return await callGeminiOnce(prompt, GEMINI_BUDGET_MS);
+  } catch (err) {
+    const left = GEMINI_BUDGET_MS - (Date.now() - started);
+    if (!(err instanceof SyntaxError) || left < 30000) throw err;
+    console.warn(`Gemini returned malformed JSON; retrying once: ${err.message}`);
+    return await callGeminiOnce(prompt, left);
+  }
+}
+
+async function callGeminiOnce(prompt: string, timeoutMs: number): Promise<any> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 130000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const started = Date.now();
 
   let res: Response;
@@ -80,7 +98,7 @@ async function callGemini(prompt: string): Promise<any> {
       await new Promise(r => setTimeout(r, 3000 * attempt));
     }
   } catch (err: any) {
-    if (err.name === 'AbortError') throw new Error("Gemini timed out after 130 seconds.");
+    if (err.name === 'AbortError') throw new Error(`Gemini timed out after ${Math.round(timeoutMs / 1000)} seconds.`);
     throw err;
   } finally {
     clearTimeout(timeoutId);
@@ -96,6 +114,7 @@ async function callGemini(prompt: string): Promise<any> {
   if (!answer) throw new Error("Gemini returned empty output");
   return JSON.parse(answer);
 }
+// end of gemini call
 
 // ---------------------------------------------------------------------------------
 // Mode "ingredients"
@@ -179,12 +198,24 @@ RULES
 
 9. NAMES are short, generic, lowercase, and what a distributor catalog would call the
    item: "chicken breast", "heavy cream", "all-purpose flour", "yellow onion",
-   "parmesan cheese". No brands, no preparation words ("diced", "roasted"). When an
-   ingredient appears in EXISTING NAMES below, use that exact name. Never list water.
-   One row per ingredient per dish — merge repeats.
+   "parmesan cheese". No brands, no preparation words ("diced", "roasted"). Never list
+   water. One row per ingredient per dish — merge repeats.
 
 10. Accompaniments named in a dish's description ("Served with Wild Rice and House
     Marinara") ARE part of that dish — include them.
+
+11. EXISTING NAMES (below) are spellings already in use — NOT a list of allowed foods.
+    Reuse one ONLY when it is the SAME food: the same animal and cut, the same plant,
+    the same product. Anything else gets a NEW name; new names are expected and normal.
+    NEVER substitute a different food for the one the dish names, however close: veal
+    is never pork, a ribeye is never a strip loin, cashews are never peanuts, provolone
+    is never mozzarella, Dijon is never grain mustard, cream sherry is never white wine.
+
+12. EVERY FOOD THE DISH NAMES IS LISTED UNDER ITS OWN NAME — the foods in its name
+    ("Hazelnut-Crusted Trout" needs hazelnuts and trout) and in its description
+    ("Gruyère" is gruyere cheese, "panko" is panko, "Kalamata" is kalamata olives).
+    A variety the dish names is its own ingredient, never the generic or a sibling.
+    If you ever use a stand-in anyway, say so in note — but a stand-in is a mistake.
 
 Do not wrap the output in markdown code fences.
 `;
@@ -256,6 +287,12 @@ async function draftIngredients(db: any, payload: any) {
 
   // Names already in use, so a later batch says "heavy cream" the way an earlier one
   // did — otherwise every synonym becomes one more ingredient to map by hand.
+  // Prompt rules 11-12 exist because a bare list here read as a CLOSED vocabulary: on
+  // 12 dishes naming foods not yet in it, 2 of 3 runs swapped wholesale (lamb -> pork
+  // tenderloin, halibut -> salmon, lobster -> shrimp) and coined 0 new names (2026-10-08).
+  // With 11-12: 32-35 of 36 named foods kept in 5 of 5 runs. Still seen: pecans ->
+  // walnuts in 3 of 5, now always said in the note — never tell the model to keep a
+  // substitution out of the note: that made them silent.
   const { data: vocab, error: vocabError } = await db.rpc('dish_ingredient_names');
   if (vocabError) throw vocabError;
   const existing = (vocab || []).map((r: any) => r.ingredient_name);
@@ -272,7 +309,7 @@ async function draftIngredients(db: any, payload: any) {
   }).join('\n\n');
 
   const prompt = INGREDIENTS_PROMPT +
-    `\nEXISTING NAMES (${existing.length}): ${existing.length ? existing.join('; ') : '(none yet)'}\n` +
+    `\nEXISTING NAMES (rules 11-12 — reuse a spelling only for the SAME food; anything not here gets a new name): ${existing.length ? existing.join('; ') : '(none yet)'}\n` +
     `\nDISHES:\n\n${dishBlock}\n`;
 
   let parsed = await callGemini(prompt);
