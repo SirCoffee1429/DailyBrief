@@ -251,6 +251,24 @@ A closed conversion table with **three classes and no crossing between them**:
 - Component recipes written in cups (FR-8) hit this wall. Deferred: recipe linkage is
   the smallest slice of the feature and is explicitly out of the first build.
 
+**Carried into P4 (owner, 2026-10-07) — two measured problems with the policy above:**
+
+- **The pack-count allowance is wrong when an inner pack is not one piece.**
+  `orderUnits.js` `unitFit` lets an `each` portion use the pack COUNT of a weight-sold
+  product. Right for `72/3.17 OZ` buns (72 buns); wrong for bags, loaves and cups:
+  coconut shrimp `4/3 LB` → "4 per case" (really ~216 shrimp, ~54x over-order), cheese
+  slices `6/1.5 LB` → 6 (really 192), sourdough slices against `8/35 OZ` loaves → 8,
+  plus wings, cocktail shrimp, mozzarella pearls, wonton wrappers, chicken strips,
+  crostini. 27 of 382 confirmed lines took this path on 10-07. Nothing orders yet.
+- **The gaps are a third of the lines, not an edge case.** 81 of 382 lines (32 of 55
+  dishes) cross classes: produce in oz against products sold by count (lettuce
+  `24/1 CT`, melons, cucumbers), sauces in floz against bottles stored by weight
+  (ketchup, mustard, ranch, sour cream, heavy cream), pickles in oz against gallons.
+- **Fix belongs in P4:** a per-mapping conversion on `ingredient_products` the reviewer
+  states once ("1 head = 10 oz", "24 slices per inner pack", "1 bottle = 20 floz"),
+  replacing the pack-count guess. Still no density guessed by the system — a human
+  states it once, like every other P3 fact.
+
 ---
 
 ## 8. Schema
@@ -323,7 +341,7 @@ ceremony. (NFR-5)
 | **P1** | Catalog ingestion + product search UI | Upload the 13 files → exactly 1,381 products, 394 varies, 6 unpriced |
 | **P2** | Menu ingestion → `menu_dishes` drafts + confirm UI | Custom Buffets + Plated Dinners fully confirmed |
 | **P3** | `dish_ingredients` drafting + `ingredient_products` mapping | Three dishes hand-checked against the arithmetic |
-| **P4** | `beo_dish_matches` + runtime arithmetic + order list UI | **Same BEO twice, days apart, byte-identical** |
+| **P4** | `beo_dish_matches` + runtime arithmetic + order list UI; per-mapping unit conversion replacing the pack-count guess (§7) | **Same BEO twice, days apart, byte-identical** |
 | **P5** | Recipe cost refresh (FR-21) | Spot-check against catalog |
 
 P1 is independently useful and blocks nothing else. P0 can run in parallel with it.

@@ -174,192 +174,17 @@
 - 09-26 — Menu Review Complete; Three Corrections After Confirm — owner confirmed all 369 drafts; a check of the CONFIRMED rows found three review items still open: Additional Salad/side/dessert re-flagged `is_price_rule` (would have double-ordered), pizza `min_order` 30 cleared (read as 30 of EACH), a stray topping bullet folded into Burrata Crostini. Result 368 confirmed / 364 orderable. → [full](docs/changelog/2026-09.md#2026-09-26--menu-review-complete-three-corrections-after-confirm)
 - 09-26 — Change a Saved Schedule's Week; Parser Stops Guessing the Year — schedule sheets print no year and the parser guessed: **7 of 25 schedules filed under 2020/2024**. Office "Change Week" moves every shift by the same days (snaps to Monday, refused onto an occupied week); `process-schedule` v12 is told today's date (Chicago). File names rejected as the signal (photo date ≠ week). → [full](docs/changelog/2026-09.md#2026-09-26--change-a-saved-schedules-week-parser-stops-guessing-the-year)
 - 09-27 — Menu Follow-ups: Prompt Test Committed, Entrée Units, Design Doc — `process-menu/prompt_test.ts` committed: slices the prompt out of the real `index.ts` and checks rules 1-12 in order (6/6, and four mutations each fail it). 13 seasonal plated entrées set to `price_unit = person` like Summer — a label only, no price changed. Design doc's old `season`/`effective_*` model marked superseded. → [full](docs/changelog/2026-09.md#2026-09-27--menu-follow-ups-prompt-test-committed-entrée-units-design-doc)
+- 09-27 — Week of 09-28 Schedule Re-dated from 2020 — `week_start` was a Sunday and all 115 shifts sat in 2020, so the grid showed nothing; moved to Monday 2026-09-28, every shift +6 years (weekdays preserved). Change Week could not do it (it shifts by `week_start`'s gap). Past misdated weeks left as-is by the owner. → [full](docs/changelog/2026-09.md#2026-09-27--week-of-09-28-schedule-re-dated-from-2020)
+- 09-27 — Drift Audit: Every Deployed Function vs the Repo — 12/15 edge functions identical; `generate-schedule` v17 = `auto-scheduler` `7dfe506` (later fixes never deployed); `parse-recipe` deployed with no source. Orphan `handle_new_user` trigger would break any sign-up. **Migrations cannot rebuild prod** (3 of 54 match) — never `db push`/`db reset`. → [full](docs/changelog/2026-09.md#2026-09-27--drift-audit-every-deployed-function-vs-the-repo-advisors-migration-history)
+- 09-27 — Dish Specs + Ingredient Mapping Built (order guide **P3**, logged late) — `dish_ingredients` (portion per ONE basis unit, oz/lb/floz/each) + `ingredient_products` (confirm once); `draft-dish-specs` drafts both, basis DERIVED from the dish, never asked. Pages `/office/dish-specs` + `/office/ingredients`; `orderUnits.js` holds the P4 arithmetic. → [full](docs/changelog/2026-09.md#2026-09-27--dish-specs--ingredient-mapping-built-order-guide-p3--logged-late)
+- 09-27 — Orphan Sign-up Trigger Dropped; `orderable_menu_dishes` Runs as Caller — dropped `handle_new_user` (wrote to a nonexistent `profiles`). View set `security_invoker`; proven in a rolled-back transaction that CREATE OR REPLACE VIEW without a WITH clause silently resets it. → [full](docs/changelog/2026-09.md#2026-09-27--orphan-sign-up-trigger-dropped-orderable_menu_dishes-runs-as-caller)
+- 09-27 — config.toml Covers Every Deployed Function — `get-weather` + `generate-order-items` added with `verify_jwt = false` (a default redeploy could have flipped them); all 16 match. Dead pre-hybrid `generate-schedule/llm.ts` deleted from `main`. → [full](docs/changelog/2026-09.md#2026-09-27--configtoml-covers-every-deployed-function-dead-llmts-deleted)
+- 09-28 — Drift-Audit Decisions — `parse-recipe` deleted from prod after archiving its source (`docs/archive/edge-functions/`). Scheduler: nothing deployed or removed — Crew Availability (31 people) and Roster are in real use; `generate-schedule` v17 left deployed by the owner's choice. → [full](docs/changelog/2026-09.md#2026-09-28--drift-audit-decisions-parse-recipe-deleted-scheduler-left-as-is)
+- 09-28 — Schema Baseline in the Repo — `supabase/schema_baseline.sql` = `db dump` of prod's structure (32 tables, 3 views, 12 functions, 52 policies — all counts verified). Event trigger `ensure_rls` is not in a dump; its definition sits in the header. The CLI 401s were a stale `SUPABASE_ACCESS_TOKEN` env var. → [full](docs/changelog/2026-09.md#2026-09-28--schema-baseline-the-live-databases-structure-is-now-in-the-repo)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-27 — Week of 09-28 Schedule Re-dated from 2020
-
-**File(s) Changed:** data only (`schedules` row `5352d2bf…`) **Type:** `fix`
-**Summary:** The current week's schedule had `week_start` 2026-09-27 (a Sunday) while all 115
-shifts were still dated 2020-09-28 → 10-04, so the grid (days built from `week_start`,
-shifts matched by exact date) had nothing to show. Fixed at the owner's instruction.
-
-**Details:**
-
-- `week_start` → **2026-09-28** (Monday); every shift date + 6 years, order preserved.
-  2020-09-28 and 2026-09-28 are both Mondays, so each shift keeps its weekday.
-- Verified: 115 shifts, Mon 9/28 → Sun 10/4 (9/13/16/20/21/20/16), 5 announcements intact.
-- The Change Week button could not do this: it shifts by `week_start`'s gap (1 day here),
-  which would have left the shifts in 2020.
-- Left as-is by the owner's choice: the past 9/21 week (filed as `2024-09-21`, a Saturday),
-  the `2024-10-21` duplicate and four small 2024 test rows. Not worth fixing now that the week is over.
-
----
-
-### 2026-09-27 — Drift Audit: Every Deployed Function vs the Repo; Advisors; Migration History
-
-**File(s) Changed:** none in code, data or deploys — `CHANGES.md`, `docs/changelog/2026-09.md`,
-`CLAUDE.md`, memory. **Type:** read-only audit.
-**Summary:** Checked that what runs in production is what the repo says. It mostly is; the
-exceptions are listed below, and each fix is the owner's call.
-
-**Details:**
-
-- **P3 work in the tree (written ~3am, unlogged, still UNCOMMITTED) matches live exactly.**
-  `draft-dish-specs` v2 = local `index.ts`; `20260927000000_create_dish_specs.sql` holds BOTH
-  applied migrations (`create_dish_specs` + `dish_ingredient_names`) — all 5 function bodies
-  hash-equal live, tables/views/policies present, `orderable_menu_dishes` now carries
-  `price_qty` + `spec_*`. Data: 364 orderable dishes all `spec_status = none`, 0
-  `dish_ingredients`, 0 `ingredient_products`. `npm run build` passes.
-- **All 15 deployed edge functions diffed against the repo:** 12 identical;
-  `categorize-recipe` and `receive-beo-email` differ in comments/whitespace only.
-  **`generate-schedule` v17 = `auto-scheduler` commit `7dfe506` (07-02)** — the 08-03
-  double-book/fairness fix (`16318f6`) and pins & quotas (`86045f5`) were never deployed.
-  **`parse-recipe` is deployed with no source on any branch and no caller in the app.**
-- **Frontend:** Vercel production = `origin/main` = `04d8396`, 28 commits behind `main`. It
-  never references `menu_dishes`, so the backend changes since cannot have broken it.
-- **Advisors:** `handle_new_user` (trigger on `auth.users`) inserts into `public.profiles`,
-  **which does not exist** — any Supabase Auth sign-up would fail; not in the repo.
-  `rls_auto_enable` (event trigger `ensure_rls`) turns RLS on for every new public table —
-  not in the repo either. `orderable_menu_dishes` has been SECURITY DEFINER since 09-19; no
-  real exposure (`menu_dishes` is allow-all). "Anon can execute" on the two trigger functions
-  is moot — Postgres will not call a trigger function directly. 11 of the 12 mutable
-  `search_path` warnings are SECURITY INVOKER functions.
-- **Migration history cannot rebuild prod:** only 3 of 54 applied migrations match a repo
-  file by version+name; ~19 applied (mostly March–May) have no file on any branch; 9 repo
-  files were never applied under their own name; pre-migration base tables were never in
-  the repo. **Never `supabase db push` / `db reset`.** The scrapped `event_tasks.portion`
-  column is confirmed gone.
-- `config.toml` lacks `get-weather` and `generate-order-items` (deployed `verify_jwt=false`).
-  `supabase/functions/generate-schedule/llm.ts` on `main` is dead (old design, swept in by
-  a 07-25 docs commit, imports a file that does not exist on `main`).
-- **Method:** `SUPABASE_ACCESS_TOKEN` still 401s, so deployed source came from the MCP's
-  `get_edge_function`, copied to scratch and diffed with CR and trailing whitespace
-  ignored — copying drops trailing spaces, which showed as false diffs until normalised.
-  Outputs too large to return inline land as JSON on disk and were extracted by script.
-
-**Open (owner's call):** commit P3; drop the `handle_new_user` trigger (or create
-`profiles`) before real auth; `orderable_menu_dishes` → `security_invoker`; add the two
-`config.toml` entries and delete `llm.ts`; snapshot the live schema into the repo (needs
-`supabase login`); deploy `16318f6` after a re-test; keep or delete `parse-recipe`.
-
----
-
-### 2026-09-27 — Dish Specs + Ingredient Mapping Built (order guide P3) — logged late
-
-**File(s) Changed:** `supabase/migrations/20260927000000_create_dish_specs.sql`,
-`supabase/functions/draft-dish-specs/index.ts`, `supabase/config.toml`,
-`app/src/pages/DishSpecs.jsx`, `app/src/pages/IngredientProducts.jsx`,
-`app/src/lib/orderUnits.js`, `app/src/lib/useKeyboardReview.js`, `app/src/App.jsx`,
-`app/src/components/OfficeLayout.jsx`, `app/src/pages/MenuDishes.jsx`, `app/src/index.css`
-**Type:** `feature` + `migration` — built in the early hours of 09-27, deployed
-(`draft-dish-specs` v2, both migrations applied) but not logged or committed until now.
-**Summary:** The P3 half of the order guide: what one serving of each confirmed dish is
-made of, and which catalog product each ingredient is bought as. Same shape as P2 — a
-model drafts, a human confirms, nothing downstream reads a draft. **Built, not yet run:**
-0 dishes specced, 0 ingredients mapped.
-
-**Details:**
-
-- **Schema:** `menu_dishes` gains `spec_basis` / `spec_status` / `spec_note` /
-  `spec_confirmed_at`; new `dish_ingredients` (portion per ONE basis unit, `oz|lb|floz|each`
-  only) and `ingredient_products` (one catalog product per ingredient name, confirm once).
-  RPCs `save_dish_spec` (refuses a non-orderable dish), `save_dish_spec_drafts` (never
-  overwrites a confirmed spec), `upsert_ingredient_product_drafts`, `dish_ingredient_names`,
-  `dish_spec_progress`; views `dish_ingredient_lines`, `ingredient_usage`. Re-running the
-  `orderable_menu_dishes` definition also restored its missing `price_qty` column.
-- **`draft-dish-specs`** (`verify_jwt=false`, gemini-3-flash-preview, no temperature —
-  temperature 0 looped into the 130s deadline): mode `ingredients` (≤12 dishes; basis is
-  DERIVED from the dish, never asked of the model) and mode `products` (≤60 names against
-  the paged 1,381-product catalog; an invented product number becomes null with a reason).
-- **Owner decisions (migration header):** raw ingredients as purchased; themed buffets
-  specced flat per guest; flavour-choice dishes as the shared base with `spec_note`.
-- **Pages:** `/office/dish-specs` ("Dish Ingredients") and `/office/ingredients`
-  ("Ingredient Products"). `orderUnits.js` holds the pure portion→pack arithmetic P4 will
-  reuse (no cross-class conversion — a gap with a reason). The keyboard review moved out of
-  `MenuDishes.jsx` into the shared `useKeyboardReview.js`; all three reviews use it.
-- **Verified:** deployed function and applied migrations byte/hash-identical to these files
-  (see the drift-audit entry); `npm run build` passes. **Not browser-tested.**
-
----
-
-### 2026-09-27 — Orphan Sign-up Trigger Dropped; orderable_menu_dishes Runs as Caller
-
-**File(s) Changed:** `supabase/migrations/20260927010000_drop_orphan_handle_new_user.sql`,
-`supabase/migrations/20260927010001_orderable_menu_dishes_security_invoker.sql` (both new)
-**Type:** `migration` — applied to prod (recorded as `20260928040925` / `…040929`).
-**Summary:** Items 2 and 3 from the drift audit, at the owner's instruction.
-
-**Details:**
-
-- **Dropped `on_auth_user_created` + `public.handle_new_user()`**: an AFTER INSERT trigger on
-  `auth.users` writing to a `public.profiles` table that does not exist, so any Supabase
-  Auth sign-up would have failed. Never in the repo. The exact dropped definitions are kept
-  in the migration file. The one existing auth user is untouched.
-- **`orderable_menu_dishes` → `security_invoker = on`**, matching the two views that read
-  through it. Verified as the `anon` role: 364 rows before and after, equal to the base
-  table. The linter's only ERROR is gone; 11 low-risk warnings remain.
-- **Trap proven, not assumed:** in a rolled-back transaction, `CREATE OR REPLACE VIEW`
-  without a `WITH` clause reset `security_invoker` to nothing — any redefinition of this
-  view must repeat `with (security_invoker = on)`.
-
----
-
-### 2026-09-27 — config.toml Covers Every Deployed Function; Dead llm.ts Deleted
-
-**File(s) Changed:** `supabase/config.toml`, `supabase/functions/generate-schedule/llm.ts` (deleted)
-**Type:** `config` — drift-audit item 4. **Summary:** `get-weather` and `generate-order-items`
-added with `verify_jwt = false`, matching how they are deployed; a redeploy that followed the
-config's default (`true`) could have flipped them. Checked by script: all 16 deployed functions
-now match (5 by the default). `llm.ts` was the pre-hybrid scheduler's model boundary, swept
-onto `main` by a 07-25 docs commit; nothing imports it and `auto-scheduler` never had it.
-
----
-
-### 2026-09-28 — Drift-Audit Decisions: parse-recipe Deleted, Scheduler Left As Is
-
-**File(s) Changed:** `docs/archive/edge-functions/parse-recipe.ts` (new, `05d1fe7`); prod edge
-functions **Type:** `config` — items 5-7 of the 09-27 audit, owner's decisions.
-**Summary:**
-- **`parse-recipe` deleted from production** (by the owner in the dashboard; verified gone —
-  15 functions remain). Its deployed source was archived first, outside `supabase/functions/`
-  so it cannot be redeployed by accident; it was never in git and its only caller lived for
-  one day (2026-03-16).
-- **Scheduler: nothing deployed, nothing removed.** The owner wants none of the auto-scheduler
-  live, but the pieces built on `main` before the branch existed (06-10→06-14) are in real
-  use — Crew Availability (31 people, 93 changes in 30 days), Roster — and stay, with the
-  Rules/Coverage screens. The one branch leak, `generate-schedule` v17, is **left deployed as
-  is** by the owner's choice: no live page calls it. `16318f6` stays undeployed.
-- **Schema baseline (item 5) still open:** needs `supabase login` + Docker Desktop. The stale
-  `SUPABASE_ACCESS_TOKEN` Windows User env var overrides a fresh login.
-
----
-
-### 2026-09-28 — Schema Baseline: the Live Database's Structure Is Now in the Repo
-
-**File(s) Changed:** `supabase/schema_baseline.sql` (new) **Type:** `config` — drift-audit item 5.
-**Summary:** `supabase db dump --linked` of production's structure (no rows), so the repo holds
-a complete definition of the database for the first time — the migration files cannot rebuild
-it. **Not a migration; never run it against prod.**
-
-**Details:**
-
-- **Verified complete against live:** 32 tables, 3 views (all `security_invoker`), 12
-  functions, 52 RLS policies, 0 table triggers — every count equal. No `COPY`/`INSERT`, no
-  token-like strings. The dropped `handle_new_user` is correctly absent.
-- **One object a schema dump skips:** the database-wide event trigger `ensure_rls` (auto-RLS on
-  new tables). Its exact definition is in the file's header, to recreate by hand.
-- **Why the CLI finally worked:** a stale `SUPABASE_ACCESS_TOKEN` sat in the Windows *User* env
-  (removed by the owner). The login from a fresh PowerShell window works once its verification
-  code is entered — the 401 right after it was simply a test run before the code was in (owner's
-  correction). A Claude Code process started before the variable was removed still carries it
-  and fails unless run as `env -u SUPABASE_ACCESS_TOKEN supabase …`. (An earlier claim that
-  `supabase login` silently re-saves an env token was a guess, never verified.)
-- Regenerating needs Docker Desktop running (`db dump` runs `pg_dump` in a container).
-
----
 
 ### 2026-09-30 — Purchase History: Ingredient Matching Prefers What the Kitchen Buys
 
@@ -490,3 +315,136 @@ in the Upcoming list (requests not yet ended).
 - **Past requests ARE removable** — the calendar shows every non-denied request in any month paged
   to (an earlier note said otherwise; corrected). Only an ENDED DENIED request is unreachable.
   Open, low: nothing signals on touch screens that names are tappable (hint is hover-only).
+
+---
+
+### 2026-10-07 — Dish Spec Review: Wings, Burrata, Whole Fruit, Sourdough Slices, Stale Notes
+
+**File(s) Changed:** data only (`dish_ingredients`, `ingredient_products`, `menu_dishes.spec_note`);
+`CLAUDE.md`, `claudedocs/design_beo_order_guide_2026-09-15.md` **Type:** `fix`
+**Summary:** The 27 drafts were already confirmed by the owner (10-05), plus 13 Quick Lunch Bites
+(10-06/07): **55/364 dishes confirmed, 0 drafts**. A line-by-line check found the problems below;
+each was fixed on the owner's instruction.
+
+**Details:**
+
+- **House Smoked Wings:** `wings` 12 → **1 each per piece** (owner: 1 piece = 1 wing).
+- **Burrata Crostini** had no burrata (the model dropped it as "not in existing names"). Added
+  `burrata` 0.5 oz per piece → **#355554** BelGioioso 2 oz balls (bought 05-28; the 4 oz #342939
+  never bought). The 0.5 oz portion is my estimate (one 2 oz ball per 4 crostini) — owner to adjust.
+- **Fresh Whole Fruit:** 12 `gala apple` per dozen, `orange` line removed (owner: fruit is mixed
+  freely; keep it simple as 1 fruit = 1 apple).
+- **Sourdough measured by the slice:** Ham & Swiss `sourdough` → `sourdough slices` (Turkey &
+  Havarti already used it); the confirmed mapping (#981353) moved with it.
+- **Stale notes:** the AI's notes described lines the owner had since corrected ("Pepperoni specced
+  as ham" beside a pepperoni line). 8 cleared, 6 trimmed to the part still true, 7 accurate kept.
+- **Buy-outs confirmed by the owner:** Coconut Shrimp (#369978) and Petite Beef Wellington (`beef en
+  croute` #256290) are pre-made, like Bacon-Wrapped Scallops — the "scallops is the ONLY pre-made
+  item" rule in CLAUDE.md/memory is superseded. 1st&10th Tee Bars (`n/a` placeholder) and Trail
+  Mix are buy-outs too.
+- **Found, folded into P4 (owner):** `orderUnits.js` `unitFit` counts a weight-sold product's
+  inner packs as pieces — right for `72/3.17 OZ` buns, wrong for bags/loaves (coconut shrimp `4/3 LB`
+  → 4 per case, ~54x over-order; cheese slices `6/1.5 LB` → 6, really 192). 27 of 382 lines; plus
+  81 cross-class gaps (32 dishes). Written into design doc §7 + the P4 phase row. No code changed.
+- **Buy-out lines named and mapped (owner):** `n/a` → `1st&10th tee bars` 12 each per dozen, confirmed
+  as "not bought from this catalog"; Trail Mix 1 → **12** per dozen → #438899 Planters Nut & Chocolate;
+  `chips` → #1073982 Frito Lay variety mix (bought 09-25); `havarti` → `havarti slice` (like the other
+  sliced cheeses) → #207141 havarti slice twin pack (bought 09-26); `tortilla wrap 12"` → #245761
+  Piancone garden spinach 12 in (owner's pick of three bought 12" tortillas).
+- **Verified:** re-queried every changed dish and mapping; 55 confirmed / 309 unspecced unchanged;
+  **ingredients 158/158 mapped and confirmed.**
+
+---
+
+### 2026-10-08 — Dish Drafter Stops Swapping Foods (draft-dish-specs v8 → v11)
+
+**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts` **Type:** `fix` — deployed v9, v10,
+v11 (v11 = v10 + a code comment).
+**Summary:** The ingredient drafter treated its EXISTING NAMES list (158 names) as the only foods allowed,
+so a dish naming anything new got the nearest listed food instead. Found reviewing the 10-07 drafts
+(burrata dropped, tenderloin → flank steak, pepperoni → ham…) and in the 10-08 Action Stations drafts
+(Beef Tenderloin and Sirloin → `shoulder tender`, Prime Rib → `roast beef` — still drafts, owner to fix).
+
+**Details:**
+
+- **Cause:** rule 9 said "when an ingredient appears in EXISTING NAMES, use that exact name" and nothing
+  about one that does not; the list sat under a bare header. Each run resolved that differently.
+- **Measured** (12 unspecced dishes naming foods not on the list, `parseOnly`, scored on 36 named foods;
+  plus 5 Action Stations drafts, 8 foods):
+
+  | Version | 12-dish set, per run | Swaps per run | Action Stations |
+  |---|---|---|---|
+  | v8 (3 runs) | 0 / 30 / 0 of 36 | 7 / 0 / 8 — and **0 new names** in the bad runs | 3 beef swaps (live) |
+  | v9 (5 runs) | 33 every run | 1-2 (pecans → walnuts), **silent** in 3 | 8/8 every run |
+  | v10 (5 runs) | 32-35 | 0, 2, 0, 1, 2 — **every one said in the note** | 8/8 every run |
+
+  Foods already on the list kept their spelling in every run (15/15, 10/10).
+- **Fix:** rule 11 — the list is spellings to reuse for the SAME food, new names are expected, never
+  substitute (examples kept out of the test set: veal/pork, cashews/peanuts…). Rule 12 — every food a dish
+  names appears under its own name. v9 also told the model never to report a substitution in the note:
+  that made the walnut swaps SILENT, so v10 removed it — a swap now always shows in review.
+- **Still open:** pecans → walnuts in 3 of 5 runs (noted when it happens); Dijon always becomes the
+  existing `grain mustard` — owner to say whether they are separate purchases.
+- **Owner:** peach cobbler IS Southern BBQ's dessert (menu says Strawberry Crumble Bars — the menu is out
+  of date, the spec is right).
+- Scorer and run outputs are in the session scratchpad (`drafter/score.py`), not the repo.
+
+---
+
+### 2026-10-09 — Drafter: Dijon Kept Separate, Batches of 4, Repeatable Check in the Repo
+
+**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/drafter_check.ts`
+(new), `app/src/pages/DishSpecs.jsx` **Type:** `fix` + `test` — `draft-dish-specs` v11 → **v12**.
+**Summary:** Owner: Dijon and grain mustard are separate purchases. The rule alone did not hold in a batch,
+so the Dish Ingredients page now drafts 4 dishes per request instead of 8. The scorer from 10-08 is now
+a Deno script beside `match_test.ts`.
+
+**Details:**
+
+- **v12:** rule 11's examples add "Dijon is never grain mustard" (owner's word, so the lamb's Dijon is no
+  longer a blind test). Drafted ALONE the lamb got `dijon mustard` 4 of 4; inside a batch it still became
+  the existing `grain mustard`.
+- **Batch size is the lever** (same 12 dishes, `parseOnly`, scored on 36 named foods):
+
+  | Batch | Runs | Named kept | Runs with a swap |
+  |---|---|---|---|
+  | 12 | 10 | 23-36 (one run fell back toward the old closed-list mode) | 2 + that one |
+  | 8 (old app setting) | 6 | 34-36 | 2 (grain mustard) |
+  | **4 (new)** | 12 | 35-36 | **0** |
+
+  Small samples, but every point agrees: fewer dishes per request, fewer swaps. `DRAFT_BATCH` 8 → 4;
+  time is not the limit. Beef set (5 dishes): 18/18 in every run at any batch size.
+- **`drafter_check.ts`** — runs the DEPLOYED function N times (`[runs=5] [batch=4]`), scores named foods,
+  swaps (whole words: "prime ribeye" is not the swap "prime rib"), existing-name reuse and new-name count;
+  exits 1 on any swap. Reads the public anon key from `app/src/lib/supabase.js` and the live name list
+  via `dish_ingredient_names`. Writes nothing. Confirmed dishes drop out over time (parseOnly skips them)
+  — the check names them so they can be replaced.
+- **Seen, not fixed:** Gemini sometimes returns malformed JSON → the function 500s (2 of ~60 calls). The
+  page stops, keeps every earlier batch, and **Draft** again resumes — a click, not lost data. A one-time
+  retry on a JSON parse failure would remove it.
+- `npm run build` passes. **Owner:** 72 confirmed / 22 drafts / 270 unspecced (10-09); Beef Tenderloin
+  is confirmed as `shoulder tender` — asked whether that is the kitchen's practice.
+
+---
+
+### 2026-10-10 — Drafter Retries Malformed JSON Once; Beef Tenderloin Respecced
+
+**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/retry_test.ts`
+(new), data (`dish_ingredients`, `menu_dishes.spec_note`) **Type:** `fix` + `test` — `draft-dish-specs` v12 → **v13**.
+
+**Details:**
+
+- **Retry:** `callGemini` now wraps `callGeminiOnce`. A reply that is not valid JSON (`SyntaxError`, 2 of ~60
+  calls on 10-09, each a failed batch) is retried ONCE; an API error or timeout is not. The retry gets only
+  what is left of the same 130s budget (none if under 30s), so it cannot push a request past the gateway.
+- **`retry_test.ts`** slices the real code out of `index.ts` (like `match_test.ts`) with fetch faked: good
+  first answer = 1 call; malformed then good = 2 calls, retry used; malformed twice = SyntaxError after 2
+  calls; HTTP 400 = 1 call. 4/4 + match_test 5/5 pass. **Mutation-checked:** removing the retry fails 2
+  tests; retrying every error fails 1; file restored byte-identical.
+- **Live:** v13 deployed; `drafter_check.ts` 4 runs — set A 35-36/36, 0 swaps; set B one run drafted the
+  12oz Prime Ribeye as the existing `prime rib` (sampling; the retry does not touch the prompt).
+- **Beef Tenderloin (Action Stations), owner:** "tenderloin should be tenderloin" — `shoulder tender` →
+  `beef tenderloin` 20 oz per lb sold (still confirmed); note trimmed to "Mushroom bordelaise components
+  included." `shoulder tender` stays on Grilled Beef Crostini. `beef tenderloin` has no product mapping yet.
+- **P3 (10-10):** 82 confirmed / 12 drafts / 270 unspecced; ingredients 158 mapped / 41 unmapped (new
+  names from the Action Stations and later drafts).

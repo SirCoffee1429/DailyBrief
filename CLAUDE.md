@@ -52,9 +52,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ratchet). `case_price` derives at INGEST (219 catch-weight; read-time math prints ~50x low).
   `category` seeds via an RPC filling only NULLs. `last_purchased_on` loads from PFG's purchase
   worksheet — NEVER its prices (catch-weight shows the per-lb price, unmarked)
-- Product matcher (`draft-dish-specs`): the model miscopies product numbers onto REAL wrong items
-  (peach for watermelon), so it also copies the description and a pick stands only if they agree,
-  digits exact (PFG sizes sit side by side). Bacon-Wrapped Scallops is the ONLY pre-made dish
+- `draft-dish-specs`: the matcher miscopies product numbers onto REAL wrong items (peach for
+  watermelon) → a pick stands only if its copied description agrees, digits exact. The drafter read
+  its name list as CLOSED (lamb → pork): rules 11-12 + batches of 4. Buy-outs = ONE line, 1 each (scallops, coconut shrimp, Wellington)
 - Menus (`menu_dishes`, P2): hand-designed marketing layouts, so a MODEL reads them, not
   coordinates. `.docx` converts to HTML **in the browser** (Gemini can't read .docx;
   `npm:mammoth` in the edge fn blew the 130s cold start). Safe only behind the confirm gate
@@ -118,8 +118,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`). **P2 DONE**: 368
-  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-03:
-  42/364 specced, 15 confirmed; 122/122 ingredient→product matches confirmed); reads only
+  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-07:
+  82/364 confirmed, 12 drafts; drafter v13); reads only
   `orderable_menu_dishes`; inference stays OUT of the per-BEO path. `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---
