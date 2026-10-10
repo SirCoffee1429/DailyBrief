@@ -448,3 +448,23 @@ a Deno script beside `match_test.ts`.
   included." `shoulder tender` stays on Grilled Beef Crostini. `beef tenderloin` has no product mapping yet.
 - **P3 (10-10):** 82 confirmed / 12 drafts / 270 unspecced; ingredients 158 mapped / 41 unmapped (new
   names from the Action Stations and later drafts).
+
+---
+
+### 2026-10-10 — Time Off Calendar: Days Line Up Under Their Weekday Again
+
+**File(s) Changed:** `app/src/index.css` **Type:** `fix` — shipped ALONE as `21cee39` (pushed
+`fix/time-off-columns:main` from `origin/main`), merged back into local main as `1061a58`.
+
+**Details:**
+
+- **Report:** October requests looked "pushed forward a day" (the 6th showing as the 7th).
+- **Not a date bug.** The DB held the right dates and the page put each in the right cell (checked in Chrome
+  on America/Chicago). The cells had slid out from under the headers: the weekday row and the day grid are
+  two SEPARATE grids, both `repeat(7, 1fr)`, and a bare `1fr` cannot shrink below its content's min width,
+  so long names (Bella Hammond, Katelyn Zeidler) widened their day column. On the live page the 28th sat
+  under MON-TUE and Tue the 6th under WED.
+- **Fix:** both grids `repeat(7, minmax(0, 1fr))`; long names truncate with the pill's existing ellipsis.
+- **Verified:** the same CSS injected on the live page gave 7/7 header lefts = cell lefts and 0 horizontal
+  overflow; `npm run build` passes on the shipped tree; the live CSS bundle serves the new rule. Mobile
+  width not checked separately.
