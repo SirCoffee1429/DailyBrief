@@ -47,31 +47,39 @@ export default function Dashboard() {
         load()
     }, [])
 
-    // Merge the tasks from all of today's briefings into one list
+    // Merge the tasks from all of today's briefings into one list, followed by today's
+    // standalone tasks (added from the office Tasks tab, no briefing attached).
     useEffect(() => {
+        // This runs once before the briefings load and again after; drop the stale
+        // first result if it lands late so it can't overwrite the full list.
+        let cancelled = false
         async function loadTasks() {
-            if (todaysBriefings.length === 0) {
-                setTasks([])
-                return
-            }
             const briefingIds = todaysBriefings.map(b => b.id)
-            const { data: taskData } = await supabase
-                .from('briefing_tasks')
-                .select('*')
-                .in('briefing_id', briefingIds)
+            const [{ data: briefingTaskData }, { data: standaloneData }] = await Promise.all([
+                briefingIds.length > 0
+                    ? supabase.from('briefing_tasks').select('*').in('briefing_id', briefingIds)
+                    : Promise.resolve({ data: [] }),
+                supabase
+                    .from('briefing_tasks')
+                    .select('*')
+                    .is('briefing_id', null)
+                    .eq('date', localDateString())
+                    .order('created_at', { ascending: true }),
+            ])
+            if (cancelled) return
 
             // sort_order is scoped per briefing, so every briefing restarts at 0 — sorting on
             // it alone would interleave two managers' lists. Group by parent briefing first
             // (in the same newest-first order as the stack), then by each list's own order.
             const briefingRank = new Map(briefingIds.map((id, i) => [id, i]))
-            setTasks(
-                [...(taskData || [])].sort((a, b) =>
-                    briefingRank.get(a.briefing_id) - briefingRank.get(b.briefing_id) ||
-                    a.sort_order - b.sort_order
-                )
+            const briefingTasks = [...(briefingTaskData || [])].sort((a, b) =>
+                briefingRank.get(a.briefing_id) - briefingRank.get(b.briefing_id) ||
+                a.sort_order - b.sort_order
             )
+            setTasks([...briefingTasks, ...(standaloneData || [])])
         }
         loadTasks()
+        return () => { cancelled = true }
     }, [todaysBriefings])
 
     // Close settings menu on outside click
