@@ -409,7 +409,8 @@ task" box; the task shows on the kitchen dashboard on its date. Kitchen (BOH) on
 **File(s) Changed:** `supabase/migrations/20261014000000_house_recipes.sql` (new), `app/scripts/recipe-book-sql.mjs`
 (new), `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/house_recipe_test.ts` (new),
 `app/src/pages/DishSpecs.jsx`, `app/src/index.css`, data (`house_recipes`, fall `dish_ingredients`) **Type:** `feature` +
-`migration` + `test` — `draft-dish-specs` v13 → **v21** (deployed), page change NOT pushed.
+`migration` + `test` — `draft-dish-specs` v13 → **v21** (deployed), page change NOT pushed. Committed 10-16 as
+`f93b9d4`; the book PDF is gitignored (stays on disk as the loader's source).
 **Summary:** The owner's seasonal recipe books (`seasonal-recipes/fall_recipe_book/Fall Banquet Recipe Book.pdf`, 25-portion
 yields, "On the Plate", sub-recipes) are now the drafter's source for the dishes they cover, and the Dish Ingredients page
 shows the book recipe beside each spec. Owner: the books' ingredients and portions are right, the methods are not
@@ -443,3 +444,35 @@ checked — so only title → ingredients is stored.
   `carrot`; one garlic amount dropped on Short Rib, Pork Loin and Chicken (heads vs oz); greens specced as lacinato kale.
 - **Page:** collapsible "fall recipe book: … + N recipes it uses" under each spec and in the edit form. `npm run build`
   passes; browser check pending (office gate).
+
+---
+
+### 2026-10-15 → 10-16 — Ingredient Products: Search, and Split Dishes Off to Another Name; Eggs Fixed
+
+**File(s) Changed:** `app/src/pages/IngredientProducts.jsx`, `app/src/index.css`, `.gitignore`; data (`dish_ingredients`,
+`ingredient_products`) **Type:** `feature` + `fix` — committed `626f9ee`, NOT pushed (local `main` is 58 ahead of GitHub).
+**Summary:** Owner request: a confirmed ingredient match could not be searched for or corrected. The case: confirmed
+"egg" → EGG PATTY was right for the 4 breakfast sandwiches but wrong for 65+ other dishes. Re-picking the product can't
+fix that — one ingredient NAME maps to ONE product for every dish (owner: "that would put me in the same situation") —
+so the fix moves some dishes to another name.
+
+**Details:**
+
+- **Search** (ingredient, product, or dish name; every status, so the status filter is disabled while searching). Ranked:
+  exact name, then names holding every word, then dish-only matches — "eggs" was buried under mayonnaise (Deviled Eggs).
+- **Split** on every row, confirmed ones too (key `s`): tick dishes, type a name, a live line says where they land
+  ("12 dishes will join "egg" (confirmed: …)"). At save: the target is looked up again; a ticked dish already listing it
+  is refused BY NAME (unique `(dish_id, ingredient_name)`), nothing written; the moved count must equal the ticked count.
+- **No match outlives its last dish:** when a fresh count finds no dish left on the old name, its match is renamed onto a
+  brand-new name, or deleted when joining an existing one — else the drafter could write the name again and its dish
+  would inherit the product unreviewed. The count is taken after the move, not from the form's list (a dish drafted while
+  the form sat open still needs the match) — fixed in a `/sc:analyze` pass, along with two missing comments.
+- **Data fixed through the page:** `egg patty` 4 sandwiches → #955042 EGG PATTY; `egg` 77 dishes (65 + the 12 from
+  `eggs`) → #518048 EGG WHITE LARGE GRADE A LOOSE (= white shell eggs, owner); `eggs` gone. Orphan confirmed matches
+  `peanuts` (PEANUT SALTED SHELF-STABLE) and `raisins` (trail-mix dried fruit) deleted (owner); 0 orphans remain.
+- **Verified:** `npm run build`; in the browser on prod data — the egg split, the clash refusal (Sausage Bagel, nothing
+  written), and a whole-name round trip `baked beans` → `baked beans split test` → back (match carried both ways, only
+  `updated_at` changed, no leftover row). Each step checked by SQL. Not checked: phone width; a dish drafted onto the
+  old name while the form is open (code-read only).
+- Also: the 10-14 recipe-book work committed separately (`f93b9d4`), its PDF gitignored. Left uncommitted on purpose:
+  `supabase/.temp/cli-latest`, the Vendor Data worksheet, `.serena/memories/session-2026-09-27-schedule-week-redate.md`.

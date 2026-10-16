@@ -52,9 +52,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ratchet). `case_price` derives at INGEST (219 catch-weight; read-time math prints ~50x low).
   `category` seeds via an RPC filling only NULLs. `last_purchased_on` loads from PFG's purchase
   worksheet — NEVER its prices (catch-weight shows the per-lb price, unmarked)
-- `draft-dish-specs`: the matcher miscopies product numbers onto REAL wrong items (peach for
-  watermelon) → a pick stands only if its copied description agrees, digits exact. The drafter read
-  its name list as CLOSED (lamb → pork): rules 11-12 + batches of 4. Buy-outs = ONE line, 1 each (scallops, coconut shrimp, Wellington)
+- `draft-dish-specs`: matcher miscopies product numbers onto REAL wrong items (peach for watermelon) → a pick stands only
+  if its copied description agrees, digits exact. Drafter read its name list as CLOSED (lamb → pork): rules 11-12 + batches
+  of 4. Buy-outs = ONE line, 1 each. A NAME = one product for EVERY dish: wrong for some → **Split** them to another name, never re-pick
 - Menus (`menu_dishes`, P2): hand-designed marketing layouts, so a MODEL reads them, not
   coordinates. `.docx` converts to HTML **in the browser** (Gemini can't read .docx;
   `npm:mammoth` in the edge fn blew the 130s cold start). Safe only behind the confirm gate
