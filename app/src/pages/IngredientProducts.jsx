@@ -20,8 +20,13 @@ export default function IngredientProducts() {
     const [error, setError] = useState(null)
     const [selected, setSelected] = useState(0)
     const [editingId, setEditingId] = useState(null)
+    // What the open row is doing: 'product' (pick a catalog product) or 'split' (move
+    // some of its dishes to another ingredient name). One editingId keeps the keyboard
+    // hook paused, and Escape closing, for both.
+    const [editMode, setEditMode] = useState('product')
     const [busy, setBusy] = useState(false)
     const [matching, setMatching] = useState(null)
+    const [query, setQuery] = useState('')
 
     const load = useCallback(async () => {
         setLoading(true)
@@ -45,10 +50,40 @@ export default function IngredientProducts() {
         draft: rows.filter(r => r.mapping_status === 'draft').length,
         confirmed: rows.filter(r => r.mapping_status === 'confirmed').length,
     }
+    // A search looks across every status: the mistakes worth searching for are mostly
+    // in confirmed rows, which the default "To review" filter hides.
     // The keyboard hook keys on `id`; an ingredient's identity is its name.
+    const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
     const visible = rows
-        .filter(r => filter === 'all' || (filter === 'unmapped' ? !r.mapping_status : r.mapping_status === filter))
-        .map(r => ({ ...r, id: r.ingredient_name }))
+        .filter(r => words.length > 0
+            ? words.every(w => searchText(r).includes(w))
+            : filter === 'all' || (filter === 'unmapped' ? !r.mapping_status : r.mapping_status === filter))
+        // The ingredient itself before rows that only match through a dish's name
+        // ("eggs" before mayonnaise, used in Deviled Eggs); most-used order within each.
+        .map(r => ({ r, rank: searchRank(r, words) }))
+        .sort((a, b) => a.rank - b.rank)
+        .map(({ r }) => ({ ...r, id: r.ingredient_name }))
+
+    // Opens the row's product picker ('product') or its dish split ('split').
+    function openEditor(row, mode) {
+        setEditMode(mode)
+        setEditingId(row.id)
+    }
+
+    // After a split the moved dishes live under the new name; searching for it puts
+    // that row (and the one they left) in front of the reviewer to finish the job.
+    async function afterSplit(newName, warning) {
+        setEditingId(null)
+        setQuery(newName)
+        setError(warning)
+        try {
+            setRows(await loadUsage())
+            setSelected(0)
+        } catch (err) {
+            console.error('Could not reload ingredient mappings:', err)
+            setError(err.message)
+        }
+    }
 
     async function matchUnmapped() {
         const names = rows.filter(r => !r.mapping_status).map(r => r.ingredient_name)
@@ -111,6 +146,7 @@ export default function IngredientProducts() {
         actions: {
             c: row => { if (row.mapping_status === 'draft') saveMapping(row, row.product_id, row.ai_note) },
             n: row => { if (row.mapping_status !== 'confirmed') saveMapping(row, null, row.ai_note) },
+            s: row => openEditor(row, 'split'),
         },
     })
 
@@ -126,7 +162,15 @@ export default function IngredientProducts() {
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)', flexWrap: 'wrap' }}>
-                <select className="input" style={{ width: 'auto' }} value={filter} onChange={e => setFilter(e.target.value)}>
+                <input
+                    className="input"
+                    style={{ width: 'auto', minWidth: '16rem' }}
+                    type="search"
+                    value={query}
+                    onChange={e => { setQuery(e.target.value); setSelected(0) }}
+                    placeholder="Search ingredient, product or dish"
+                />
+                <select className="input" style={{ width: 'auto' }} value={filter} onChange={e => setFilter(e.target.value)} disabled={words.length > 0}>
                     <option value="draft">To review ({counts.draft})</option>
                     <option value="unmapped">Not matched ({counts.unmapped})</option>
                     <option value="confirmed">Confirmed ({counts.confirmed})</option>
@@ -158,8 +202,9 @@ export default function IngredientProducts() {
             {!loading && visible.length > 0 && (
                 <>
                     <div className="page-subtitle" style={{ marginBottom: 'var(--space-3)' }}>
+                        {words.length > 0 && `${visible.length} found across every status · `}
                         j / k or ↑ ↓ to move · c to confirm the match · e to pick a different product ·
-                        n for not bought from this catalog
+                        n for not bought from this catalog · s to split dishes off to another name
                     </div>
                     <div className="catalog-list">
                         {visible.map((row, i) => (
@@ -168,9 +213,12 @@ export default function IngredientProducts() {
                                 row={row}
                                 isSelected={i === selected}
                                 isEditing={editingId === row.id}
+                                editMode={editMode}
                                 busy={busy}
                                 onSelect={() => setSelected(i)}
-                                onEdit={() => setEditingId(row.id)}
+                                onEdit={() => openEditor(row, 'product')}
+                                onSplit={() => openEditor(row, 'split')}
+                                onSplitDone={afterSplit}
                                 onCancelEdit={() => setEditingId(null)}
                                 onPick={product => saveMapping(row, product.id, `Picked by hand: ${product.description}`)}
                                 onConfirm={() => saveMapping(row, row.product_id, row.ai_note)}
@@ -202,7 +250,20 @@ async function loadUsage() {
     return all
 }
 
-function MappingRow({ row, isSelected, isEditing, busy, onSelect, onEdit, onCancelEdit, onPick, onConfirm, onNotFromCatalog }) {
+// Everything a search can match on one row: its name, its product and its dishes.
+function searchText(row) {
+    return [row.ingredient_name, row.product_description, ...(row.dishes || []).map(d => d.name)]
+        .filter(Boolean).join(' ').toLowerCase()
+}
+
+// 0 = the name is the search, 1 = the name holds every word, 2 = matched elsewhere.
+function searchRank(row, words) {
+    if (words.length === 0) return 0
+    if (row.ingredient_name === words.join(' ')) return 0
+    return words.every(w => row.ingredient_name.includes(w)) ? 1 : 2
+}
+
+function MappingRow({ row, isSelected, isEditing, editMode, busy, onSelect, onEdit, onSplit, onSplitDone, onCancelEdit, onPick, onConfirm, onNotFromCatalog }) {
     const rowRef = useRef(null)
     useEffect(() => {
         if (isSelected) rowRef.current?.scrollIntoView({ block: 'nearest' })
@@ -249,7 +310,8 @@ function MappingRow({ row, isSelected, isEditing, busy, onSelect, onEdit, onCanc
                 )}
                 {row.ai_note && <div className="catalog-row-lists">{row.ai_note}</div>}
 
-                {isEditing && <ProductPicker initial={row.ingredient_name} busy={busy} onPick={onPick} onCancel={onCancelEdit} />}
+                {isEditing && editMode === 'product' && <ProductPicker initial={row.ingredient_name} busy={busy} onPick={onPick} onCancel={onCancelEdit} />}
+                {isEditing && editMode === 'split' && <SplitForm row={row} onDone={onSplitDone} onCancel={onCancelEdit} />}
             </div>
             <div className="catalog-row-price">
                 <div className="menu-dish-actions">
@@ -262,6 +324,11 @@ function MappingRow({ row, isSelected, isEditing, busy, onSelect, onEdit, onCanc
                     {!isEditing && (
                         <button className="btn btn-sm btn-secondary" disabled={busy} onClick={e => { e.stopPropagation(); onEdit() }}>
                             {row.product_id ? 'Change' : 'Pick product'}
+                        </button>
+                    )}
+                    {!isEditing && (
+                        <button className="btn btn-sm btn-secondary" disabled={busy} onClick={e => { e.stopPropagation(); onSplit() }}>
+                            Split
                         </button>
                     )}
                     {row.mapping_status !== 'confirmed' && (
@@ -306,6 +373,218 @@ function DishList({ dishes }) {
             )}
         </div>
     )
+}
+
+// Moves the ticked dishes' lines from this ingredient name to another. A name maps to
+// ONE product for every dish that uses it, so when one name covers two things the
+// kitchen buys differently ("egg": a frozen patty on the breakfast sandwiches, shell
+// eggs everywhere else) the fix is to give some of the dishes a different name.
+//
+// Moved dishes take whatever the new name is mapped to; a brand-new name starts with no
+// product. Moving EVERY dish carries the match along to a brand-new name (a plain
+// rename) and drops it when joining an existing name, so no confirmed match is left on a
+// name no dish uses: the drafter could write that name again and its dish would pick up
+// the product without anyone reviewing it.
+function SplitForm({ row, onDone, onCancel }) {
+    const from = row.ingredient_name
+    const [lines, setLines] = useState(null)
+    const [ticked, setTicked] = useState(() => new Set())
+    const [newName, setNewName] = useState('')
+    const [target, setTarget] = useState(null)
+    const [saving, setSaving] = useState(false)
+    const [formError, setFormError] = useState(null)
+
+    const to = normaliseName(newName)
+    const allTicked = lines !== null && lines.length > 0 && ticked.size === lines.length
+
+    // Every line using this name, orderable dish or not, so a move leaves none behind.
+    useEffect(() => {
+        let live = true
+        supabase
+            .from('dish_ingredients')
+            .select('dish_id, portion_qty, portion_unit, menu_dishes(name, menu_source, season)')
+            .eq('ingredient_name', from)
+            .then(({ data, error }) => {
+                if (!live) return
+                if (error) { setFormError(error.message); setLines([]); return }
+                setLines([...(data || [])].sort((a, b) =>
+                    (a.menu_dishes?.menu_source || '').localeCompare(b.menu_dishes?.menu_source || '')
+                    || (a.menu_dishes?.name || '').localeCompare(b.menu_dishes?.name || '')))
+            })
+        return () => { live = false }
+    }, [from])
+
+    // What the typed name already is, so the reviewer sees where the dishes will land
+    // before moving them.
+    useEffect(() => {
+        if (!to || to === from) { setTarget(null); return }
+        let live = true
+        const timer = setTimeout(async () => {
+            try {
+                const found = await lookupName(to)
+                if (live) setTarget({ name: to, ...found })
+            } catch (err) {
+                if (live) setFormError(err.message)
+            }
+        }, 250)
+        return () => { live = false; clearTimeout(timer) }
+    }, [to, from])
+
+    function toggle(dishId) {
+        setTicked(prev => {
+            const next = new Set(prev)
+            if (next.has(dishId)) next.delete(dishId)
+            else next.add(dishId)
+            return next
+        })
+    }
+
+    async function save() {
+        if (to === from) { setFormError(`Those dishes already say "${from}".`); return }
+        setSaving(true)
+        setFormError(null)
+        const ids = [...ticked]
+        let before
+        try {
+            // Looked up again here, not taken from the preview, which can trail the typing.
+            before = await lookupName(to)
+
+            // unique (dish_id, ingredient_name): one dish already listing the new name
+            // would fail the whole update, so name those dishes instead.
+            const { data: clash, error: clashError } = await supabase
+                .from('dish_ingredients').select('dish_id').eq('ingredient_name', to).in('dish_id', ids)
+            if (clashError) throw clashError
+            if (clash.length > 0) {
+                const names = clash.map(c => lines.find(l => l.dish_id === c.dish_id)?.menu_dishes?.name)
+                throw new Error(`Already listing "${to}": ${names.join(', ')}. Untick them, or fix them on Dish Ingredients.`)
+            }
+
+            const { data: moved, error: moveError } = await supabase
+                .from('dish_ingredients')
+                .update({ ingredient_name: to })
+                .eq('ingredient_name', from)
+                .in('dish_id', ids)
+                .select('id')
+            if (moveError) throw moveError
+            if (moved.length !== ids.length) throw new Error(`Moved ${moved.length} of ${ids.length} dishes — reload and check them.`)
+        } catch (err) {
+            console.error('Could not move the dishes:', err)
+            setFormError(err.message)
+            setSaving(false)
+            return
+        }
+
+        // The dishes have moved; a failure from here on is reported on the page, since
+        // the form's dish list no longer matches the database.
+        let warning = null
+        if (row.mapping_status) {
+            try {
+                // Counted afresh, not read off the form's list: a dish drafted with this
+                // name while the form sat open still needs the match.
+                const { count: left, error: countError } = await supabase
+                    .from('dish_ingredients')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('ingredient_name', from)
+                if (countError) throw countError
+                if (left === 0) {
+                    const brandNew = !before.mapping && before.dishCount === 0
+                    const { error: mapError } = brandNew
+                        ? await supabase.from('ingredient_products')
+                            .update({ ingredient_name: to, updated_at: new Date().toISOString() })
+                            .eq('ingredient_name', from)
+                        : await supabase.from('ingredient_products').delete().eq('ingredient_name', from)
+                    if (mapError) throw mapError
+                }
+            } catch (err) {
+                console.error('Could not tidy the old match:', err)
+                warning = `The dishes moved, but "${from}" still has its old match: ${err.message}`
+            }
+        }
+        setSaving(false)
+        onDone(to, warning)
+    }
+
+    return (
+        <div className="ingredient-picker" onClick={e => e.stopPropagation()}>
+            <div className="catalog-row-lists">
+                Tick the dishes that need a different ingredient, then name it. The rest stay "{from}".
+            </div>
+            {lines === null && <div className="catalog-row-lists"><span className="spinner" /> Loading dishes...</div>}
+            {lines !== null && lines.length > 0 && (
+                <>
+                    <button
+                        type="button"
+                        className="ingredient-dishes-more"
+                        onClick={() => setTicked(allTicked ? new Set() : new Set(lines.map(l => l.dish_id)))}
+                    >
+                        {allTicked ? 'Untick all' : `Tick all ${lines.length}`}
+                    </button>
+                    <div className="ingredient-split-list">
+                        {lines.map(l => (
+                            <label key={l.dish_id} className="ingredient-split-dish">
+                                <input type="checkbox" checked={ticked.has(l.dish_id)} onChange={() => toggle(l.dish_id)} />
+                                <span>
+                                    <span className="ingredient-dish-name">{l.menu_dishes?.name}</span>
+                                    {' — '}{l.menu_dishes?.season ? `${l.menu_dishes.menu_source} (${l.menu_dishes.season})` : l.menu_dishes?.menu_source}
+                                    {' · '}{Number(l.portion_qty)} {l.portion_unit === 'floz' ? 'fl oz' : l.portion_unit}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                </>
+            )}
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <input className="input" autoFocus value={newName} onChange={e => setNewName(e.target.value)} placeholder="New ingredient name" />
+                <button className="btn btn-sm btn-primary" disabled={saving || ticked.size === 0 || !to} onClick={save}>
+                    Move {ticked.size}
+                </button>
+                <button className="btn btn-sm btn-secondary" disabled={saving} onClick={onCancel}>Cancel</button>
+            </div>
+            {target?.name === to && ticked.size > 0 && (
+                <div className="catalog-row-lists">{splitPreview(ticked.size, to, allTicked && !!row.mapping_status, target)}</div>
+            )}
+            {formError && <div className="dish-spec-gap">{formError}</div>}
+        </div>
+    )
+}
+
+// The database's check on ingredient names (lower case, trimmed), plus runs of spaces
+// squeezed to one, so "egg  patty" can't become a second name beside "egg patty".
+function normaliseName(name) {
+    return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+// A name's current match (if any) and how many dish lines already use it.
+async function lookupName(name) {
+    const [mapping, used] = await Promise.all([
+        supabase
+            .from('ingredient_products')
+            .select('status, product_id, supplier_products(description)')
+            .eq('ingredient_name', name)
+            .maybeSingle(),
+        supabase
+            .from('dish_ingredients')
+            .select('id', { count: 'exact', head: true })
+            .eq('ingredient_name', name),
+    ])
+    if (mapping.error) throw mapping.error
+    if (used.error) throw used.error
+    return { mapping: mapping.data, dishCount: used.count ?? 0 }
+}
+
+// The line under the Split form saying where the ticked dishes will land and what
+// product they will take there.
+function splitPreview(count, to, carriesMatch, target) {
+    const dishes = `${count} dish${count === 1 ? '' : 'es'}`
+    if (!target.mapping && target.dishCount === 0) {
+        return carriesMatch
+            ? `${dishes} will be renamed "${to}" and keep this match.`
+            : `${dishes} will move to "${to}", a new ingredient with no product yet — pick one after.`
+    }
+    const answer = !target.mapping ? 'no product yet'
+        : !target.mapping.product_id ? `${target.mapping.status}, not bought from this catalog`
+        : `${target.mapping.status}: ${target.mapping.supplier_products?.description}`
+    return `${dishes} will join "${to}" (${answer}).`
 }
 
 // Search the catalog and pick any product, including one the model never suggested
