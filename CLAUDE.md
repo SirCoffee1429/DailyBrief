@@ -41,9 +41,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   **Multimodal PDF work is the exception**: `process-beo` and `process-menu` pin
   `gemini-2.5-flash`, measured — 3-flash-preview took 25s on ONE page and blew the 130s
   gateway margin on four. Time a new PDF path on the LARGEST file; 1 page hides it
-- Recipes are a FIXED Excel template in `workbook_sheets.rows` (row 1 `RECIPE:`|name, rows
-  3–23 ingredients, row 24 `Assembly:`). **NO yield field** — 494 sheets, 0 say "serves":
-  an absolute batch that CANNOT scale to a headcount
+- Recipes: the Excel template (`workbook_sheets.rows`; row 1 `RECIPE:`, 3–23 ingredients, 24 `Assembly:`) has **NO
+  yield** (494 sheets) — can't scale. Seasonal BOOKS do (25 portions) → `house_recipes` (`app/scripts/recipe-book-sql.mjs`);
+  for those dishes the drafter's model only COPIES batches, code reads every share off the book (model math: up to 25x off)
 - Dates: `lib/dates.js` for local "today", never `toISOString().split()` (UTC flips 7pm Central).
   Schedule `week_start` is a MONDAY; the grid matches shifts by exact date — re-date BOTH
 - Briefings: `briefings.date` is the day it SHOWS; same-day posts stack. `defaultBriefingDate()`
@@ -118,8 +118,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`). **P2 DONE**: 368
-  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-07:
-  82/364 confirmed, 12 drafts; drafter v13); reads only
+  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-14: 232 confirmed, 39 drafts
+  incl. 18 fall from the book; 93 seasonal unspecced, spring–winter WAIT for their books; drafter v21). Reads only
   `orderable_menu_dishes`; inference stays OUT of the per-BEO path. `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---

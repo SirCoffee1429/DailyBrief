@@ -27,6 +27,7 @@ export default function DishSpecs() {
     const [status, setStatus] = useState('draft')
     const [dishes, setDishes] = useState([])
     const [lines, setLines] = useState({})
+    const [recipes, setRecipes] = useState({})
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [selected, setSelected] = useState(0)
@@ -55,14 +56,17 @@ export default function DishSpecs() {
 
             const { data, error: queryError } = await request
             if (queryError) throw queryError
+            const ids = (data || []).map(d => d.id)
             setDishes(data || [])
-            setLines(await loadLines((data || []).map(d => d.id)))
+            setLines(await loadLines(ids))
+            setRecipes(await loadHouseRecipes(ids))
             setSelected(0)
         } catch (err) {
             console.error('Could not load dish specs:', err)
             setError(err.message)
             setDishes([])
             setLines({})
+            setRecipes({})
         } finally {
             setLoading(false)
         }
@@ -263,6 +267,7 @@ export default function DishSpecs() {
                                 key={dish.id}
                                 dish={dish}
                                 lines={lines[dish.id] || []}
+                                recipes={recipes[dish.id] || []}
                                 isSelected={i === selected}
                                 isEditing={editingId === dish.id}
                                 busy={busy}
@@ -298,14 +303,40 @@ async function loadLines(dishIds) {
     return byDish
 }
 
-function SpecRow({ dish, lines, isSelected, isEditing, busy, onSelect, onEdit, onCancelEdit, onSave, onConfirm }) {
+// The kitchen's own recipe for each dish whose season's book is loaded (house_recipes),
+// grouped by dish: the dish's recipe first, then the sides and sub-recipes it uses. The
+// same lookup the drafter reads, so the reviewer sees exactly what the draft came from.
+async function loadHouseRecipes(dishIds) {
+    if (dishIds.length === 0) return {}
+    const { data, error } = await supabase.rpc('dish_house_recipes', { p_dish_ids: dishIds })
+    if (error) throw error
+    const byDish = {}
+    for (const row of [...(data || [])].sort((a, b) => a.depth - b.depth)) (byDish[row.dish_id] ||= []).push(row)
+    return byDish
+}
+
+// Collapsed by default: it is there to check a spec against, not to read on every row.
+function HouseRecipes({ dish, recipes }) {
+    if (recipes.length === 0) return null
+    const [own, ...used] = recipes
+    return (
+        <details className="dish-spec-recipe" onClick={e => e.stopPropagation()}>
+            <summary>
+                {dish.season} recipe book: {own.title}{used.length > 0 && ` + ${used.length} recipe${used.length === 1 ? '' : 's'} it uses`}
+            </summary>
+            {recipes.map(r => <pre key={r.recipe_id} className="dish-spec-recipe-text">{r.recipe_text}</pre>)}
+        </details>
+    )
+}
+
+function SpecRow({ dish, lines, recipes, isSelected, isEditing, busy, onSelect, onEdit, onCancelEdit, onSave, onConfirm }) {
     const rowRef = useRef(null)
     useEffect(() => {
         if (isSelected) rowRef.current?.scrollIntoView({ block: 'nearest' })
     }, [isSelected])
 
     if (isEditing) {
-        return <SpecEditForm dish={dish} lines={lines} busy={busy} onSave={onSave} onCancel={onCancelEdit} />
+        return <SpecEditForm dish={dish} lines={lines} recipes={recipes} busy={busy} onSave={onSave} onCancel={onCancelEdit} />
     }
 
     const { cost, costed, gaps } = specCost(lines)
@@ -322,6 +353,7 @@ function SpecRow({ dish, lines, isSelected, isEditing, busy, onSelect, onEdit, o
                 </div>
                 {dish.description && <div className="catalog-row-lists">{dish.description}</div>}
                 {dish.spec_note && <div className="dish-spec-note">{dish.spec_note}</div>}
+                <HouseRecipes dish={dish} recipes={recipes} />
 
                 {lines.length > 0 && (
                     <table className="dish-spec-lines">
@@ -370,7 +402,7 @@ function SpecRow({ dish, lines, isSelected, isEditing, busy, onSelect, onEdit, o
 
 // Edits are validated here before the RPC so a mistyped row gets a message beside the
 // form instead of a constraint error from the database.
-function SpecEditForm({ dish, lines, busy, onSave, onCancel }) {
+function SpecEditForm({ dish, lines, recipes, busy, onSave, onCancel }) {
     const [basis, setBasis] = useState(dish.spec_basis || derivedBasis(dish))
     const [note, setNote] = useState(dish.spec_note || '')
     const [rows, setRows] = useState(
@@ -396,6 +428,7 @@ function SpecEditForm({ dish, lines, busy, onSave, onCancel }) {
             <div style={{ width: '100%' }}>
                 <div className="catalog-row-name" style={{ marginBottom: 'var(--space-3)' }}>{dish.name}</div>
                 {dish.description && <div className="catalog-row-lists" style={{ marginBottom: 'var(--space-3)' }}>{dish.description}</div>}
+                <HouseRecipes dish={dish} recipes={recipes} />
 
                 <div className="menu-dish-edit-grid">
                     <label className="menu-dish-field">

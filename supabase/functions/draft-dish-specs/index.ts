@@ -217,6 +217,42 @@ RULES
     A variety the dish names is its own ingredient, never the generic or a sibling.
     If you ever use a stand-in anyway, say so in note — but a stand-in is a mistake.
 
+13. HOUSE RECIPE. Some dishes come with the kitchen's own recipe, and the recipes it uses.
+    That recipe IS the dish: its ingredients exactly — none added, none swapped — and its
+    portion is the portion (rule 4 does not resize it). For such a dish return "recipes"
+    INSTEAD of "ingredients", one element per recipe given with the dish:
+      "recipes": [ { "title": string, "called": number, "yield": number, "within": string|null,
+                     "ingredients": [ { "name": string, "qty": number, "unit": ... } ] } ]
+    - title: copied exactly from the input — the title alone, not the line printed under it.
+      A recipe's own sections (its sauce, glaze, jus, custard, crust) stay in ITS element;
+      only a recipe given with its own title gets an element of its own.
+    - ingredients: that recipe's WHOLE BATCH as written — every line at its full amount.
+      Do NOT divide or scale anything; that is done for you. Rule 3 holds: butter, herbs,
+      garlic, shallots, breadcrumbs, sugar, nuts, spices and pastes are bought by WEIGHT,
+      so a cup or spoon of them becomes oz, never floz — floz is for liquids. A line
+      counted but sized by weight ("1 each whole ribeye roll, 15 to 16 lb") is its weight,
+      the larger figure of a range. The recipe's words name the food (rule 11): brioche is
+      brioche, acorn squash is acorn squash — never the butternut squash already on the
+      list — heirloom carrots are heirloom carrots, never plain carrot, and smoked paprika
+      is smoked paprika. Zest is bought as its fruit: lemon zest is lemons (each). A
+      recipe is never "mapped" to a listed name: a food the list lacks gets a new name.
+      Water, including a brine's water, is never an ingredient. A line that IS one of the given recipes
+      ("3 cups Maple Cider Vinaigrette (sub-recipe)") is not an ingredient: leave it out
+      of the batch — its own element lists what it is made of.
+    - called, yield, within: how much of this recipe ONE portion uses, as two numbers
+      COPIED from the page — never divide them yourself. called and yield in one unit.
+        the dish's own recipe ("25 portions"):             called 1, yield 25, within null
+        a side ON THE PLATE at "3 oz" whose recipe makes
+          "25 portions, 3 oz each" (75 oz):                 called 3, yield 75, within null
+        "1 square" of a recipe cut into 25:                called 1, yield 25, within null
+        a line "3 cups Maple Cider Vinaigrette" in the salad's batch, the vinaigrette
+          making "About 3 1/2 cups":    called 3, yield 3.5, within "<the salad's title>"
+      within is the title of the recipe whose BATCH lists this one, or null when the
+      amount is per portion of the dish. A given recipe the dish does not use: called 0.
+    - Leave out water, "to taste" or "as needed" lines with no amount, and anything the
+      recipe marks optional — name the optional ones in note. Where a line offers a
+      choice ("brioche or country French bread"), use the first.
+
 Do not wrap the output in markdown code fences.
 `;
 
@@ -256,17 +292,276 @@ function cleanSpec(raw: any, dish: any): CleanSpec {
     }
   }
 
+  // 4 places keeps a pinch from a sub-recipe (nutmeg, 0.0004 oz a guest). Anything smaller
+  // rounds to 0, which portion_qty's > 0 CHECK rejects along with the whole batch (the Short
+  // Rib's purée nutmeg did, 2026-10-14) — so it is left out and named, not saved as 0.
+  const rounded = [...kept.values()].map(i => ({ ...i, qty: Math.round(i.qty * 10000) / 10000 }));
+  const tooSmall = rounded.filter(i => i.qty === 0).map(i => i.name);
+
   const notes = [typeof raw?.note === 'string' ? raw.note.trim() : '']
     .concat(dropped.length ? [`Model gave unusable amounts for: ${dropped.join(', ')}`] : [])
+    .concat(tooSmall.length ? [`Too small to order per portion: ${tooSmall.join(', ')}`] : [])
     .filter(Boolean);
 
   return {
     dish_id: dish.id,
     basis: basisFor(dish),
     note: notes.length ? notes.join(' · ') : null,
-    ingredients: [...kept.values()].map(i => ({ ...i, qty: Math.round(i.qty * 1000) / 1000 })),
+    ingredients: rounded.filter(i => i.qty > 0),
   };
 }
+
+// The books write a buffet entrée as a full single-entrée portion and say most guests on
+// a 2-entrée buffet take 60-70% of each; the owner set 65% (2026-10-14). Buffet sides are
+// already written at side portions and are left as the book has them.
+const BUFFET_ENTREE_SHARE = 0.65;
+
+// A house-recipe dish comes back as whole batches plus, per recipe, two numbers copied off
+// the page (rule 13), and every division is done HERE. Asked to divide and sum itself, the
+// model got each main-recipe line right and the cross-recipe ones wrong — crouton bread 34%
+// low, a third recipe's butter dropped; handed one share to compute per recipe, it still
+// put the candied pecans at 2.7% of the batch, not 12/28 x 4% = 1.7% (2026-10-14 dry runs).
+// Copying numbers it does reliably; dividing them it does not.
+// Returns the ordinary { ingredients, note } shape, so cleanSpec still checks every unit
+// and sums a name that several recipes share. A share that cannot be worked out, or a
+// recipe that is not one of the dish's, is left out and NAMED in the note — never guessed.
+// Tested by house_recipe_test.ts.
+//
+// The model also renames and splits recipes, so a title is matched by what it MEANS:
+//  - "Boneless Braised Beef Short Rib (7 oz) with Red Wine Pan Reduction" (title + the
+//    subtitle printed under it) is the Short Rib recipe — exact matching lost its beef;
+//  - "Bourbon Maple Glaze", a SECTION of the Pecan-Crusted Salmon recipe sent back as a
+//    recipe of its own, is counted with that recipe at that recipe's share — dropping it
+//    lost the salmon's glaze and the pork loin's whole pan jus (2026-10-14 drafts).
+// And the dish's own recipe takes its share from its own "25 portions" yield, not from the
+// model: the soup came back as 6 of 160 oz (3.75%), not 1 of 25.
+// "Leek & Gruyère Bread Pudding" and "leek and gruyere bread pudding" alike: no case,
+// accents or punctuation, and "&" read as "and".
+const foodKey = (name: unknown) => String(name ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
+const toNumber = (v: unknown) => typeof v === 'string' ? parseFloat(v) : v;
+
+// The book's portion count for a recipe ("YIELD" then "25 portions, ..."), or null for a
+// sub-recipe whose yield is an amount ("About 3 1/2 cups").
+function portionsOf(recipe: any): number | null {
+  const m = /^YIELD\s*\n\s*(\d+)\s+portions\b/im.exec(recipe?.recipe_text || '');
+  return m ? Number(m[1]) : null;
+}
+
+// Which of the dish's recipes a title means: the same name, or the name with more after it.
+function recipeNamed(title: unknown, recipes: any[]): any | null {
+  const k = foodKey(title);
+  if (!k) return null;
+  return recipes
+    .filter((r: any) => k === foodKey(r.title) || k.startsWith(foodKey(r.title) + ' '))
+    .sort((a: any, b: any) => foodKey(b.title).length - foodKey(a.title).length)[0] ?? null;
+}
+
+// The dish's recipe that has a section by this name ("Bourbon maple glaze (makes ...)").
+function recipeWithSection(title: unknown, recipes: any[]): any | null {
+  const k = foodKey(title);
+  if (!k) return null;
+  return recipes.find((r: any) => ` ${foodKey(r.recipe_text)} `.includes(` ${k} `)) ?? null;
+}
+
+// The share of a recipe's batch in ONE portion, read off the BOOK where it can be: the
+// dish's own recipe is 1 of its portions; any other recipe is named on a line of another
+// of the dish's recipes — "3 oz Roasted Acorn Squash Purée" ON THE PLATE (that much per
+// portion) or "3 cups Horseradish Sauce (sub-recipe)" among the INGREDIENTS (that much
+// per batch of the recipe it goes into) — and its own YIELD says how much a batch makes.
+// The model's copied numbers are only the fallback: on the 2026-10-14 drafts they put the
+// Short Rib's plate sides INSIDE the rib (0.2%, not 4%) and the horseradish at 3 cups of
+// a yield it wrote in fl oz (0.5%, not 3.7%). null when neither source gives a 0-1 share.
+function shareOf(title: string, answers: Map<string, any>, recipes: any[]): { share: number, from: 'book' | 'model' } | null {
+  const book = bookShare(title, recipes, new Set());
+  if (book !== null) return { share: book, from: 'book' };
+  const model = modelShare(title, answers, recipes, new Set());
+  return model === null ? null : { share: model, from: 'model' };
+}
+
+// Amounts as the books print them ("3", "1/2", "3 1/2", "2.5") and each unit's kind and
+// size in oz (weight) or fl oz (volume).
+const BOOK_UNITS: Record<string, [string, number]> = {
+  oz: ['weight', 1], ounce: ['weight', 1], ounces: ['weight', 1],
+  lb: ['weight', 16], lbs: ['weight', 16], pound: ['weight', 16], pounds: ['weight', 16],
+  tsp: ['volume', 1 / 6], tbsp: ['volume', 0.5], cup: ['volume', 8], cups: ['volume', 8],
+  pint: ['volume', 16], pints: ['volume', 16], qt: ['volume', 32], quart: ['volume', 32], quarts: ['volume', 32],
+  gal: ['volume', 128], gallon: ['volume', 128], gallons: ['volume', 128],
+  each: ['count', 1], square: ['count', 1], squares: ['count', 1], piece: ['count', 1], pieces: ['count', 1],
+  slice: ['count', 1], slices: ['count', 1],
+};
+const MEASURE = new RegExp(String.raw`(\d+\s+\d+/\d+|\d+/\d+|\d*\.\d+|\d+)\s+(` + Object.keys(BOOK_UNITS).join('|') + String.raw`)\b`, 'gi');
+const LABELS = new Set(['YIELD', 'USED ON', 'ALLERGENS', 'ON THE PLATE', 'INGREDIENTS']);
+
+function bookAmount(text: string): number {
+  return text.trim().split(/\s+/).reduce((sum, part) => {
+    const [a, b] = part.split('/').map(Number);
+    return sum + (b ? a / b : a);
+  }, 0);
+}
+
+// The measurements in a piece of book text, in order, as { kind, value }. Adjacent ones of
+// one kind are ONE amount: "1 lb 12 oz" is 28 oz, while "3 oz (about 5 lb)" is two.
+function bookMeasures(text: string): { kind: string, value: number }[] {
+  const found: { kind: string, value: number, end: number }[] = [];
+  for (const m of text.matchAll(MEASURE)) {
+    const [kind, size] = BOOK_UNITS[m[2].toLowerCase()];
+    const value = bookAmount(m[1]) * size;
+    const prev = found[found.length - 1];
+    if (prev && prev.kind === kind && /^\s*$/.test(text.slice(prev.end, m.index))) {
+      prev.value += value;
+      prev.end = m.index! + m[0].length;
+    } else {
+      found.push({ kind, value, end: m.index! + m[0].length });
+    }
+  }
+  return found.map(({ kind, value }) => ({ kind, value }));
+}
+
+// The lines under one of a recipe's labels, up to the next label.
+function bookSection(recipe: any, label: string): string[] {
+  const lines = String(recipe?.recipe_text ?? '').split(/\r?\n/);
+  const start = lines.findIndex(l => l.trim() === label);
+  if (start < 0) return [];
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex(l => LABELS.has(l.trim()));
+  return end < 0 ? rest : rest.slice(0, end);
+}
+
+// How much one batch of a recipe makes, in the kind of unit it is called for in:
+// "25 portions, 3 oz each" is 25 by the count and 75 oz by weight; "About 3 1/2 cups" is 28 fl oz.
+function bookBatch(recipe: any, kind: string): number | null {
+  const text = bookSection(recipe, 'YIELD').join(' ');
+  const portions = /(\d+)\s+portions\b/i.exec(text);
+  if (portions) {
+    if (kind === 'count') return Number(portions[1]);
+    const size = bookMeasures(text.slice(portions.index + portions[0].length)).find(m => m.kind === kind);
+    return size ? Number(portions[1]) * size.value : null;
+  }
+  return bookMeasures(text).find(m => m.kind === kind)?.value ?? null;
+}
+
+function bookShare(title: string, recipes: any[], seen: Set<string>): number | null {
+  const recipe = recipes.find((r: any) => r.title === title);
+  if (!recipe) return null;
+  if (recipe.depth === 0) return portionsOf(recipe) ? 1 / portionsOf(recipe)! : null;
+  const named = ` ${foodKey(title)} `;
+  for (const parent of recipes) {
+    if (parent.title === title) continue;
+    for (const [label, perPortion] of [['ON THE PLATE', true], ['INGREDIENTS', false]] as const) {
+      const line = bookSection(parent, label).find(l => ` ${foodKey(l)} `.includes(named));
+      if (!line) continue;
+      const called = bookMeasures(line)[0];
+      const batch = called ? bookBatch(recipe, called.kind) : null;
+      if (!called || !batch) return null;
+      const share = called.value / batch;
+      if (!(share > 0 && share <= 1)) return null;
+      // ON THE PLATE is per portion of the dish, so it counts only on the dish's own recipe.
+      if (perPortion) return parent.depth === 0 ? share : null;
+      if (seen.has(parent.title)) return null;
+      const parentShare = bookShare(parent.title, recipes, new Set([...seen, title]));
+      return parentShare === null ? null : share * parentShare;
+    }
+  }
+  return null;
+}
+
+// The model's numbers: called / yield, times the share of the recipe it says it goes into.
+function modelShare(title: string, answers: Map<string, any>, recipes: any[], seen: Set<string>): number | null {
+  const recipe = recipes.find((r: any) => r.title === title);
+  if (recipe?.depth === 0 && portionsOf(recipe)) return 1 / portionsOf(recipe)!;
+  const answer = answers.get(title);
+  const called = toNumber(answer?.called), yieldOf = toNumber(answer?.yield);
+  if (typeof called !== 'number' || typeof yieldOf !== 'number' || !isFinite(called) || !isFinite(yieldOf)
+      || called < 0 || yieldOf <= 0 || called > yieldOf) return null;
+  const share = called / yieldOf;
+  if (answer.within == null || answer.within === '') return share;
+  const parent = recipeNamed(answer.within, recipes);
+  if (!parent || parent.title === title || seen.has(parent.title)) return null;
+  const parentShare = modelShare(parent.title, answers, recipes, new Set([...seen, title]));
+  return parentShare === null ? null : share * parentShare;
+}
+
+function flattenHouseRecipes(raw: any, recipes: any[]): any {
+  if (recipes.length === 0 || !Array.isArray(raw?.recipes)) return raw;
+  const subRecipes = new Set(recipes.map((r: any) => foodKey(r.title)));
+  const answers = new Map<string, any>();                  // the dish's recipe title -> its element
+  const sections: { answer: any, of: string }[] = [];
+  const problems: string[] = [];
+  for (const answer of raw.recipes) {
+    const named = recipeNamed(answer?.title, recipes);
+    if (named) { if (!answers.has(named.title)) answers.set(named.title, answer); continue; }
+    const holder = recipeWithSection(answer?.title, recipes);
+    if (holder) sections.push({ answer, of: holder.title });
+    else problems.push(`"${answer?.title}" is not one of this dish's recipes`);
+  }
+
+  const ingredients: any[] = [];
+  const used: string[] = [];
+  const add = (answer: any, share: number) => {
+    for (const ing of Array.isArray(answer?.ingredients) ? answer.ingredients : []) {
+      // A batch's "3 cups Maple Cider Vinaigrette" line is that recipe, already expanded
+      // into its own ingredients — kept, it would be ordered twice (all 4 dishes of the
+      // 2026-10-14 dry run listed their sub-recipes as lines despite the prompt).
+      if (subRecipes.has(foodKey(ing?.name))) continue;
+      const qty = toNumber(ing?.qty);
+      // A bad amount is passed through untouched so cleanSpec drops it and names it.
+      if (typeof qty !== 'number' || !isFinite(qty)) { ingredients.push(ing); continue; }
+      // Batches are written in lb, one guest's share of them is ounces: all weights go
+      // to oz, so carrots in lb from one recipe and oz from another still sum (cleanSpec
+      // drops a name that arrives in two units).
+      const pounds = String(ing?.unit ?? '').trim().toLowerCase().replace(/s$/, '') === 'lb';
+      ingredients.push({ ...ing, qty: qty * share * (pounds ? 16 : 1), unit: pounds ? 'oz' : ing.unit });
+    }
+  };
+  for (const [title, answer] of answers) {
+    const found = shareOf(title, answers, recipes);
+    if (found === null) {
+      problems.push(`${title} (${answer?.called ?? '?'} of ${answer?.yield ?? '?'}${answer?.within ? ` within ${answer.within}` : ''})`);
+      continue;
+    }
+    if (found.share === 0) continue;
+    used.push(`${title} ${Math.round(found.share * 1000) / 10}%${found.from === 'model' ? " (not in the book's lines: the model's numbers)" : ''}`);
+    add(answer, found.share);
+  }
+  const folded: string[] = [];
+  for (const { answer, of } of sections) {
+    const found = shareOf(of, answers, recipes);
+    if (found === null || found.share === 0) { problems.push(`"${answer?.title}" (a section of ${of})`); continue; }
+    folded.push(`${answer.title} (with ${of})`);
+    add(answer, found.share);
+  }
+
+  const missed = recipes.map((r: any) => r.title).filter((t: string) => !answers.has(t));
+  const notes = [
+    typeof raw.note === 'string' ? raw.note.trim() : '',
+    used.length ? `Per portion, from the recipe book: ${used.join(' + ')} of each batch` : '',
+    folded.length ? `Counted as part of their recipe: ${folded.join(', ')}` : '',
+    problems.length ? `Left out, unusable share: ${problems.join(', ')}` : '',
+    missed.length ? `Model skipped: ${missed.join(', ')}` : '',
+  ].filter(Boolean);
+  return { ...raw, ingredients, note: notes.join(' · ') || null };
+}
+
+// A buffet entrée takes its share of the book's single-entrée portion. A house-recipe dish
+// the model answered the old way (one flat list, no shares) is flagged for a closer look.
+function fromHouseRecipe(spec: CleanSpec, dish: any, raw: any, recipes: any[]): CleanSpec {
+  if (recipes.length === 0) return spec;
+  const buffetEntree = /buffet entr/i.test(dish.menu_section || '');
+  const notes = [
+    spec.note,
+    Array.isArray(raw?.recipes) ? null : `Recipe book given, but the model did not split it by recipe — check every amount.`,
+    buffetEntree ? `Buffet entrée: ${BUFFET_ENTREE_SHARE * 100}% of the book's single-entrée portion.` : null,
+  ].filter(Boolean);
+  return {
+    ...spec,
+    note: notes.join(' · ') || null,
+    ingredients: buffetEntree
+      ? spec.ingredients.map(i => ({ ...i, qty: Math.round(i.qty * BUFFET_ENTREE_SHARE * 10000) / 10000 }))
+      : spec.ingredients,
+  };
+}
+// end of house recipe helpers
 
 async function draftIngredients(db: any, payload: any) {
   const dishIds: string[] = Array.isArray(payload.dishIds) ? payload.dishIds : [];
@@ -297,14 +592,26 @@ async function draftIngredients(db: any, payload: any) {
   if (vocabError) throw vocabError;
   const existing = (vocab || []).map((r: any) => r.ingredient_name);
 
+  // The kitchen's own recipe for a dish, when its season's book is loaded (house_recipes):
+  // depth 0 is the dish itself, deeper rows the sides and sub-recipes it uses (rule 13).
+  const { data: houseRows, error: houseError } = await db.rpc('dish_house_recipes', { p_dish_ids: todo.map((d: any) => d.id) });
+  if (houseError) throw houseError;
+  const recipesFor = new Map<string, any[]>();
+  for (const row of (houseRows || []).sort((a: any, b: any) => a.depth - b.depth)) {
+    recipesFor.set(row.dish_id, [...(recipesFor.get(row.dish_id) || []), row]);
+  }
+
   const dishBlock = todo.map((d: any) => {
     const basis = basisFor(d);
+    const [own, ...used] = recipesFor.get(d.id) || [];
     return [
       `dish_id: ${d.id}`,
       `name: ${d.name}`,
       `menu: ${d.menu_source}${d.season ? ` (${d.season})` : ''}${d.menu_section ? ` — ${d.menu_section}` : ''}`,
       d.description ? `description: ${d.description}` : null,
       `portion basis: per ${basisPhrase(d, basis)}`,
+      own ? `HOUSE RECIPE (rule 13):\n${own.recipe_text}` : null,
+      ...used.map((r: any) => `RECIPE IT USES — ${r.title}:\n${r.recipe_text}`),
     ].filter(Boolean).join('\n');
   }).join('\n\n');
 
@@ -320,7 +627,8 @@ async function draftIngredients(db: any, payload: any) {
   for (const raw of parsed) {
     const dish = byId.get(raw?.dish_id);
     if (!dish || specs.some(s => s.dish_id === dish.id)) continue;
-    const spec = cleanSpec(raw, dish);
+    const recipes = recipesFor.get(dish.id) || [];
+    const spec = fromHouseRecipe(cleanSpec(flattenHouseRecipes(raw, recipes), dish), dish, raw, recipes);
     // An empty list is a failed read, not a dish made of nothing. Leave it unspecced
     // so it shows up as still to do instead of as a draft that claims to cost $0.
     if (spec.ingredients.length > 0) specs.push(spec);

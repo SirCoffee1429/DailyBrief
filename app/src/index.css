@@ -7208,6 +7208,27 @@ tr.beo-completed td .beo-check {
   font-size: 0.75rem;
 }
 
+/* The kitchen's own recipe beside a spec under review (house_recipes), collapsed by default. */
+.dish-spec-recipe {
+  margin-top: var(--space-2);
+  font-size: 0.8rem;
+}
+
+.dish-spec-recipe summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.dish-spec-recipe-text {
+  white-space: pre-wrap;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--border-color);
+  background: var(--bg-input);
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
 .dish-spec-edit-rows {
   display: flex;
   flex-direction: column;

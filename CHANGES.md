@@ -181,112 +181,16 @@
 - 09-27 — config.toml Covers Every Deployed Function — `get-weather` + `generate-order-items` added with `verify_jwt = false` (a default redeploy could have flipped them); all 16 match. Dead pre-hybrid `generate-schedule/llm.ts` deleted from `main`. → [full](docs/changelog/2026-09.md#2026-09-27--configtoml-covers-every-deployed-function-dead-llmts-deleted)
 - 09-28 — Drift-Audit Decisions — `parse-recipe` deleted from prod after archiving its source (`docs/archive/edge-functions/`). Scheduler: nothing deployed or removed — Crew Availability (31 people) and Roster are in real use; `generate-schedule` v17 left deployed by the owner's choice. → [full](docs/changelog/2026-09.md#2026-09-28--drift-audit-decisions-parse-recipe-deleted-scheduler-left-as-is)
 - 09-28 — Schema Baseline in the Repo — `supabase/schema_baseline.sql` = `db dump` of prod's structure (32 tables, 3 views, 12 functions, 52 policies — all counts verified). Event trigger `ensure_rls` is not in a dump; its definition sits in the header. The CLI 401s were a stale `SUPABASE_ACCESS_TOKEN` env var. → [full](docs/changelog/2026-09.md#2026-09-28--schema-baseline-the-live-databases-structure-is-now-in-the-repo)
+- 09-30 — Purchase History: Matcher Prefers What the Kitchen Buys — PFG worksheet loaded (631 products dated, 611 updated / 20 added); its prices deliberately NOT taken (catch-weight = per-lb, 20–50x low as case prices). Matcher v3 lists bought products first (`BOUGHT <date>`). First CLI deploy: it stores compiled JS. → [full](docs/changelog/2026-09.md#2026-09-30--purchase-history-ingredient-matching-prefers-what-the-kitchen-buys)
+
+### October 2026
+
+- 10-01 — Ingredient Products Shows Which Dishes Use Each Ingredient — `ingredient_usage.dishes` (name, menu, season, portion; 122/122 rows checked); `BASIS_LABEL` shared via `orderUnits.js`. → [full](docs/changelog/2026-10.md#2026-10-01--ingredient-products-shows-which-dishes-use-each-ingredient)
+- 10-01 → 10-03 — Product Matcher Sees Each Ingredient's Dishes; Miscopied Numbers Caught — dish lines + `with:` companions (scallops picked pre-made 2/3 → 4/5 right); Bacon-Wrapped Scallops IS bought pre-made (owner); a pick stands only if its copied description matches its number, digit-words exact (`match_test.ts`). v3 → v8; 122/122 matches confirmed. → [full](docs/changelog/2026-10.md#2026-10-01--10-03--product-matcher-sees-each-ingredients-dishes-miscopied-numbers-caught)
 
 ---
 
 ## Detailed Entries
-
-### 2026-09-30 — Purchase History: Ingredient Matching Prefers What the Kitchen Buys
-
-**File(s) Changed:** `supabase/migrations/20260930000000_supplier_purchase_history.sql` (new),
-`app/src/lib/catalogParse.js`, `app/src/components/PurchaseHistoryPanel.jsx` (new),
-`app/src/pages/SupplierCatalog.jsx`, `app/src/pages/IngredientProducts.jsx`, `app/src/lib/dates.js`,
-`supabase/functions/draft-dish-specs/index.ts` **Type:** `feature` + `migration` —
-`draft-dish-specs` deployed v2→**v3**; migration applied.
-**Summary:** P3's matcher chose from all 1,381 catalog products with no idea which ones the
-club orders. PFG's purchase-history worksheet now records each product's last purchase, and
-the matcher and the hand picker both put what is bought first.
-
-**Details:**
-
-- **Loaded by the owner from the new Catalog panel:** 631 products, last bought 2026-02-05 →
-  09-29; **611 updated, 20 added**. Checked in the table: 1,401 products, 631 dated, 0 prices
-  changed, 0 new products priced.
-- **Prices deliberately NOT taken.** The worksheet's Price is a bare number, and for
-  catch-weight items it is the **per-pound** price (Parmesan 5.38 against a $107.60 case;
-  a new beef tenderloin case at "11.85"). Read as case prices: 20–50x too cheap. The 20 new
-  products arrive **unpriced** until the next order-guide load.
-- `record_purchase_history` (one RPC): a last-purchase date never moves backwards; nothing
-  else on an existing product is touched. A third export shape, so its header is FOUND, not
-  assumed (it sits two rows lower than the order guides').
-- **Matcher (v3):** bought products listed first and marked `BOUGHT <date>` (or `BOUGHT` for
-  the order guides' older "Purchase History" list); new rule 3 picks a bought product when one
-  fits and opens the note `NOT BOUGHT BEFORE:` otherwise. **Not yet run on real ingredients.**
-- **Pages:** catalog rows show "Last bought 9/28/2026 · 13 cs"; the picker sorts bought first
-  (before its 25-row limit); a mapped product shows its last purchase or, in red, "no purchase
-  on record". New `formatDateOnly` in `lib/dates.js` (a bare DATE via `new Date()` shows a day early).
-- **Verified:** the shipped parser run headless on the real file (631 / 0 unreadable / same
-  range as an independent count); `npm run build` passes; the deployed v3 contains the new rule.
-- **Deploy note:** this was the first CLI deploy here. The CLI stores **compiled JavaScript**,
-  so a deployed-vs-repo byte diff no longer works for this function (MCP deploys keep the
-  original TypeScript). The Deno type check could not run (an `openai` type inside Supabase's
-  own runtime declarations fails to resolve — unrelated to this code).
-
----
-
-### 2026-10-01 — Ingredient Products Shows Which Dishes Use Each Ingredient
-
-**File(s) Changed:** `supabase/migrations/20261001000000_ingredient_usage_dishes.sql` (new),
-`app/src/pages/IngredientProducts.jsx`, `app/src/lib/orderUnits.js`, `app/src/pages/DishSpecs.jsx`,
-`app/src/index.css` **Type:** `feature` + `migration` (applied).
-**Summary:** Owner request — to pick the right product he needs to see what an ingredient is
-FOR ("cheese" on a Charcuterie Board vs in a Buffalo Chicken Dip). Each ingredient row now lists
-its dishes: name, menu (with season), and the portion, e.g. "1 oz per piece".
-- `ingredient_usage` gains a `dishes` jsonb column (appended; `security_invoker` repeated).
-  Checked: 122/122 rows have one entry per dish, matching `dish_count`.
-- First 4 dishes shown, "+N more" expands. `BASIS_LABEL` moved to `orderUnits.js` and shared
-  with Dish Ingredients instead of duplicated. Build passes; owner checked it in the browser.
-- **P3 progress (owner's review, as of 10-01):** 42/364 dishes specced — Hors d'Oeuvres, Platters,
-  Themed Buffets — 14 confirmed; 116 of 122 ingredient→product matches confirmed, 6 to review.
-
----
-
-### 2026-10-01 → 10-03 — Product Matcher Sees Each Ingredient's Dishes; Miscopied Numbers Caught
-
-**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/match_test.ts` (new),
-`supabase/migrations/20261001000001_ingredient_usage_dish_companions.sql` (new), data (`dish_ingredients`,
-`ingredient_products`) **Type:** `feature` + `fix` + `migration` (applied) — `draft-dish-specs` v3→**v7**.
-**Summary:** The agreed next task: the AI matcher now gets the same dish context the owner sees
-on Ingredient Products. Testing it surfaced two more problems, both fixed.
-
-**Details:**
-
-- **Dish context (prompt rule 2):** each ingredient line lists up to 8 dishes — name, menu, season,
-  portion — and each dish's OTHER ingredients (`with:`, up to 12). Dish names alone made it pick a
-  pre-made bacon-wrapped scallop appetizer for "scallops" in 2 of 3 runs while the spec ordered bacon
-  separately; a wording rule alone fixed 1 of 3; with `with:` shown, 4 of 5. Migration adds `with`
-  inside `ingredient_usage.dishes` (no new column; `security_invoker` repeated). Checked: 305/305
-  entries equal an independent count.
-- **Bacon-Wrapped Scallops is bought pre-made (owner, 10-02).** The AI's pick was right and the SPEC
-  was wrong: the ingredients prompt assumes scratch and splits anything into raw parts. Spec is now one
-  line, `bacon-wrapped scallops` 1 each per piece → #256278 (both drafts, via the drafting RPCs); the
-  orphaned `scallops` draft mapping deleted. **Owner: it is the ONLY pre-made item** — every other
-  dish stays specced from scratch.
-- **Miscopied product numbers.** For watermelon (#52193) the model returned #52167 PEACH TRAY-PACK and
-  #522183 BUTTERNUT SQUASH — real numbers, so the not-in-catalog check passed them with a note still
-  reading "Seedless watermelon". Smoked salmon got an invented number 8 of 8 runs. The model now also
-  copies the product's description; a pick is kept only when 60% of its words are on the numbered
-  product (`describesProduct`), else saved empty with a note naming both. `match_test.ts` slices the
-  shipped helper (4 tests; mutation in both directions fails them).
-- **Verified live:** 5 `parseOnly` runs on the 5 draft ingredients after v7 — **25/25 correct**,
-  smoked salmon included. The check never fired: asking for the description apparently made the copy
-  accurate. Its rejection path is proven by the test only, not seen in production.
-- **Not measured:** whether the dish lines changed the miscopy rate (the local old-vs-new A/B was
-  refused by the permission check — it copied API keys into a scratch file). Runs take 3–6s for 5–6
-  ingredients; a full batch of 40 has not been timed with the longer prompt.
-- **Confirmed at the owner's instruction (10-03):** the 6 ingredient drafts (bacon-wrapped scallops,
-  salmon, seaweed salad, smoked salmon, watermelon, wonton wrappers) and the Bacon-Wrapped Scallops spec.
-  Smoked salmon's stored draft was the old v3 result — EMPTY (invented #256256) — so it was re-drafted
-  through v7 first (→ #256125 cold-smoked sliced, bought 07-25). **Ingredient matches: 122/122
-  confirmed.** Dish specs: 15 confirmed, 27 drafts, 322 unspecced of 364.
-- **Review fix (10-03), `draft-dish-specs` v7→v8:** the 60% word share passed a miscopy onto a SIBLING
-  size (described SCALLOP 30-40, numbered #252182 SCALLOP 60-80 — 10 of 12 words), the likeliest
-  slip since PFG numbers sizes side by side. Now every word holding a digit (30, 40, 4X4) must be on the
-  product too. Test written first and seen failing; removing the rule fails it again; 11/11 pass.
-  Not run live — every ingredient is confirmed, so the matcher has nothing to match (v8 boots and
-  answers). A leftover local test server (old v3 on `0.0.0.0:8000`, keys in memory) was stopped.
-
----
 
 ### 2026-10-06 — Office Time Off: Remove a Request From the Calendar (shipped on its own)
 
@@ -495,3 +399,47 @@ task" box; the task shows on the kitchen dashboard on its date. Kitchen (BOH) on
   task-less briefing (0/1), checkbox saved `is_completed`; delete removed row + empty group. Test rows deleted (0
   standalone rows left). `npm run build` passes; Vercel prod deploy READY and the live bundle serves the new form.
   Mobile width not checked separately.
+
+---
+
+### 2026-10-14 — Seasonal Recipe Books Drive the Dish Drafter; Fall Drafted From the Book
+
+**Session name:** `house-recipe-books` — Serena memory `session-2026-10-14-house-recipe-books`.
+
+**File(s) Changed:** `supabase/migrations/20261014000000_house_recipes.sql` (new), `app/scripts/recipe-book-sql.mjs`
+(new), `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/house_recipe_test.ts` (new),
+`app/src/pages/DishSpecs.jsx`, `app/src/index.css`, data (`house_recipes`, fall `dish_ingredients`) **Type:** `feature` +
+`migration` + `test` — `draft-dish-specs` v13 → **v21** (deployed), page change NOT pushed.
+**Summary:** The owner's seasonal recipe books (`seasonal-recipes/fall_recipe_book/Fall Banquet Recipe Book.pdf`, 25-portion
+yields, "On the Plate", sub-recipes) are now the drafter's source for the dishes they cover, and the Dish Ingredients page
+shows the book recipe beside each spec. Owner: the books' ingredients and portions are right, the methods are not
+checked — so only title → ingredients is stored.
+
+**Details:**
+
+- **`house_recipes`** (prod, via MCP): season, title, `recipe_text` (title through ingredients, method cut). Open policy
+  like `menu_dishes`. `dish_house_recipes(uuid[])` = the dish's recipe (same season, name compared without case/accents)
+  + every recipe it names under ON THE PLATE / INGREDIENTS, followed down. Searching the description too pulled the pork
+  entrée into the buffet bread pudding ("Side for the Herb-Crusted Pork Tenderloin") — fixed before load.
+- **Loader** `app/scripts/recipe-book-sql.mjs <pdf> <season>` prints the insert. Fall: 30 recipes; the 9 Contents entries
+  not loaded are all section headings. Cross-checked line-for-line against an independent pypdf extraction (30/30) and
+  by md5 after load.
+- **Drafter (rule 13):** for a house-recipe dish the model copies each recipe's WHOLE batch (unit conversion only); code
+  does every division. Shares are read off the BOOK: the dish's own recipe = 1 of its portions; a plate side = its plate
+  amount ÷ (portions × portion size); a sub-recipe = the amount on its parent's line ÷ its YIELD × the parent's share.
+  The model's numbers are only a fallback, named in the note. Each step was forced by a measured failure: model-summed
+  amounts (crouton bread −34%, a butter dropped), a model-computed share (pecans 2.7% vs 1.7%), model-copied numbers
+  (Short Rib sides 0.2% vs 4%, horseradish 0.5% vs 3.7%).
+- Also in code: a sub-recipe's own line is dropped (it was ordered twice); lb → oz so recipes sum; a title with its
+  subtitle is that recipe (the Short Rib had lost its beef); a recipe's own section sent back separately (salmon glaze,
+  pork loin jus) is counted with its recipe; an amount that rounds to 0 is named, not saved (a 0 failed a whole batch).
+- **Buffet entrées × 0.65** of the book's single-entrée portion (owner); buffet sides stay as written.
+- **Tests:** `house_recipe_test.ts` 12 cases sliced from the real code, real book text for the share cases; with
+  match/retry 21/21. Mutation-checked: 13 single changes each fail a test, file restored byte-identical.
+- **Data:** all 18 fall dishes the book covers drafted (all 37 shares from the book, each hand-checked). NOT covered by the
+  book, left unspecced: both Caesars, House Garden Salad, 3 plated + 4 buffet desserts. Spring/summer/winter wait for
+  their books (owner).
+- **Known model slips still in the fall drafts (named in notes, for review):** chicken's heirloom carrots merged into
+  `carrot`; one garlic amount dropped on Short Rib, Pork Loin and Chicken (heads vs oz); greens specced as lacinato kale.
+- **Page:** collapsible "fall recipe book: … + N recipes it uses" under each spec and in the edit form. `npm run build`
+  passes; browser check pending (office gate).
