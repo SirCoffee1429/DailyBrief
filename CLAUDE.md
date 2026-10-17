@@ -118,8 +118,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`). **P2 DONE**: 368
-  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-14: 232 confirmed, 39 drafts
-  incl. 18 fall from the book; 93 seasonal unspecced, spring–winter WAIT for their books; drafter v21). Reads only
+  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 IN PROGRESS** (10-17: 345 confirmed, 19 plated-dessert
+  drafts; spring–winter specced WITHOUT books for now — REDRAFT each season when its book arrives; drafter v21). Reads only
   `orderable_menu_dishes`; inference stays OUT of the per-BEO path. `claudedocs/design_beo_order_guide_2026-09-15.md`
 
 ---

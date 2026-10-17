@@ -476,3 +476,21 @@ so the fix moves some dishes to another name.
   old name while the form is open (code-read only).
 - Also: the 10-14 recipe-book work committed separately (`f93b9d4`), its PDF gitignored. Left uncommitted on purpose:
   `supabase/.temp/cli-latest`, the Vendor Data worksheet, `.serena/memories/session-2026-09-27-schedule-week-redate.md`.
+
+---
+
+### 2026-10-17 — Owner Finished the Spec and Ingredient Review; Spring–Winter to Be Redrafted From Their Books
+
+**File(s) Changed:** data only (owner, through the Dish Ingredients and Ingredient Products pages); `CLAUDE.md`
+**Type:** `docs` — status check by SQL, no code change.
+**Summary:** The owner reviewed and confirmed the 18 fall book drafts and finished mapping every ingredient. Checked on
+prod: **345/364 orderable dishes confirmed, 19 drafts, 0 unspecced**; all 373 ingredient names confirmed (325 to a product,
+48 not from the catalog); 0 matches with no dish.
+
+- **The 19 drafts are all From the Bakery (Plated Desserts)** (several appear twice — two prices, two rows).
+- **Spring/summer/winter (83 dishes) were specced and confirmed WITHOUT recipe books** (only fall's is loaded). Owner
+  decision: **when each season's book arrives, load it and redraft that season's dishes from it.** CLAUDE.md updated.
+- Fall garlic spot-check against the book: Short Rib, Airline Chicken, Chicken Marsala and Pork Loin's head of garlic all
+  divide correctly (incl. buffet ×0.65); Pork Loin's second line (1 Tbsp minced, ~0.4 oz per event) is still missing — left as is.
+- Open: `.gitignore` covers only the fall PDF; the other seasons' books will show as untracked unless widened to
+  `seasonal-recipes/*/*.pdf` (asked, not answered).

@@ -13,9 +13,16 @@
 - Commits (NOT pushed; main ahead of origin): `f93b9d4` house recipe books (+ PDF gitignored), `626f9ee` search/Split,
   then the session-save docs commit.
 
+## 10-17 follow-up
+- Owner finished review: 345/364 confirmed, 19 drafts (all From the Bakery plated desserts), 0 unspecced;
+  373 ingredient names all confirmed (48 not from catalog), 0 orphans.
+- Spring/summer/winter (83) specced WITHOUT books — owner: redraft each season from its book when it arrives.
+- Fall Pork Loin still lacks its 1 Tbsp minced garlic line (tiny; left as is).
+
 ## Open
 - Not checked: phone width; a dish drafted onto the old name while the form is open (code-read only).
-- Owner review of the 18 fall drafts; browser check of the DishSpecs book-recipe panel.
+- The 19 plated-dessert drafts; browser check of the DishSpecs book-recipe panel.
+- `.gitignore` covers only the fall PDF — widen to `seasonal-recipes/*/*.pdf`? (asked, unanswered)
 - Uncommitted on purpose: `supabase/.temp/cli-latest`, Vendor Data worksheet,
   `.serena/memories/session-2026-09-27-schedule-week-redate.md` (owner to decide).
 - Pushing main = owner's call (would make Catalog/Menus/Dish Ingredients/Ingredient Products live).
