@@ -42,6 +42,6 @@ BEOs/
 app/sample-data/test_beos/
 app/sample-data/test_beos upload diff/
 
-# Seasonal recipe book kept on disk as the source for house_recipes
-# (app/scripts/recipe-book-sql.mjs reads it). Not committed.
-seasonal-recipes/fall_recipe_book/Fall Banquet Recipe Book.pdf
+# Seasonal recipe books kept on disk as the source for house_recipes
+# (app/scripts/recipe-book-sql.mjs reads them). Not committed.
+seasonal-recipes/*/*.pdf

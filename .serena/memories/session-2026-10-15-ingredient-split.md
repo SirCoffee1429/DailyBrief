@@ -32,13 +32,13 @@
   Me (owner's call): `hot dogs` → `hot dog` (#970396 4/1, the only 4/1 frank), `rack of lamb` → not from catalog,
   `monteray jack`/`monteray jack cheese`/`monetary jack blend` → `monterey …` (the last merged into `monterey jack blend`).
   10-19 owner: `cheddar cheese` → shredded #158814 (10 dishes); `cheddar cheese slices` merged into `cheddar cheese slice` (6).
-  STILL on the cubed variety pack #1006778: `pepper jack cheese` (Tinga Tacos, Pepper Jack bagel) — owner to re-pick.
+  Owner: `pepper jack cheese` → sliced #469349 (bagel), new `shredded pepper jack` → #270917 (Tinga Tacos). #1006778 now unused.
+- `.gitignore` widened to `seasonal-recipes/*/*.pdf` (owner).
 - 10-19 `/sc:save`: CHANGES.md 497 → 423 (10-06/07/08 moved verbatim to `docs/changelog/2026-10.md`).
 
 ## Open
 - Not checked: phone width; a dish drafted onto the old name while the form is open (code-read only).
 - The 19 plated-dessert drafts; browser check of the DishSpecs book-recipe panel.
-- `.gitignore` covers only the fall PDF — widen to `seasonal-recipes/*/*.pdf`? (asked, unanswered)
 - Uncommitted on purpose: `supabase/.temp/cli-latest`, Vendor Data worksheet,
   `.serena/memories/session-2026-09-27-schedule-week-redate.md` (owner to decide).
 - Pushing main = owner's call (would make Catalog/Menus/Dish Ingredients/Ingredient Products live).

@@ -409,12 +409,14 @@ recorded. Ran the SHIPPED `specCost` against hand math: Bearnaise $0.9559/guest,
 - **Cheese:** `cheddar cheese` (12 dishes: mac & cheese, soups, sandwiches) and `pepper jack cheese` were on a CUBED variety
   pack, `swiss cheese` on a cubed pack with no swiss. Owner split the trays onto `cubed cheddar/pepper jack/swiss cheese`, then
   re-picked `cheddar cheese` → shredded #158814 and merged `cheddar cheese slices` into `cheddar cheese slice`.
-  **Still open: `pepper jack cheese` (Tinga Tacos, Pepper Jack bagel) is on the cubed variety pack #1006778.**
+  Then `pepper jack cheese` (bagel) → sliced #469349 and a new `shredded pepper jack` (Tinga Tacos) → #270917; the cubed
+  variety pack #1006778 is no longer matched to anything.
 - **Apples (owner):** `gala apple` was on FUJI; both apple names now → GALA #950172 (the only apple the kitchen uses).
 - **By SQL (owner's call, one guarded transaction):** `hot dogs` → `hot dog` on #970396 4/1 beef franks (the only 4/1 in the
   catalog — description doesn't say Nathan's); `rack of lamb` → not bought from this catalog (it was a boneless LEG);
   `monteray jack`, `monteray jack cheese`, `monetary jack blend` → `monterey …` (the last merged into `monterey jack blend`).
-- **State 10-19:** 364/364 confirmed, 372 names all confirmed (49 not from catalog), 0 unmatched, 0 orphan matches.
+- **State 10-19:** 364/364 confirmed, 373 names all confirmed (49 not from catalog), 0 unmatched, 0 orphan matches.
+- `.gitignore` widened from the fall PDF to `seasonal-recipes/*/*.pdf` (owner), so the other seasons' books stay out too.
 - **What P4 faces:** of 2,693 lines only 2,022 cost exactly; 446 cross-class gaps, 45 on the pack-count guess, 36 with no
   pack total — **78 of 364 dishes cost fully today.** The per-mapping conversion is most of P4.
 - A word check (ingredient word missing from the product description) surfaced ~55 names; most are kitchen choices
