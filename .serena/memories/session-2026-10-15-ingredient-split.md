@@ -19,6 +19,22 @@
 - Spring/summer/winter (83) specced WITHOUT books — owner: redraft each season from its book when it arrives.
 - Fall Pork Loin still lacks its 1 Tbsp minced garlic line (tiny; left as is).
 
+## 10-17 `/sc:reflect P3 --type completion --validate`
+- Data complete: 364/364 confirmed, 0 without lines/basis, 373 names all confirmed + mapped, 0 orphans, 0 dangling products.
+- Design-doc P3 gate ("three dishes hand-checked against the arithmetic") had never been recorded. Ran shipped
+  `specCost` vs hand math: Bearnaise $0.9559/guest, House Cookies $4.1133/dozen, Cubed Cheese & Crackers $17.6807/tray — match.
+- Of 2,693 lines: 2,022 exact, 446 cross-class gaps, 143 not-from-catalog (48 names), 45 pack-count (P4 bug), 36 no pack total, 1 unpriced.
+  Only 78 of 364 dishes cost fully today — the P4 per-mapping conversion is the bulk of the remaining work.
+- Mapping questions for the owner (all owner-confirmed, may be deliberate): `cheddar cheese` (14 lines: mac, soup,
+  sandwiches) and `pepper jack cheese` → CUBED variety pack #1006778; `swiss cheese` → cubed variety #2873 (no swiss in it);
+  `gala apple` → FUJI while `honeycrisp apples` → GALA; `rack of lamb` → boneless leg; `hot dog`/`hot dogs` → different franks.
+- 10-18 resolved. Owner: split the tray onto `cubed cheddar/pepper jack/swiss cheese`, both apples → GALA #950172.
+  Me (owner's call): `hot dogs` → `hot dog` (#970396 4/1, the only 4/1 frank), `rack of lamb` → not from catalog,
+  `monteray jack`/`monteray jack cheese`/`monetary jack blend` → `monterey …` (the last merged into `monterey jack blend`).
+  10-19 owner: `cheddar cheese` → shredded #158814 (10 dishes); `cheddar cheese slices` merged into `cheddar cheese slice` (6).
+  STILL on the cubed variety pack #1006778: `pepper jack cheese` (Tinga Tacos, Pepper Jack bagel) — owner to re-pick.
+- 10-19 `/sc:save`: CHANGES.md 497 → 423 (10-06/07/08 moved verbatim to `docs/changelog/2026-10.md`).
+
 ## Open
 - Not checked: phone width; a dish drafted onto the old name while the form is open (code-read only).
 - The 19 plated-dessert drafts; browser check of the DishSpecs book-recipe panel.

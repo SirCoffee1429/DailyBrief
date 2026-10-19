@@ -187,113 +187,13 @@
 
 - 10-01 — Ingredient Products Shows Which Dishes Use Each Ingredient — `ingredient_usage.dishes` (name, menu, season, portion; 122/122 rows checked); `BASIS_LABEL` shared via `orderUnits.js`. → [full](docs/changelog/2026-10.md#2026-10-01--ingredient-products-shows-which-dishes-use-each-ingredient)
 - 10-01 → 10-03 — Product Matcher Sees Each Ingredient's Dishes; Miscopied Numbers Caught — dish lines + `with:` companions (scallops picked pre-made 2/3 → 4/5 right); Bacon-Wrapped Scallops IS bought pre-made (owner); a pick stands only if its copied description matches its number, digit-words exact (`match_test.ts`). v3 → v8; 122/122 matches confirmed. → [full](docs/changelog/2026-10.md#2026-10-01--10-03--product-matcher-sees-each-ingredients-dishes-miscopied-numbers-caught)
+- 10-06 — Office Time Off: Remove a Request From the Calendar (shipped on its own, `461f12a`) — office clicks a calendar name → named confirm → delete; `deleteRequest` now checks a row was really removed before notifying. Shipped alone via a branch off `origin/main`, merged back (not rebased). Owner tested it; live removals followed. → [full](docs/changelog/2026-10.md#2026-10-06--office-time-off-remove-a-request-from-the-calendar-shipped-on-its-own)
+- 10-07 — Dish Spec Review: Wings, Burrata, Whole Fruit, Sourdough Slices, Stale Notes — wings 1 per piece, burrata added (#355554), whole fruit = 12 gala apples/dozen, stale AI notes cleared; coconut shrimp + Wellington are buy-outs. Found `unitFit`'s pack-count guess (coconut shrimp ~54x over) → folded into P4. 55/364 confirmed, 158/158 ingredients mapped. → [full](docs/changelog/2026-10.md#2026-10-07--dish-spec-review-wings-burrata-whole-fruit-sourdough-slices-stale-notes)
+- 10-08 — Dish Drafter Stops Swapping Foods (v8 → v11) — it read its EXISTING NAMES list as the only foods allowed (tenderloin → shoulder tender, 0 new names in bad runs). Rules 11-12 (new names expected, never substitute); telling the model to keep swaps out of its note made them SILENT, so that was removed. → [full](docs/changelog/2026-10.md#2026-10-08--dish-drafter-stops-swapping-foods-draft-dish-specs-v8--v11)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-06 — Office Time Off: Remove a Request From the Calendar (shipped on its own)
-
-**File(s) Changed:** `app/src/pages/TimeOff.jsx` **Type:** `feature` — **pushed and live** (`461f12a`,
-Vercel production READY), shipped WITHOUT the 45 unpushed commits on `main`.
-**Summary:** Owner request: on `/office/time-off`, clicking a name on the calendar opened the
-new-request form and there was no way to remove it there. A trash button already existed, but only
-in the Upcoming list (requests not yet ended).
-
-**Details:**
-
-- Office mode only: clicking a calendar name asks "Remove <name>'s time off (<dates>)?" and deletes
-  it (`stopPropagation`, so the day's click no longer fires); the empty part of a day still opens
-  the form. The kitchen calendar is unchanged. The Upcoming trash button shares the named confirm.
-- `deleteRequest` now uses `.select()` and checks a row was removed, as the approve/deny path does:
-  a blocked delete returns no error, and it was going on to notify the office of a cancellation
-  that never happened. (The DB delete policy exists; nothing was failing — this closes the gap.)
-- **Shipping on its own:** branch from `origin/main` → commit → `git push origin time-off-remove:main`
-  (fast-forward of one commit) → `main` merged `origin/main` back (`caace3b`, merge — not a rebase,
-  which would have rewritten the 45 commits' hashes that the docs cite). Merged `main` builds.
-- **Verified:** `npm run build`; owner tested on a local dev server (confirm names the request,
-  Cancel leaves it, OK removes it, empty day still opens the form) — "yep it works".
-- **Validated after deploy:** the live bundle contains the change and NONE of main's unpushed work
-  (no Purchase History / Ingredient Products / `describesProduct`). Owner's real removals right after
-  (6 cancellation notifications, 07:13–07:14 UTC; sent only on a confirmed delete) prove it in use.
-- **Past requests ARE removable** — the calendar shows every non-denied request in any month paged
-  to (an earlier note said otherwise; corrected). Only an ENDED DENIED request is unreachable.
-  Open, low: nothing signals on touch screens that names are tappable (hint is hover-only).
-
----
-
-### 2026-10-07 — Dish Spec Review: Wings, Burrata, Whole Fruit, Sourdough Slices, Stale Notes
-
-**File(s) Changed:** data only (`dish_ingredients`, `ingredient_products`, `menu_dishes.spec_note`);
-`CLAUDE.md`, `claudedocs/design_beo_order_guide_2026-09-15.md` **Type:** `fix`
-**Summary:** The 27 drafts were already confirmed by the owner (10-05), plus 13 Quick Lunch Bites
-(10-06/07): **55/364 dishes confirmed, 0 drafts**. A line-by-line check found the problems below;
-each was fixed on the owner's instruction.
-
-**Details:**
-
-- **House Smoked Wings:** `wings` 12 → **1 each per piece** (owner: 1 piece = 1 wing).
-- **Burrata Crostini** had no burrata (the model dropped it as "not in existing names"). Added
-  `burrata` 0.5 oz per piece → **#355554** BelGioioso 2 oz balls (bought 05-28; the 4 oz #342939
-  never bought). The 0.5 oz portion is my estimate (one 2 oz ball per 4 crostini) — owner to adjust.
-- **Fresh Whole Fruit:** 12 `gala apple` per dozen, `orange` line removed (owner: fruit is mixed
-  freely; keep it simple as 1 fruit = 1 apple).
-- **Sourdough measured by the slice:** Ham & Swiss `sourdough` → `sourdough slices` (Turkey &
-  Havarti already used it); the confirmed mapping (#981353) moved with it.
-- **Stale notes:** the AI's notes described lines the owner had since corrected ("Pepperoni specced
-  as ham" beside a pepperoni line). 8 cleared, 6 trimmed to the part still true, 7 accurate kept.
-- **Buy-outs confirmed by the owner:** Coconut Shrimp (#369978) and Petite Beef Wellington (`beef en
-  croute` #256290) are pre-made, like Bacon-Wrapped Scallops — the "scallops is the ONLY pre-made
-  item" rule in CLAUDE.md/memory is superseded. 1st&10th Tee Bars (`n/a` placeholder) and Trail
-  Mix are buy-outs too.
-- **Found, folded into P4 (owner):** `orderUnits.js` `unitFit` counts a weight-sold product's
-  inner packs as pieces — right for `72/3.17 OZ` buns, wrong for bags/loaves (coconut shrimp `4/3 LB`
-  → 4 per case, ~54x over-order; cheese slices `6/1.5 LB` → 6, really 192). 27 of 382 lines; plus
-  81 cross-class gaps (32 dishes). Written into design doc §7 + the P4 phase row. No code changed.
-- **Buy-out lines named and mapped (owner):** `n/a` → `1st&10th tee bars` 12 each per dozen, confirmed
-  as "not bought from this catalog"; Trail Mix 1 → **12** per dozen → #438899 Planters Nut & Chocolate;
-  `chips` → #1073982 Frito Lay variety mix (bought 09-25); `havarti` → `havarti slice` (like the other
-  sliced cheeses) → #207141 havarti slice twin pack (bought 09-26); `tortilla wrap 12"` → #245761
-  Piancone garden spinach 12 in (owner's pick of three bought 12" tortillas).
-- **Verified:** re-queried every changed dish and mapping; 55 confirmed / 309 unspecced unchanged;
-  **ingredients 158/158 mapped and confirmed.**
-
----
-
-### 2026-10-08 — Dish Drafter Stops Swapping Foods (draft-dish-specs v8 → v11)
-
-**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts` **Type:** `fix` — deployed v9, v10,
-v11 (v11 = v10 + a code comment).
-**Summary:** The ingredient drafter treated its EXISTING NAMES list (158 names) as the only foods allowed,
-so a dish naming anything new got the nearest listed food instead. Found reviewing the 10-07 drafts
-(burrata dropped, tenderloin → flank steak, pepperoni → ham…) and in the 10-08 Action Stations drafts
-(Beef Tenderloin and Sirloin → `shoulder tender`, Prime Rib → `roast beef` — still drafts, owner to fix).
-
-**Details:**
-
-- **Cause:** rule 9 said "when an ingredient appears in EXISTING NAMES, use that exact name" and nothing
-  about one that does not; the list sat under a bare header. Each run resolved that differently.
-- **Measured** (12 unspecced dishes naming foods not on the list, `parseOnly`, scored on 36 named foods;
-  plus 5 Action Stations drafts, 8 foods):
-
-  | Version | 12-dish set, per run | Swaps per run | Action Stations |
-  |---|---|---|---|
-  | v8 (3 runs) | 0 / 30 / 0 of 36 | 7 / 0 / 8 — and **0 new names** in the bad runs | 3 beef swaps (live) |
-  | v9 (5 runs) | 33 every run | 1-2 (pecans → walnuts), **silent** in 3 | 8/8 every run |
-  | v10 (5 runs) | 32-35 | 0, 2, 0, 1, 2 — **every one said in the note** | 8/8 every run |
-
-  Foods already on the list kept their spelling in every run (15/15, 10/10).
-- **Fix:** rule 11 — the list is spellings to reuse for the SAME food, new names are expected, never
-  substitute (examples kept out of the test set: veal/pork, cashews/peanuts…). Rule 12 — every food a dish
-  names appears under its own name. v9 also told the model never to report a substitution in the note:
-  that made the walnut swaps SILENT, so v10 removed it — a swap now always shows in review.
-- **Still open:** pecans → walnuts in 3 of 5 runs (noted when it happens); Dijon always becomes the
-  existing `grain mustard` — owner to say whether they are separate purchases.
-- **Owner:** peach cobbler IS Southern BBQ's dessert (menu says Strawberry Crumble Bars — the menu is out
-  of date, the spec is right).
-- Scorer and run outputs are in the session scratchpad (`drafter/score.py`), not the repo.
-
----
 
 ### 2026-10-09 — Drafter: Dijon Kept Separate, Batches of 4, Repeatable Check in the Repo
 
@@ -487,10 +387,37 @@ so the fix moves some dishes to another name.
 prod: **345/364 orderable dishes confirmed, 19 drafts, 0 unspecced**; all 373 ingredient names confirmed (325 to a product,
 48 not from the catalog); 0 matches with no dish.
 
-- **The 19 drafts are all From the Bakery (Plated Desserts)** (several appear twice — two prices, two rows).
+- **Later 10-17: the 19 drafts (all From the Bakery plated desserts) confirmed too → ALL 364 confirmed**, every dish has
+  lines, 0 orphan matches. P3's data is complete; next is P4 (order quantities on a BEO).
 - **Spring/summer/winter (83 dishes) were specced and confirmed WITHOUT recipe books** (only fall's is loaded). Owner
   decision: **when each season's book arrives, load it and redraft that season's dishes from it.** CLAUDE.md updated.
 - Fall garlic spot-check against the book: Short Rib, Airline Chicken, Chicken Marsala and Pork Loin's head of garlic all
   divide correctly (incl. buffet ×0.65); Pork Loin's second line (1 Tbsp minced, ~0.4 oz per event) is still missing — left as is.
 - Open: `.gitignore` covers only the fall PDF; the other seasons' books will show as untracked unless widened to
   `seasonal-recipes/*/*.pdf` (asked, not answered).
+
+---
+
+### 2026-10-17 → 10-19 — P3 Completion Check: the Costing Arithmetic Hand-Checked; Wrong Cheese, Apple, Lamb and Hot Dog Matches Fixed
+
+**File(s) Changed:** data only (owner through Ingredient Products; four name fixes by SQL on the owner's instruction)
+**Type:** `fix` — `/sc:reflect P3 --type completion --validate`, no code change.
+**Summary:** P3's exit gate in the design doc ("three dishes hand-checked against the arithmetic") had never been
+recorded. Ran the SHIPPED `specCost` against hand math: Bearnaise $0.9559/guest, House Cookies $4.1133/dozen, Cubed Cheese
+& Crackers $17.6807/tray — identical to 4 places. Checking those lines found real mapping errors, all now fixed.
+
+- **Cheese:** `cheddar cheese` (12 dishes: mac & cheese, soups, sandwiches) and `pepper jack cheese` were on a CUBED variety
+  pack, `swiss cheese` on a cubed pack with no swiss. Owner split the trays onto `cubed cheddar/pepper jack/swiss cheese`, then
+  re-picked `cheddar cheese` → shredded #158814 and merged `cheddar cheese slices` into `cheddar cheese slice`.
+  **Still open: `pepper jack cheese` (Tinga Tacos, Pepper Jack bagel) is on the cubed variety pack #1006778.**
+- **Apples (owner):** `gala apple` was on FUJI; both apple names now → GALA #950172 (the only apple the kitchen uses).
+- **By SQL (owner's call, one guarded transaction):** `hot dogs` → `hot dog` on #970396 4/1 beef franks (the only 4/1 in the
+  catalog — description doesn't say Nathan's); `rack of lamb` → not bought from this catalog (it was a boneless LEG);
+  `monteray jack`, `monteray jack cheese`, `monetary jack blend` → `monterey …` (the last merged into `monterey jack blend`).
+- **State 10-19:** 364/364 confirmed, 372 names all confirmed (49 not from catalog), 0 unmatched, 0 orphan matches.
+- **What P4 faces:** of 2,693 lines only 2,022 cost exactly; 446 cross-class gaps, 45 on the pack-count guess, 36 with no
+  pack total — **78 of 364 dishes cost fully today.** The per-mapping conversion is most of P4.
+- A word check (ingredient word missing from the product description) surfaced ~55 names; most are kitchen choices
+  (grapeseed for vegetable oil, paste bases for stock, rigatoni for ziti). Read the list, don't treat it as errors.
+- The Supabase MCP returned "Invalid or expired requestState" on a write TWICE; neither ran (checked by SQL each time).
+  The same statement without a trailing SELECT went through.
