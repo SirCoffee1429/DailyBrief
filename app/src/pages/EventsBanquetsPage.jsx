@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { localDateString } from '../lib/dates.js'
+import { localDateString, formatDateOnly } from '../lib/dates.js'
+import { productsForItemNames } from '../lib/orderProducts.js'
 import PendingBeoPanel from '../components/PendingBeoPanel.jsx'
+import ProductPicker from '../components/ProductPicker.jsx'
 
 export default function EventsBanquetsPage({ readOnly = false }) {
     const location = useLocation()
@@ -42,6 +44,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [newOrderText, setNewOrderText] = useState({})        // { [beoId]: string }
     const [activeNoteId, setActiveNoteId] = useState(null)      // itemId currently in note-edit mode
     const [orderNoteDrafts, setOrderNoteDrafts] = useState({})  // { [itemId]: string }
+    const [pickingProductFor, setPickingProductFor] = useState(null) // itemId with the catalog picker open
 
     // Per-event prep list + subtask state
     const [generatingPrepFor, setGeneratingPrepFor] = useState(null)       // UUID | null — which BEO is generating prep
@@ -305,7 +308,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         const beoIds = beos.map(b => b.id)
         const { data } = await supabase
             .from('event_order_items')
-            .select('*')
+            .select('*, supplier_products(product_number, description, brand, pack_size, case_price, price_varies, last_purchased_on)')
             .in('beo_id', beoIds)
             .order('sort_order')
             .order('created_at')
@@ -336,6 +339,9 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 return
             }
 
+            // Looked up before anything is cleared, so a failed lookup leaves the old list as it was
+            const products = await productsForItemNames(dishes.flatMap(dish => dish.ingredients || []))
+
             // Clear old AI-generated items, leave manual ones untouched
             await supabase
                 .from('event_order_items')
@@ -351,6 +357,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                         beo_id: beo.id,
                         item_name: ingredient,
                         source_dish: dish.source_dish,
+                        product_id: products.get(ingredient) ?? null,
                         is_ordered: false,
                         is_manual: false,
                         sort_order: dishIdx * 100 + ingIdx,
@@ -512,10 +519,19 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         const text = (newOrderText[beoId] || '').trim()
         if (!text) return
         const currentItems = orderItemsByBeo[beoId] || []
+        let products
+        try {
+            products = await productsForItemNames([text])
+        } catch (err) {
+            console.error('Error looking up the product for an order item:', err)
+            alert('Could not look up the catalog product. The item was not added — try again.')
+            return
+        }
         const { error } = await supabase.from('event_order_items').insert({
             beo_id: beoId,
             item_name: text,
             source_dish: null,
+            product_id: products.get(text) ?? null,
             is_ordered: false,
             is_manual: true,
             sort_order: currentItems.length * 100,
@@ -536,6 +552,22 @@ export default function EventsBanquetsPage({ readOnly = false }) {
             }
             return updated
         })
+    }
+
+    // A product picked by hand for one order item. It belongs to this BEO's row only and
+    // does not change the ingredient's match on Ingredient Products.
+    async function setOrderItemProduct(itemId, productId) {
+        const { error } = await supabase
+            .from('event_order_items')
+            .update({ product_id: productId })
+            .eq('id', itemId)
+        if (error) {
+            console.error('Error saving the order item product:', error)
+            alert('Could not save the product. Try again.')
+            return
+        }
+        setPickingProductFor(null)
+        await loadOrderItems()
     }
 
     // Save an inline note on a single order item; no-op if value unchanged
@@ -1575,10 +1607,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         const noteDraft = orderNoteDrafts[item.id] ?? (item.note || '')
 
         return (
-            <div
-                key={item.id}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 2px' }}
-            >
+            <div key={item.id}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 2px' }}>
                 <input
                     type="checkbox"
                     className="task-box"
@@ -1586,15 +1616,17 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     onChange={() => toggleOrderItem(item.id, item.is_ordered)}
                     style={{ flexShrink: 0, width: '12px', height: '12px', cursor: 'pointer' }}
                 />
-                <span style={{
-                    flex: 1,
-                    fontSize: '0.88rem',
-                    color: item.is_ordered ? 'var(--text-muted)' : 'var(--text-primary)',
-                    textDecoration: item.is_ordered ? 'line-through' : 'none',
-                    transition: 'color 0.2s, text-decoration 0.2s',
-                }}>
-                    {item.item_name}
-                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{
+                        fontSize: '0.88rem',
+                        color: item.is_ordered ? 'var(--text-muted)' : 'var(--text-primary)',
+                        textDecoration: item.is_ordered ? 'line-through' : 'none',
+                        transition: 'color 0.2s, text-decoration 0.2s',
+                    }}>
+                        {item.item_name}
+                    </span>
+                    {renderOrderItemProduct(item)}
+                </div>
 
                 {/* Inline note — click to edit, auto-saves on blur */}
                 {isEditingNote ? (
@@ -1650,6 +1682,44 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 >
                     <i className="fa-solid fa-xmark" />
                 </button>
+            </div>
+            {pickingProductFor === item.id && (
+                <ProductPicker
+                    initial={item.item_name}
+                    busy={false}
+                    onPick={product => setOrderItemProduct(item.id, product.id)}
+                    onCancel={() => setPickingProductFor(null)}
+                />
+            )}
+            </div>
+        )
+    }
+
+    // The catalog product under an order item: what to order, by number and pack, or a
+    // plain "no catalog product" when the item's name has no confirmed match.
+    function renderOrderItemProduct(item) {
+        const p = item.supplier_products
+        const parts = p ? [
+            `#${p.product_number}`,
+            p.description,
+            p.brand,
+            p.pack_size,
+            p.case_price != null && `$${Number(p.case_price).toFixed(2)}/case${p.price_varies ? ' (varies)' : ''}`,
+            p.last_purchased_on && `last bought ${formatDateOnly(p.last_purchased_on)}`,
+        ].filter(Boolean) : []
+
+        return (
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                {p ? parts.join(' · ') : <span style={{ fontStyle: 'italic' }}>No catalog product</span>}
+                {pickingProductFor !== item.id && (
+                    <button
+                        type="button"
+                        onClick={() => setPickingProductFor(item.id)}
+                        style={{ marginLeft: '6px', background: 'none', border: 'none', padding: 0, color: '#34d399', cursor: 'pointer', fontSize: 'inherit' }}
+                    >
+                        {p ? 'change' : 'pick product'}
+                    </button>
+                )}
             </div>
         )
     }
