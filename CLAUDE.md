@@ -117,10 +117,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ingestion: PDF, DOCX, CSV, plain text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
-- Supplier order guide in BEO order lists — **P1 SHIPPED** (`/office/catalog`). **P2 DONE**: 368
-  dishes confirmed, 364 orderable (`process-menu` v9). P0 cancelled. **P3 DONE** (all 364 confirmed, all 372 ingredients
-  matched; gate hand-checked 10-19; spring–winter specced WITHOUT books — REDRAFT each when its book arrives; drafter v21). Reads only
-  `orderable_menu_dishes`; inference stays OUT of the per-BEO path. `claudedocs/design_beo_order_guide_2026-09-15.md`
+- Supplier order guide in BEO order lists (`claudedocs/design_beo_order_guide_2026-09-15.md`) — P1 SHIPPED, P2/P3 DONE (364
+  dishes confirmed, 373 ingredients matched; spring–winter specced WITHOUT books — REDRAFT each from its book; drafter v21).
+  **10-25 owner: the order list showing PRODUCTS comes first** — A built (`event_order_items.product_id`), next B = BEO line →
+  confirmed dish spec; case yields PARKED (`design_p4_case_yield_2026-10-25.md`). Inference stays OUT of the per-BEO path
 
 ---
 
