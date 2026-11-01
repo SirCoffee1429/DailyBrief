@@ -45,3 +45,4 @@ app/sample-data/test_beos upload diff/
 # Seasonal recipe books kept on disk as the source for house_recipes
 # (app/scripts/recipe-book-sql.mjs reads them). Not committed.
 seasonal-recipes/*/*.pdf
+.claude/settings.local.json
