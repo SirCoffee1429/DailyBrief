@@ -10,7 +10,8 @@
 > **Nothing is ever destroyed.** Anything condensed on or after 2026-09-08 lives in
 > `docs/changelog/`. Entries condensed *before* that date (2026-03 → 2026-08, the
 > title-only lines below) predate this rule and exist in full only in git history —
-> recovering them into `docs/changelog/` is an open job, not yet done.
+> recovering them into `docs/changelog/` is an open job. 07-11 → 08-06 were recovered
+> 2026-10-27; the rest are not yet done.
 >
 > **Consolidated 2026-06-12.** Entries before the auto-scheduler work (2026-06-10)
 > were condensed to one line each. A duplicated block of April 2026 entries was
@@ -131,19 +132,19 @@
 
 ### July 2026
 
-- 07-11 — Fix: Restore Invisible Delete/Edit Buttons on Events Page (`.wb-act-btn` scoped to `.wb-note`)
-- 07-12 — FOH Sidebar Layout + Cyan Theme Fix (`.foh-v2`)
-- 07-17 — Prep List Portion Scaling: built, deployed, then scrapped; only the flash-model swap kept (`23332a2`)
-- 07-19 — Stacked Same-Day Briefings + Attribution + Local-Date Fix (`lib/dates.js` added)
-- 07-19 — Fix: Upcoming Banquets Dropped the Current Day After 7pm (UTC rollover)
-- 07-22 — Fix: Evening Briefings Vanished Next Day (`defaultBriefingDate()` 5pm cutoff)
+- 07-11 — Fix: Restore Invisible Delete/Edit Buttons on Events Page (`.wb-act-btn` scoped to `.wb-note`) → [full](docs/changelog/2026-07.md#2026-07-11--fix-restore-invisible-deleteedit-buttons-on-events-page)
+- 07-12 — FOH Sidebar Layout + Cyan Theme Fix (`.foh-v2`) → [full](docs/changelog/2026-07.md#2026-07-12--foh-sidebar-layout--cyan-theme-fix)
+- 07-17 — Prep List Portion Scaling: built, deployed, then scrapped; only the flash-model swap kept (`23332a2`) → [full](docs/changelog/2026-07.md#2026-07-17--prep-list-portion-scaling-built-deployed-then-scrapped-perf-change-kept)
+- 07-19 — Stacked Same-Day Briefings + Attribution + Local-Date Fix (`lib/dates.js` added) → [full](docs/changelog/2026-07.md#2026-07-19--stacked-same-day-briefings--attribution--local-date-fix)
+- 07-19 — Fix: Upcoming Banquets Dropped the Current Day After 7pm (UTC rollover) → [full](docs/changelog/2026-07.md#2026-07-19--fix-upcoming-banquets-dropped-the-current-day-after-7pm)
+- 07-22 — Fix: Evening Briefings Vanished Next Day (`defaultBriefingDate()` 5pm cutoff) → [full](docs/changelog/2026-07.md#2026-07-22--fix-evening-briefings-vanished-next-day-smart-date-default)
 
 ### August 2026
 
-- 08-03 — Claude Code health check: extension cleanup + CLAUDE.md trim
-- 08-04 — Separate the auto-scheduler branch from main's housekeeping
-- 08-05 — Office Notification Bell (time off + availability)
-- 08-06 — Time Off Approval Workflow + Sidebar Approval Badges
+- 08-03 — Claude Code health check: extension cleanup + CLAUDE.md trim → [full](docs/changelog/2026-08.md#2026-08-03--claude-code-health-check-extension-cleanup--claudemd-trim)
+- 08-04 — Separate the auto-scheduler branch from main's housekeeping → [full](docs/changelog/2026-08.md#2026-08-04--separate-the-auto-scheduler-branch-from-mains-housekeeping)
+- 08-05 — Office Notification Bell (time off + availability) → [full](docs/changelog/2026-08.md#2026-08-05--office-notification-bell-time-off--availability)
+- 08-06 — Time Off Approval Workflow + Sidebar Approval Badges → [full](docs/changelog/2026-08.md#2026-08-06--time-off-approval-workflow--sidebar-approval-badges)
 - 08-16 — Emailed BEO Ingestion: Postmark → Review Queue → Approve
 - 08-18 — Kitchen Assistant Sales Path: Broken Since April, Now Exact
 - 08-18 — Codex/ChatGPT Tooling Quarantined (`AGENTS.md`, `.codex/`, `.agents/skills/` gitignored; Codex stays advisory-only)
@@ -469,3 +470,30 @@ number, pack, price — not pricing or yields. Re-sequenced: **A** (now) looks u
   `npm run build` passes. **Not checked: phone width** (the window would not resize).
 - **Known wrong under the prep-word rule:** `diced tomatoes` → fresh vine-ripe (likely meant canned) and `shredded
   mozzarella` → the fresh pearls (`mozzarella` is the pearls' name). Owner told; "diced" can be dropped from the list.
+
+---
+
+### 2026-10-31 → 11-01 — Old Skill Bundle Removed; Five Vendored Skills and Live-Safety Permissions Added
+
+**File(s) Changed:** 256 deletions (`2968f78`); `.claude/skills/` (new, 5 skills), `.claude/rules/skills-and-live-safety.md`
+(new), `.claude/settings.json` (new), `.gitignore` (`dcfd7e6`); `.claude/settings.local.json` (replaced, not in git)
+**Type:** `config` — no app code, nothing pushed.
+**Summary:** Owner's cleanup plus a new skills setup, prepared and reviewed 10-29 in a Cowork session (`_skills-setup/APPLY.md`)
+and applied here, every file checked against the manifest's SHA-256 before and after copying.
+
+- **`2968f78` (owner's cleanup):** the everything-claude-code commands and skills in `.claude/`, `SuperClaude Guides/`, root
+  `package.json` (it held only the `fallow` dev tool), `.fallow/`, `app/sample-data/*` and other scratch files. Both
+  `settings.local.json` files and `supabase/.temp/*` were untracked but stay on disk. Vercel builds from `app/`, so the live site is unaffected.
+- **Vendored skills (`dcfd7e6`):** `supabase`, `debugging-and-error-recovery`, `code-review-and-quality`,
+  `deprecation-and-migration`, `security-and-hardening`, copied by hand from pinned commits with local edits. Sources are in
+  `.claude/skills/VENDORED_SKILLS.md`. Never install skills with `npx skills add` or a marketplace.
+- **`.claude/rules/skills-and-live-safety.md`:** ask Ryan before live-data SQL or migrations, edge function deploys and
+  secrets, `git push` and history rewrites, and any install.
+- **`.claude/settings.json`:** 13 "ask" rules (Supabase `execute_sql`, `apply_migration`, `deploy_edge_function`, the branch
+  and project calls, `git push`) and bypass-permissions mode disabled. "Ask" overrides "always allow", so these prompt
+  even when a local file allows them. Read-only `SELECT`s through the connector prompt too.
+- **`settings.local.json`:** 15 risky "always allow" entries removed (live SQL, migrations, deploys, secrets, installs,
+  `git checkout *`, `git filter-repo`). It's now ignored by the repo's `.gitignore` as well as the global ignore, so
+  it never shows in `git status`.
+- `_skills-setup/` deleted after the copy (step 6). The repo converts line endings to CRLF on checkout, so a later SHA-256
+  check against the old manifest would fail even with the content unchanged.
