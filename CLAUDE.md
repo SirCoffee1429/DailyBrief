@@ -142,10 +142,10 @@ For DailyBrief, the rules below win:
 - **Testing:** no test runner on `main` — the gate is `npm run build` plus browser
   verification; no 80%-coverage/E2E demands (a framework is the owner's call). Deno tests: `process-menu/prompt_test.ts` on main, the solver suite on `auto-scheduler`.
 - **Agents:** never spawn sub-agents automatically — the developer orchestrates; use one
-  only when asked. The global agents table names agents that are NOT installed.
-- **Toolset:** SuperClaude (`/sc:*`, the 20 agents in `~/.claude/agents/`, this repo's
-  `feature-prioritizer`). The `everything-claude-code` bundle is disabled in
-  `.claude/settings.local.json`; prefer the SuperClaude equivalent.
+  only when asked.
+- **Toolset:** SuperClaude (`/sc:*`, `~/.claude/agents/`, `feature-prioritizer`) + 5 VENDORED skills in `.claude/skills/`
+  (`VENDORED_SKILLS.md`; never `npx skills add`). The old bundle was deleted 10-31. `.claude/settings.json` ASKS before
+  Supabase writes and `git push`, and that overrides any local allow (`.claude/rules/skills-and-live-safety.md`)
 - **Commits:** no `Co-Authored-By` trailer — no commit in this repo has one.
 - **Codex is advisory only.** `AGENTS.md`, `.codex/`, `.agents/skills/` (untracked) are
   Codex's; `AGENTS.md`'s "make no changes" rule is for Codex and does NOT apply here, and
@@ -183,7 +183,7 @@ ules`
 11. Never cut corners just for the sake of saving time, tokens, or to get
     something "working" just for the sake of pleasing me.
 12. Never store JWT locally.
-13. Use the tools, commands, agents, loops, scripts, plugins etc. from the C:\Old Hawthorne Projects\DailyBrief\SuperClaude_Framework folder
+13. Use the 5 skills in `.claude/skills/` and the installed SuperClaude `/sc:` commands. `SuperClaude_Framework/` is a reference copy only: never run anything from it.
 
 ## Session End
 
