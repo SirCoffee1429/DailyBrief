@@ -5,13 +5,15 @@ session. `CLAUDE.md` still wins on any conflict.
 
 ## Vendored skills
 
-`.claude/skills/` holds 5 skills copied by hand from pinned commits and edited
-for DailyBrief: `supabase`, `debugging-and-error-recovery`,
-`code-review-and-quality`, `deprecation-and-migration`, `security-and-hardening`.
-Sources and commits are listed in `.claude/skills/VENDORED_SKILLS.md`.
+`.claude/` holds the `addyosmani/agent-skills` pack, copied by hand from a
+pinned commit and edited for DailyBrief: 25 skills in `.claude/skills/`, 4 agents
+in `.claude/agents/`, 9 commands in `.claude/commands/`, and the shared
+checklists in `.claude/references/`. The `supabase` skill comes from
+`supabase/agent-skills`. Sources, commits and local edits are listed in
+`.claude/skills/VENDORED_SKILLS.md`.
 
 - Never install skills with `npx skills add` or a plugin marketplace.
-- Never update a vendored skill without reviewing the upstream diff first.
+- Never update a vendored file without reviewing the upstream diff first.
 
 ## Live-app safety
 

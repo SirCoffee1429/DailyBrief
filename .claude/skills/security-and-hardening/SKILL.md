@@ -1,12 +1,13 @@
 ---
 name: security-and-hardening
-description: Hardens code against vulnerabilities. Use when auditing an input handler for vulnerabilities, when handling user input, authentication, data storage, or external integrations, or when checking a login flow is safe against the OWASP Top Ten. Use when building any feature that accepts untrusted data, manages user sessions, or interacts with third-party services. Use when auditing dependencies for known vulnerabilities, triaging package-manager audit findings, or assessing supply-chain risk in a new package. Use when personal data or privacy compliance (GDPR, CCPA) is involved.
+description: Hardens code against vulnerabilities. Use when auditing an input handler for vulnerabilities, when handling user input, authentication, data storage, or external integrations, or when checking a login flow is safe against the OWASP Top Ten. Use when building any feature that accepts untrusted data, manages user sessions or session cookies, or interacts with third-party services. Use when auditing dependencies for known vulnerabilities, triaging package-manager audit findings, or assessing supply-chain risk in a new package. Use when personal data or privacy compliance (GDPR, CCPA) is involved.
 ---
 
-> **DailyBrief local rules.** Copied from `addyosmani/agent-skills` at commit `aeac41d4d005` and edited for DailyBrief. These rules sit on top of everything below:
+> **DailyBrief local rules.** Copied from `addyosmani/agent-skills` at commit `301b02b12bff` and edited for DailyBrief. These rules sit on top of everything below:
 > - DailyBrief's `CLAUDE.md` wins over this skill on any conflict. DailyBrief is live and used every day at Old Hawthorne.
 > - Ask Ryan first before you: change the rules in `CLAUDE.md` (the session-end updates it asks for are fine); install, upgrade, or remove any package or tool; add an MCP server or a hook; run SQL that changes data or schema, or apply a migration, on the live Supabase project `chajwmoohmiugdgvqjyo`; deploy an Edge Function; or `git push` (`main` is Vercel's production branch).
-> - If this skill points to a skill that is not installed in `.claude/skills/`, skip that step.
+> - Commands: tests are `npm test` in `app/` (Vitest) and `deno test --allow-read <test file>` for Edge Functions; the build gate is `npm run build` in `app/`; check UI changes in the real app with Claude in Chrome.
+> - Sub-agents run only when Ryan asks for one or runs `/ship`. Where a step below says to spawn one, do that step yourself in the main session, or ask Ryan first.
 > - Explain results to Ryan in plain, simple words.
 
 # Security and Hardening
@@ -92,14 +93,14 @@ Patterns: [Injection](references/hardening-patterns.md#injection), [XSS](referen
 
 ### Authentication and sessions
 
-- DailyBrief uses Supabase Auth: never roll your own auth or password hashing. (Generic advice for other stacks: hash passwords with bcrypt (≥12 rounds), scrypt, or argon2.) The session secret comes from the environment, never from code.
+- DailyBrief has no real user auth yet: the office password is client-side by design (see `CLAUDE.md`), and real auth is a future project for Ryan to decide. Never roll your own auth or password hashing. (Generic advice for other stacks: hash passwords with bcrypt (≥12 rounds), scrypt, or argon2.) The session secret comes from the environment, never from code.
 - Session cookies are `httpOnly`, `secure`, and `sameSite: 'lax'` or `'strict'` (the CSRF defense; `'none'` sends the cookie on cross-site requests), with a bounded `maxAge`.
 
 Pattern: [Authentication](references/hardening-patterns.md#broken-authentication).
 
 ### Headers, CORS, and responses
 
-- Security headers on every response (in DailyBrief: the Vercel config `vercel.json` for the app, and each Edge Function's own response headers); CSP starts from `default-src 'self'` and is tightened, not loosened.
+- Security headers on every response (in DailyBrief: `app/vercel.json` for the app, and each Edge Function's own response headers); CSP starts from `default-src 'self'` and is tightened, not loosened.
 - CORS restricted to an explicit origin list from configuration. Never `*` with credentials.
 - Strip sensitive fields (`passwordHash`, reset tokens) before any response. Error bodies are generic; internals go to server logs only.
 
@@ -122,7 +123,7 @@ Pattern: [SSRF](references/hardening-patterns.md#server-side-request-forgery-ssr
 
 A delete, move, or overwrite is only as safe as the value naming its target, and trust follows who *wrote* that value, not which channel delivered it: another process's command line is as attacker-controlled as a form field. A shape check proves well-formedness, not authorization. Before the call, require all three: the resolved target (symlinks resolved) sits under an **allowlisted root**; it is at least one level **below** that root; and it carries **ownership evidence read before the operation**. On refusal, log the rejected target and stop; never fall back to a broader default path.
 
-Why the check is weaker than it reads (marker self-attestation, check/use races): [Destructive paths](references/hardening-patterns.md#destructive-operations-on-derived-paths). Worked code: `references/security-checklist.md`.
+Why the check is weaker than it reads (marker self-attestation, check/use races): [Destructive paths](references/hardening-patterns.md#destructive-operations-on-derived-paths). Worked code: `../../references/security-checklist.md`.
 
 ### Rate limiting
 
@@ -143,7 +144,7 @@ Pattern: [Secrets management](references/hardening-patterns.md#secrets-managemen
 3. **Run the native audit against the committed lockfile before every release.** Triage critical/high by **reachability** (runtime, build, test, deploy paths) and fix availability. Never apply forced remediation (`npm audit fix --force` or equivalent) automatically, since forced fixes may cross declared dependency ranges; preview, read changelogs, test each upgrade. Document every deferral with a reason and a review date.
 4. **Audits only match known advisories.** They do not catch a newly malicious or typosquatted package (`cross-env` vs `crossenv`). Review new dependencies, lockfile diffs, and script-policy changes together: ownership, maintenance, release age, provenance, transitive graph. Verify registry signatures where supported (`npm audit signatures`, `pnpm audit signatures`) and treat their absence as a signal to investigate, not automatic proof of compromise (A06, LLM03).
 
-Triage decision tree: [Dependency audit triage](references/hardening-patterns.md#dependency-audit-triage). Manager matrix and install-script gate: `references/security-checklist.md`.
+Triage decision tree: [Dependency audit triage](references/hardening-patterns.md#dependency-audit-triage). Manager matrix and install-script gate: `../../references/security-checklist.md`.
 
 ### Personal data and privacy
 
@@ -169,7 +170,7 @@ Pattern: [LLM output handling](references/hardening-patterns.md#llm-output-handl
 
 ## Review Checklist
 
-Before sign-off, walk `references/security-checklist.md`: it covers authentication, authorization, input, data protection and privacy, headers and CORS, dependencies and supply chain, AI/LLM, and error handling, plus the OWASP quick-reference tables.
+Before sign-off, walk `../../references/security-checklist.md`: it covers authentication, authorization, input, data protection and privacy, headers and CORS, dependencies and supply chain, AI/LLM, and error handling, plus the OWASP quick-reference tables.
 
 ## Common Rationalizations
 

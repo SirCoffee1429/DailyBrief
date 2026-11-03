@@ -134,22 +134,22 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 
 ---
 
-## Global Rule Overrides
+## Workflow & Rule Overrides
 
-The global `~/.claude/rules/` files assume conventions this repo does not follow.
-For DailyBrief, the rules below win:
+DailyBrief runs the `addyosmani/agent-skills` workflow (vendored 11-02, `VENDORED_SKILLS.md`); these rules win over it:
 
-- **Testing:** no test runner on `main` — the gate is `npm run build` plus browser
-  verification; no 80%-coverage/E2E demands (a framework is the owner's call). Deno tests: `process-menu/prompt_test.ts` on main, the solver suite on `auto-scheduler`.
-- **Agents:** never spawn sub-agents automatically — the developer orchestrates; use one
-  only when asked.
-- **Toolset:** SuperClaude (`/sc:*`, `~/.claude/agents/`, `feature-prioritizer`) + 5 VENDORED skills in `.claude/skills/`
-  (`VENDORED_SKILLS.md`; never `npx skills add`). The old bundle was deleted 10-31. `.claude/settings.json` ASKS before
-  Supabase writes and `git push`, and that overrides any local allow (`.claude/rules/skills-and-live-safety.md`)
+- **Workflow:** new features `/spec` → `/plan-tasks` → `/build` → `/test` → `/review-change` → `/ship` (`/plan`, `/review` are
+  built-ins, hence the names); small fixes skip the spec. Specs in `spec/<feature>.md`, plans in `tasks/`; `claudedocs/` is the
+  older history. `/build` does ONE task then stops — `/build auto` left out on purpose (owner, 11-02)
+- **Testing:** `npm test` in `app/` (Vitest), `deno test --allow-read <file>` for functions; gate = tests + `npm run build` +
+  a browser check. Test first for new logic/bug fixes; pin current behaviour before changing untested code; no coverage %
+- **Agents:** only via `/ship` (`code-reviewer` + `security-auditor` + `test-engineer` in parallel) or when Ryan asks (`/webperf` too)
+- **Toolset:** the pack (`.claude/skills|agents|commands|references`) + `supabase` skill + SuperClaude `/sc:*` (save/load + gaps).
+  Superpowers is OFF here (`.claude/settings.json`). Never `npx skills add`/marketplace. `.claude/settings.json` ASKS before
+  Supabase writes and `git push`, overriding any local allow (`.claude/rules/skills-and-live-safety.md`)
 - **Commits:** no `Co-Authored-By` trailer — no commit in this repo has one.
-- **Codex is advisory only.** `AGENTS.md`, `.codex/`, `.agents/skills/` (untracked) are
-  Codex's; `AGENTS.md`'s "make no changes" rule is for Codex and does NOT apply here, and
-  its `~/.Codex/...` paths are really `~/.claude/...`.
+- **Codex is advisory only.** `AGENTS.md`, `.codex/`, `.agents/skills/` (untracked) are Codex's; `AGENTS.md`'s "make no
+  changes" rule is for Codex and does NOT apply here, and its `~/.Codex/...` paths are really `~/.claude/...`.
 
 ---
 
@@ -183,7 +183,7 @@ ules`
 11. Never cut corners just for the sake of saving time, tokens, or to get
     something "working" just for the sake of pleasing me.
 12. Never store JWT locally.
-13. Use the 5 skills in `.claude/skills/` and the installed SuperClaude `/sc:` commands. `SuperClaude_Framework/` is a reference copy only: never run anything from it.
+13. Follow the agent-skills workflow and the skills in `.claude/skills/` (see Workflow & Rule Overrides); SuperClaude `/sc:` commands fill the gaps. `SuperClaude_Framework/` is a reference copy only: never run anything from it.
 
 ## Session End
 

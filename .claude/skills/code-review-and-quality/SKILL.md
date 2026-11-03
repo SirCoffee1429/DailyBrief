@@ -3,10 +3,11 @@ name: code-review-and-quality
 description: Conducts multi-axis code review. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions before it enters the main branch. Use when asked to review a diff or a pull request, even when the diff is pasted inline.
 ---
 
-> **DailyBrief local rules.** Copied from `addyosmani/agent-skills` at commit `aeac41d4d005` and edited for DailyBrief. These rules sit on top of everything below:
+> **DailyBrief local rules.** Copied from `addyosmani/agent-skills` at commit `301b02b12bff` and edited for DailyBrief. These rules sit on top of everything below:
 > - DailyBrief's `CLAUDE.md` wins over this skill on any conflict. DailyBrief is live and used every day at Old Hawthorne.
 > - Ask Ryan first before you: change the rules in `CLAUDE.md` (the session-end updates it asks for are fine); install, upgrade, or remove any package or tool; add an MCP server or a hook; run SQL that changes data or schema, or apply a migration, on the live Supabase project `chajwmoohmiugdgvqjyo`; deploy an Edge Function; or `git push` (`main` is Vercel's production branch).
-> - If this skill points to a skill that is not installed in `.claude/skills/`, skip that step.
+> - Commands: tests are `npm test` in `app/` (Vitest) and `deno test --allow-read <test file>` for Edge Functions; the build gate is `npm run build` in `app/`; check UI changes in the real app with Claude in Chrome.
+> - Sub-agents run only when Ryan asks for one or runs `/ship`. Where a step below says to spawn one, do that step yourself in the main session, or ask Ryan first.
 > - Explain results to Ryan in plain, simple words.
 
 # Code Review and Quality
@@ -184,6 +185,8 @@ For each file changed:
 
 ### Step 4: Categorize Findings
 
+Before reporting a finding, check it against the callers, guards and tests that reach the changed code, and drop it if they rule it out. Label defects that already exist in the base separately from regressions this change introduces. Zero findings is a valid result; do not invent one.
+
 Label every comment with its severity so the author knows what's required vs optional:
 
 | Prefix | Meaning | Author Action |
@@ -356,8 +359,8 @@ For triaging `npm audit` findings and supply-chain risk (typosquatting, compromi
 ```
 ## See Also
 
-- For detailed security review guidance, see `references/security-checklist.md`
-- For performance review checks, see `references/performance-checklist.md`
+- For detailed security review guidance, see `../../references/security-checklist.md`
+- For performance review checks, see `../../references/performance-checklist.md`
 
 ## Common Rationalizations
 

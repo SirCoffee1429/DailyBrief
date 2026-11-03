@@ -17,5 +17,8 @@
       "PowerShell(git push *)"
     ],
     "disableBypassPermissionsMode": "disable"
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": false
   }
 }

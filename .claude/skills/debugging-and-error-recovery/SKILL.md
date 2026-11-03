@@ -3,10 +3,11 @@ name: debugging-and-error-recovery
 description: Guides systematic root-cause debugging. Use when tests fail, builds break, something that worked yesterday broke, behavior doesn't match expectations, or you encounter any unexpected error. Use when you need to figure out what broke and why — a systematic approach to finding and fixing the root cause rather than guessing.
 ---
 
-> **DailyBrief local rules.** Copied from `addyosmani/agent-skills` at commit `aeac41d4d005` and edited for DailyBrief. These rules sit on top of everything below:
+> **DailyBrief local rules.** Copied from `addyosmani/agent-skills` at commit `301b02b12bff` and edited for DailyBrief. These rules sit on top of everything below:
 > - DailyBrief's `CLAUDE.md` wins over this skill on any conflict. DailyBrief is live and used every day at Old Hawthorne.
 > - Ask Ryan first before you: change the rules in `CLAUDE.md` (the session-end updates it asks for are fine); install, upgrade, or remove any package or tool; add an MCP server or a hook; run SQL that changes data or schema, or apply a migration, on the live Supabase project `chajwmoohmiugdgvqjyo`; deploy an Edge Function; or `git push` (`main` is Vercel's production branch).
-> - If this skill points to a skill that is not installed in `.claude/skills/`, skip that step.
+> - Commands: tests are `npm test` in `app/` (Vitest) and `deno test --allow-read <test file>` for Edge Functions; the build gate is `npm run build` in `app/`; check UI changes in the real app with Claude in Chrome.
+> - Sub-agents run only when Ryan asks for one or runs `/ship`. Where a step below says to spawn one, do that step yourself in the main session, or ask Ryan first.
 > - Explain results to Ryan in plain, simple words.
 
 # Debugging and Error Recovery
@@ -87,7 +88,7 @@ npm test -- --grep "test name"
 npm test -- --verbose
 
 # Run in isolation (rules out test pollution)
-npm test -- --testPathPattern="specific-file" --runInBand
+npm test -- specific-file --runInBand
 ```
 
 ### Step 2: Localize
