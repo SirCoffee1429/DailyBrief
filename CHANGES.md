@@ -484,4 +484,4 @@ warning. Pushing `main` would put the new vite, react-router and xlsx in the liv
   case saves the capability map and module specs in `spec/`.
 - Checked first: nothing else in `.claude/` (commands, agents, skills, references) reads a spec by path; `/build` reads
   `tasks/todo.md`, unchanged. No `SPEC.md`, `spec/` or `tasks/` existed, so nothing to move.
-- Logged as a local edit in `VENDORED_SKILLS.md` so a future upstream re-copy re-applies it.
+- Logged as a local edit in `VENDORED_SKILLS.md` so a future upstream re-copy re-applies it. Committed `7010efc`, not pushed.
