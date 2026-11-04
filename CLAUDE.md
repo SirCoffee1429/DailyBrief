@@ -142,12 +142,12 @@ DailyBrief runs the `addyosmani/agent-skills` workflow (vendored 11-02, `VENDORE
   built-ins, hence the names); small fixes skip the spec. Specs in `spec/<feature>.md`, plans in `tasks/`; `claudedocs/` is the
   older history. `/build` does ONE task then stops — `/build auto` left out on purpose (owner, 11-02)
 - **Testing:** `npm test` in `app/` (Vitest), `deno test --allow-read <file>` for functions; gate = tests + `npm run build` +
-  a browser check. Test first for new logic/bug fixes; pin current behaviour before changing untested code; no coverage %
+  a browser check. Test first for new logic/bug fixes; pin current behaviour before changing untested code; no coverage %.
+  `xlsx` installs from the SheetJS CDN tarball (npm's 0.18.5 is vulnerable) — never `npm i xlsx`. Local dev = LIVE DB
 - **Agents:** only via `/ship` (`code-reviewer` + `security-auditor` + `test-engineer` in parallel) or when Ryan asks (`/webperf` too)
 - **Toolset:** the pack (`.claude/skills|agents|commands|references`) + `supabase` skill + SuperClaude `/sc:*` (save/load + gaps).
   Superpowers is OFF here (`.claude/settings.json`). Never `npx skills add`/marketplace. `.claude/settings.json` ASKS before
-  Supabase writes and `git push`, overriding any local allow (`.claude/rules/skills-and-live-safety.md`)
-- **Commits:** no `Co-Authored-By` trailer — no commit in this repo has one.
+  Supabase writes and `git push`, overriding any local allow (`.claude/rules/skills-and-live-safety.md`). **Commits:** no `Co-Authored-By` trailer
 - **Codex is advisory only.** `AGENTS.md`, `.codex/`, `.agents/skills/` (untracked) are Codex's; `AGENTS.md`'s "make no
   changes" rule is for Codex and does NOT apply here, and its `~/.Codex/...` paths are really `~/.claude/...`.
 

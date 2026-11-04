@@ -191,70 +191,12 @@
 - 10-06 — Office Time Off: Remove a Request From the Calendar (shipped on its own, `461f12a`) — office clicks a calendar name → named confirm → delete; `deleteRequest` now checks a row was really removed before notifying. Shipped alone via a branch off `origin/main`, merged back (not rebased). Owner tested it; live removals followed. → [full](docs/changelog/2026-10.md#2026-10-06--office-time-off-remove-a-request-from-the-calendar-shipped-on-its-own)
 - 10-07 — Dish Spec Review: Wings, Burrata, Whole Fruit, Sourdough Slices, Stale Notes — wings 1 per piece, burrata added (#355554), whole fruit = 12 gala apples/dozen, stale AI notes cleared; coconut shrimp + Wellington are buy-outs. Found `unitFit`'s pack-count guess (coconut shrimp ~54x over) → folded into P4. 55/364 confirmed, 158/158 ingredients mapped. → [full](docs/changelog/2026-10.md#2026-10-07--dish-spec-review-wings-burrata-whole-fruit-sourdough-slices-stale-notes)
 - 10-08 — Dish Drafter Stops Swapping Foods (v8 → v11) — it read its EXISTING NAMES list as the only foods allowed (tenderloin → shoulder tender, 0 new names in bad runs). Rules 11-12 (new names expected, never substitute); telling the model to keep swaps out of its note made them SILENT, so that was removed. → [full](docs/changelog/2026-10.md#2026-10-08--dish-drafter-stops-swapping-foods-draft-dish-specs-v8--v11)
+- 10-09 — Drafter: Dijon Kept Separate, Batches of 4, Repeatable Check in the Repo — `draft-dish-specs` v12: Dijon is never grain mustard (owner). The rule alone failed inside a batch; **batch size is the lever** (12 → swaps, 8 → 2 runs with swaps, 4 → 0 in 12 runs), so `DRAFT_BATCH` 8 → 4. `drafter_check.ts` scores the deployed function N times and exits 1 on any swap. → [full](docs/changelog/2026-10.md#2026-10-09--drafter-dijon-kept-separate-batches-of-4-repeatable-check-in-the-repo)
+- 10-10 — Drafter Retries Malformed JSON Once; Beef Tenderloin Respecced — v13: a non-JSON reply is retried ONCE inside the same 130s budget (API errors/timeouts are not); `retry_test.ts` 4/4, mutation-checked. Owner: "tenderloin should be tenderloin" — Action Stations moved off `shoulder tender`. → [full](docs/changelog/2026-10.md#2026-10-10--drafter-retries-malformed-json-once-beef-tenderloin-respecced)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-09 — Drafter: Dijon Kept Separate, Batches of 4, Repeatable Check in the Repo
-
-**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/drafter_check.ts`
-(new), `app/src/pages/DishSpecs.jsx` **Type:** `fix` + `test` — `draft-dish-specs` v11 → **v12**.
-**Summary:** Owner: Dijon and grain mustard are separate purchases. The rule alone did not hold in a batch,
-so the Dish Ingredients page now drafts 4 dishes per request instead of 8. The scorer from 10-08 is now
-a Deno script beside `match_test.ts`.
-
-**Details:**
-
-- **v12:** rule 11's examples add "Dijon is never grain mustard" (owner's word, so the lamb's Dijon is no
-  longer a blind test). Drafted ALONE the lamb got `dijon mustard` 4 of 4; inside a batch it still became
-  the existing `grain mustard`.
-- **Batch size is the lever** (same 12 dishes, `parseOnly`, scored on 36 named foods):
-
-  | Batch | Runs | Named kept | Runs with a swap |
-  |---|---|---|---|
-  | 12 | 10 | 23-36 (one run fell back toward the old closed-list mode) | 2 + that one |
-  | 8 (old app setting) | 6 | 34-36 | 2 (grain mustard) |
-  | **4 (new)** | 12 | 35-36 | **0** |
-
-  Small samples, but every point agrees: fewer dishes per request, fewer swaps. `DRAFT_BATCH` 8 → 4;
-  time is not the limit. Beef set (5 dishes): 18/18 in every run at any batch size.
-- **`drafter_check.ts`** — runs the DEPLOYED function N times (`[runs=5] [batch=4]`), scores named foods,
-  swaps (whole words: "prime ribeye" is not the swap "prime rib"), existing-name reuse and new-name count;
-  exits 1 on any swap. Reads the public anon key from `app/src/lib/supabase.js` and the live name list
-  via `dish_ingredient_names`. Writes nothing. Confirmed dishes drop out over time (parseOnly skips them)
-  — the check names them so they can be replaced.
-- **Seen, not fixed:** Gemini sometimes returns malformed JSON → the function 500s (2 of ~60 calls). The
-  page stops, keeps every earlier batch, and **Draft** again resumes — a click, not lost data. A one-time
-  retry on a JSON parse failure would remove it.
-- `npm run build` passes. **Owner:** 72 confirmed / 22 drafts / 270 unspecced (10-09); Beef Tenderloin
-  is confirmed as `shoulder tender` — asked whether that is the kitchen's practice.
-
----
-
-### 2026-10-10 — Drafter Retries Malformed JSON Once; Beef Tenderloin Respecced
-
-**File(s) Changed:** `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/retry_test.ts`
-(new), data (`dish_ingredients`, `menu_dishes.spec_note`) **Type:** `fix` + `test` — `draft-dish-specs` v12 → **v13**.
-
-**Details:**
-
-- **Retry:** `callGemini` now wraps `callGeminiOnce`. A reply that is not valid JSON (`SyntaxError`, 2 of ~60
-  calls on 10-09, each a failed batch) is retried ONCE; an API error or timeout is not. The retry gets only
-  what is left of the same 130s budget (none if under 30s), so it cannot push a request past the gateway.
-- **`retry_test.ts`** slices the real code out of `index.ts` (like `match_test.ts`) with fetch faked: good
-  first answer = 1 call; malformed then good = 2 calls, retry used; malformed twice = SyntaxError after 2
-  calls; HTTP 400 = 1 call. 4/4 + match_test 5/5 pass. **Mutation-checked:** removing the retry fails 2
-  tests; retrying every error fails 1; file restored byte-identical.
-- **Live:** v13 deployed; `drafter_check.ts` 4 runs — set A 35-36/36, 0 swaps; set B one run drafted the
-  12oz Prime Ribeye as the existing `prime rib` (sampling; the retry does not touch the prompt).
-- **Beef Tenderloin (Action Stations), owner:** "tenderloin should be tenderloin" — `shoulder tender` →
-  `beef tenderloin` 20 oz per lb sold (still confirmed); note trimmed to "Mushroom bordelaise components
-  included." `shoulder tender` stays on Grilled Beef Crostini. `beef tenderloin` has no product mapping yet.
-- **P3 (10-10):** 82 confirmed / 12 drafts / 270 unspecced; ingredients 158 mapped / 41 unmapped (new
-  names from the Action Stations and later drafts).
-
----
 
 ### 2026-10-10 — Time Off Calendar: Days Line Up Under Their Weekday Again
 
@@ -497,3 +439,34 @@ and applied here, every file checked against the manifest's SHA-256 before and a
   it never shows in `git status`.
 - `_skills-setup/` deleted after the copy (step 6). The repo converts line endings to CRLF on checkout, so a later SHA-256
   check against the old manifest would fail even with the content unchanged.
+
+---
+
+### 2026-11-02 → 11-04 — agent-skills Workflow + Vitest; npm Audit to 0 (SheetJS From Its CDN)
+
+**File(s) Changed:** `.claude/` (agents, commands, references, skills, rules, settings), `CLAUDE.md`, `app/package.json`,
+`app/package-lock.json`, `app/src/lib/dates.test.js` (new) **Type:** `config` + `test` + `chore` (deps) — 3 commits, **none pushed**.
+**Summary:** Adopted `addyosmani/agent-skills` as DailyBrief's workflow, added a test runner, and cleared every `npm audit`
+warning. Pushing `main` would put the new vite, react-router and xlsx in the live bundle — the owner's call.
+
+- **`3528bdd` — agent-skills pack** vendored by hand at `301b02b`: 25 skills, 4 agents, 9 commands, shared references, each with
+  a DailyBrief local-rules block (`VENDORED_SKILLS.md`). `/plan` → `/plan-tasks`, `/review` → `/review-change` (built-in clashes);
+  `/build` does one task (no `/build auto`); agents only via `/ship` or on request. Superpowers OFF for this project only
+  (`.claude/settings.json` `enabledPlugins`) — owner confirmed 11-03 it no longer loads. `/constraints` (writes `CONSTRAINTS.md`)
+  is installed but not run: owner skipped it; no agent reads that file.
+- **Vitest:** `npm test` in `app/`; first suite pins `lib/dates.js` (9/9).
+- **`3107002` — `npm audit fix`:** 10 advisories fixed within existing semver ranges (vite 6.4.5, react-router 7.18.5, postcss,
+  @babel/core, nanoid, ws, …); only the lockfile changed. **On this machine node_modules stayed old until a separate
+  `npm install`** — the first test/build had checked old code; re-run after.
+- **`41c59ce` — xlsx:** npm's `xlsx` stops at 0.18.5 (CVE-2023-30533 prototype pollution, CVE-2024-22363 ReDoS); SheetJS ships
+  fixes only on its CDN, so `app/package.json` pins `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. `npm audit`: **0**.
+  Upgrade by the next CDN tarball URL, never `npm i xlsx`.
+- **Checked:** old vs new SheetJS on all 28 repo `.xlsx` files with the app's read options — the only change is CRLF → LF inside
+  multi-line cells (recipe assembly text); nothing splits on `\r`. The app's own parsers (`lib/catalogParse.js`) gave identical
+  numbers on both. In the browser (`/office/catalog`, preview only, **nothing saved** — the local app writes to the LIVE DB):
+  S2S Walkin 169 rows / 169 products / 0 varies / 0 unpriced; master list 1,381 products / 20 categories / 347 item groups; no
+  console errors. `npm test` 9/9, `npm run build` passes.
+- **Gotcha:** stopping a backgrounded `npm run dev` can leave Vite's node process holding 5173 and serving old deps — kill it by
+  PID, restart with `--force`.
+- **Seen, not investigated:** at ~9pm 11-03 the FOH brief header showed Wed Nov 4 while Kitchen showed Tue Nov 3 — possibly the
+  `defaultBriefingDate()` after-5pm rule applied to one view and not the other.
