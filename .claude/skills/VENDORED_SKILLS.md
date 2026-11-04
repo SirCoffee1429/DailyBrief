@@ -15,6 +15,7 @@ Not copied from agent-skills: `hooks/` (upstream says not to wire its session-st
 ## Local edits (agent-skills)
 - Every SKILL.md: the "DailyBrief local rules" block (CLAUDE.md wins; ask-first list; test/build commands; sub-agents only via `/ship` or when Ryan asks; plain words).
 - Commands: `plan.md` → `plan-tasks.md` and `review.md` → `review-change.md` (`/plan` and `/review` are Claude Code built-ins); the plugin's `agent-skills:` prefix stripped from skill names; `build.md` keeps only one-task mode (no `/build auto`, owner 2026-11-02); `test.md` points at Claude in Chrome.
+- Spec save location (2026-11-04): `SPEC.md` / `SPEC-<module>.md` at the project root → `spec/<feature>.md` / `spec/<module>.md` (CLAUDE.md's convention) in `commands/spec.md`, `commands/plan-tasks.md` and `spec-driven-development`. Paths only; `tasks/plan.md` and `tasks/todo.md` unchanged.
 - Agents: links to the uncopied `docs/agents.md` point at `../references/orchestration-patterns.md`.
 - browser-testing-with-devtools: use Claude in Chrome; no Chrome DevTools MCP is installed.
 - shipping-and-launch, ci-cd-and-automation: note that a push to `main` is the deploy (Vercel), with no staging, flags or CI yet.

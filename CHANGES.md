@@ -470,3 +470,18 @@ warning. Pushing `main` would put the new vite, react-router and xlsx in the liv
   PID, restart with `--force`.
 - **Seen, not investigated:** at ~9pm 11-03 the FOH brief header showed Wed Nov 4 while Kitchen showed Tue Nov 3 — possibly the
   `defaultBriefingDate()` after-5pm rule applied to one view and not the other.
+
+---
+
+### 2026-11-04 — Specs Save to `spec/<feature>.md`, Matching CLAUDE.md
+
+**File(s) Changed:** `.claude/commands/spec.md`, `.claude/commands/plan-tasks.md`,
+`.claude/skills/spec-driven-development/SKILL.md`, `.claude/skills/VENDORED_SKILLS.md` **Type:** `config`
+**Summary:** The vendored pack saved specs as `SPEC.md` (or `SPEC-<module>.md`) in the project root; CLAUDE.md says
+`spec/<feature>.md`. Save paths changed to match. Owner's condition: paths only, no loss of function.
+
+- `/spec` saves to `spec/<feature>.md` (creates `spec/`); `/plan-tasks` reads it from there; the skill's multi-module
+  case saves the capability map and module specs in `spec/`.
+- Checked first: nothing else in `.claude/` (commands, agents, skills, references) reads a spec by path; `/build` reads
+  `tasks/todo.md`, unchanged. No `SPEC.md`, `spec/` or `tasks/` existed, so nothing to move.
+- Logged as a local edit in `VENDORED_SKILLS.md` so a future upstream re-copy re-applies it.

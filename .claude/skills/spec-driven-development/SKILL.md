@@ -69,7 +69,7 @@ Build order: identity → billing, notifications → reporting
 
 **The map is gated like every phase.** The human reviews module boundaries, dependency direction, and build order before any module spec is written. Getting the map wrong is expensive; reviewing ten lines is not.
 
-**Then recurse per module.** Run Specify → Plan → Tasks → Implement for each module in dependency order. Each module gets its own spec, scoped to that module's objective, boundaries, and success criteria. Save the approved map at the project root and each module's spec alongside it, named by module id (`SPEC-identity.md`, `SPEC-billing.md`) — the map, not filename guessing, is the index of what exists.
+**Then recurse per module.** Run Specify → Plan → Tasks → Implement for each module in dependency order. Each module gets its own spec, scoped to that module's objective, boundaries, and success criteria. Save the approved map in `spec/` and each module's spec alongside it, named by module id (`spec/identity.md`, `spec/billing.md`) — the map, not filename guessing, is the index of what exists.
 
 ### Phase 1: Specify
 
@@ -157,7 +157,7 @@ Don't silently fill in ambiguous requirements. The spec's entire purpose is to s
 **External spec tools:** This workflow is format-agnostic. If the project
 already uses OpenSpec or another specification system, keep that system's
 artifact format and storage conventions instead of creating a duplicate
-`SPEC.md`. This skill owns the clarification, content, and approval gates; the
+spec in `spec/`. This skill owns the clarification, content, and approval gates; the
 external tool owns how the approved spec is represented.
 
 **Reframe instructions as success criteria.** When receiving vague requirements, translate them into concrete conditions:
