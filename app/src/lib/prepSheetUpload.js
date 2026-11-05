@@ -97,6 +97,17 @@ export function toSections(lines) {
     return sections.filter(section => section.items.length > 0)
 }
 
+// Sections → the flat rows prep_replace_station saves, in sheet order.
+export function toUploadPayload(sections) {
+    return sections.flatMap(section => section.items.map(item => ({
+        section: section.name,
+        name: item.name,
+        par_text: item.parText,
+        par_qty: item.qty,
+        par_unit: item.unit,
+    })))
+}
+
 // One cell as trimmed text ('' when missing).
 function cellText(row, col) {
     return String(row?.[col] ?? '').trim()

@@ -101,12 +101,20 @@ sections, items, par text and parsed par, with unparsed ones flagged. Confirm ca
 if the name is new.
 
 **Acceptance criteria:**
-- [ ] The preview writes nothing; only Confirm writes. Each blank-par row has a Section/Item toggle.
+- [x] The preview writes nothing; only Confirm writes. Each blank-par row has a Section/Item toggle.
 - [ ] **On Ryan's OK,** the five Fall 26 sheets are loaded into prod through this page, and a `SELECT` shows item counts
       matching T2.
-- [ ] Re-uploading the same file keeps every item's id and state (a no-op).
+- [x] Re-uploading the same file keeps every item's id and state (a no-op). Checked on `ZZ Test`: "0 added, 7 updated, 0 removed", same 7 ids.
 
-**Verification:** B · C (`ZZ Test` upload first, then the real five)
+**As built (code done, `ZZ Test` checked):** `PrepSetup.jsx` lists the stations with item counts, then file → preview
+(summary, station name from the file and editable, a "Replaces X's list" or "new station" note, a Make section/item
+switch on blank-par rows, unreadable pars flagged) → Confirm → `prep_replace_station` → "N added, N updated, N removed".
+`toUploadPayload` is tested (115 tests). Office nav "Prep Sheets" sits before Communication, and the route is added
+after `/office/roster-coverage`, both away from local main's unpushed edits to those files. `App.jsx` is stored with
+CRLF in git, so it was edited at the byte level to keep the diff to 2 lines.
+
+**Verification:** T 115 · B · C on `ZZ Test` (upload, flip, save, re-upload = no-op, 0 console errors). The real five are
+still to load, on Ryan's OK.
 
 **Dependencies:** T2, T3
 

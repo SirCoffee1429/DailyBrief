@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
-    readPrepFile, parsePrepRows, setLineKind, toSections, stationNameFromFile, fixTypos,
+    readPrepFile, parsePrepRows, setLineKind, toSections, stationNameFromFile, fixTypos, toUploadPayload,
 } from './prepSheetUpload.js'
 
 // The five real Fall 26 sheets, read through the same function the upload page uses.
@@ -186,5 +186,32 @@ describe('setLineKind / toSections', () => {
     it('items before the first section go in an unnamed section; empty sections are dropped', () => {
         expect(shape(toSections(lines))).toEqual([[null, 1], ['S', 1]])
         expect(shape(toSections([...lines, { ...lines[1], name: 'Empty' }]))).toEqual([[null, 1], ['S', 1]])
+    })
+})
+
+describe('toUploadPayload', () => {
+    it('flattens sections into the rows prep_replace_station takes, in sheet order', () => {
+        const payload = toUploadPayload(toSections(linesOf('Grill')))
+        expect(payload).toHaveLength(12)
+        expect(payload[0]).toEqual({
+            section: 'Protein', name: '10 oz NY Strip Steak', par_text: '8 ea', par_qty: 8, par_unit: 'ea',
+        })
+        expect(payload.find(r => r.name === 'Peppernata')).toEqual({
+            section: 'Sauces', name: 'Peppernata', par_text: '', par_qty: null, par_unit: null,
+        })
+        expect(payload.at(-1)).toMatchObject({ section: 'Garnish', name: 'Lemon Halves' })
+    })
+
+    it('items before any section have a null section (Fry)', () => {
+        const payload = toUploadPayload(toSections(linesOf('Fry')))
+        expect(payload).toHaveLength(27)
+        expect(new Set(payload.map(r => r.section))).toEqual(new Set([null]))
+    })
+
+    it('an unreadable par is sent as text only, with no qty or unit', () => {
+        const lines = parsePrepRows([['T'], ['Item', 'Par'], ['Mystery', 'some']])
+        expect(toUploadPayload(toSections(lines))).toEqual([
+            { section: null, name: 'Mystery', par_text: 'some', par_qty: null, par_unit: null },
+        ])
     })
 })

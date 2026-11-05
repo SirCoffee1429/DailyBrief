@@ -1,0 +1,26 @@
+/* Station prep sheets (spec/prep-sheets.md). Every class is prefixed prep- and lives in this file only. */
+
+/* ─── Setup page ───────────────────────────────────────────── */
+.prep-card { margin-bottom: 1.25rem; }
+.prep-card-title { font-size: var(--font-size-lg); font-weight: 600; margin: 0 0 0.75rem; color: var(--text-bright); }
+.prep-muted { color: var(--text-secondary); font-size: var(--font-size-sm); margin: 0.25rem 0; }
+.prep-warn { color: var(--warning); font-size: var(--font-size-sm); }
+.prep-error { color: var(--danger); background: var(--danger-bg); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); margin: 0.75rem 0 0; }
+.prep-success { color: var(--success); background: var(--success-bg); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); margin: 0.75rem 0 0; }
+.prep-tag { display: inline-block; margin: 0 0.3rem; padding: 0 0.4rem; border-radius: var(--radius-full); background: var(--bg-glass); color: var(--text-muted); font-size: var(--font-size-xs); }
+
+.prep-station-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.prep-station-list li { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.4rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+
+.prep-file-btn { cursor: pointer; display: inline-flex; gap: 0.5rem; align-items: center; }
+
+.prep-preview-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
+.prep-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.prep-field input { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); padding: 0.45rem 0.6rem; font-size: var(--font-size-base); }
+
+.prep-preview { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: var(--font-size-sm); }
+.prep-preview th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border-color); }
+.prep-preview td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.prep-preview-section td { font-weight: 700; color: var(--accent); background: var(--accent-subtle); padding-top: 0.6rem; }
+
+.prep-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
