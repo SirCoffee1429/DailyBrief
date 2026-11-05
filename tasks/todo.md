@@ -58,26 +58,34 @@ skipped.
 **Files:** `app/src/lib/prepSheetUpload.js`, `app/src/lib/prepSheetUpload.test.js`, `prepsheets/*` (the five sheets,
 committed as test fixtures)
 
-## Task 3: Migration: tables, RLS, realtime, RPCs
+## Task 3: Migration: tables, RLS, realtime, RPCs ✅ DONE (applied to prod 2026-11-05, version `20261105174946`)
 
-**Description:** `supabase/migrations/20261105000000_prep_sheets.sql`: `prep_stations`, `prep_items`,
+**Description:** `supabase/migrations/20261105174946_prep_sheets.sql`: `prep_stations`, `prep_items`,
 `prep_item_state`, `prep_entries`, `prep_counts`; anon + authenticated policies in the SAME migration (the `ensure_rls`
 trigger switches RLS on); `prep_item_state` and `prep_counts` added to `supabase_realtime`; RPCs `prep_record`,
 `prep_finish_count` and `prep_replace_station`, `security invoker`, each one transaction. Partial adds to the
 current value, and Done sets have to par.
 
 **Acceptance criteria:**
-- [ ] The migration is additive only (no existing object changed), and the SQL has been reviewed with Ryan.
-- [ ] **Applied to prod only with Ryan's OK.** Then checked by `SELECT`: tables exist, policies exist, publication lists
+- [x] The migration is additive only (no existing object changed), and the SQL has been reviewed with Ryan.
+- [x] **Applied to prod only with Ryan's OK.** Then checked by `SELECT`: tables exist, policies exist, publication lists
       both tables, RPCs callable as anon.
-- [ ] A smoke test on a `ZZ Test` station: replace → record count/done/partial/note → finish count gives the expected
+- [x] A smoke test on a `ZZ Test` station: replace → record count/done/partial/note → finish count gives the expected
       state and entries. Retired after.
 
-**Verification:** SQL `SELECT` checks above · B
+**As built:** the current count lives ON `prep_items` (`have`, `note`, `changed_at`, `changed_by`), with no separate
+state table. That's one fewer table and one fewer realtime subscription; the history is still in `prep_entries`. The
+replace RPC finds the station by NAME, and a helper `prep_upload_rows(jsonb)` parses the upload. A par UNIT change
+clears the count. Realtime is on `prep_stations`, `prep_items` and `prep_counts`.
+
+**Verification:** `supabase/tests/prep_sheets_smoke.sql`, ~30 checks, which always ends in an exception, so nothing is
+kept. It ran clean before applying (inside the same transaction as the migration) and after (`set local role anon`,
+proving kitchen access). Afterwards a `SELECT` showed 0 rows in all four tables; RLS on, 8 policies, 3 tables in
+realtime, anon can execute all 4 functions.
 
 **Dependencies:** none (can be written alongside T1–T2)
 
-**Files likely touched:** `supabase/migrations/20261105000000_prep_sheets.sql`
+**Files likely touched:** `supabase/migrations/20261105174946_prep_sheets.sql`
 
 **Estimated scope:** S
 
