@@ -72,7 +72,7 @@ See `tasks/todo.md` for full acceptance criteria. Phases:
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Local dev writes to the LIVE DB | High | Tests use a throwaway station named `ZZ Test`, retired after; the five real stations are only loaded once in T4 on Ryan's OK |
-| A blank-par row is a section OR an item, with no signal in the file | Med | Defaults to section, flagged; the preview has a Section/Item toggle per row |
+| A blank-par row is a section OR an item, with no signal in the file | Med | Section only if the next line has a par (Fall 26: 1 flip left, Citrus Vinaigrette); every blank-par row has a Section/Item toggle in the preview |
 | Par text the parser misreads (e.g. `2 1/3 pans`) | Med | Tests cover every par in the five real files; the upload preview flags anything unparsed; nothing saves without confirm |
 | Merge back into `main` conflicts | Low | Own CSS file, a few added lines in shared files, merge (not rebase) |
 | Vitest isn't on the live branch | Med | See Open Question 1 |

@@ -30,28 +30,33 @@ lockfile if OQ1 = add Vitest)
 
 **Estimated scope:** S
 
-## Task 2: Sheet parser `parsePrepRows` + typo fixes (test first)
+## Task 2: Sheet parser + typo fixes (test first) ✅ DONE
 
-**Description:** Turn one workbook's rows into `{ station, sections: [{ name, items: [{ name, parText, qty, unit }] }] }`.
-The title row names the station; the two header rows (days / `Item | Par | Prep …`) are skipped. **A named row with a
-blank par is read as a SECTION by default, flagged `ambiguous`**, and the T4 preview gives each one a Section/Item
-toggle. The files carry no reliable signal to tell them apart: bold can't be read through SheetJS, blank rows are
-inconsistent, and Salad's `Citrus Vinnegrette` (an item) sits exactly like Grill's `Garnish` (a section). For Fall 26
-the office flips three rows to Item: Peppernata, Roasted Shallot, Citrus Vinaigrette. Typo map from the spec.
+**Description:** `lib/prepSheetUpload.js` (separate from `prepSheets.js` so SheetJS loads only on the upload page):
+`readPrepFile` (first sheet with content, displayed text), `parsePrepRows` → preview lines, `setLineKind` (the
+Section/Item toggle), `toSections`, `stationNameFromFile`, `fixTypos`. Rows up to and including the `Par` header are
+skipped.
+
+**As built, two changes from the first draft:**
+- The **station name comes from the FILE name** ("Fry fall 26.xls" → Fry), and the office can edit it. The title row
+  can't be used: "Grill- Dinner" and "LUNCH PREP" don't name the station cleanly.
+- **A blank-par row is a section only if the next line has a par.** A section needs something under it, so Peppernata
+  and Roasted Shallot come in as items automatically. Only **Citrus Vinaigrette** still needs the office's flip: it sits
+  exactly like `Garnish`. Every blank-par line stays flippable.
 
 **Acceptance criteria:**
-- [ ] On the five real files: station names Fry, Grill, Lunch, Salad, Sautee; item counts per station match a hand count
-      of the files (recorded in the test); every section in order.
-- [ ] Fry (no section rows) lands as one unnamed section.
-- [ ] Typos fixed; unparsed par text comes back flagged, never dropped.
+- [x] Five real files: Fry [unnamed 27]; Grill Protein 8 / Sauces 2 / Garnish 2; Lunch 17/19/9/8/8/2; Salad 3/23/13/9/3
+      (after the one flip); Sautee 7/3/3/6. 172 items, matching a hand count, 0 unparsed.
+- [x] Fry (no section rows) lands as one unnamed section.
+- [x] Typos fixed (whole words only); unparsed par text is flagged, never dropped; a file with no `Par` header throws a
+      clear error.
 
-**Verification:** T (fixtures per plan OQ2) · B
+**Verification:** T 112/112 (mutation-checked: section rule → 5 fail, typo fix → 13 fail) · B passes
 
 **Dependencies:** T1
 
-**Files likely touched:** `app/src/lib/prepSheets.js`, `app/src/lib/prepSheets.test.js`, fixtures
-
-**Estimated scope:** S
+**Files:** `app/src/lib/prepSheetUpload.js`, `app/src/lib/prepSheetUpload.test.js`, `prepsheets/*` (the five sheets,
+committed as test fixtures)
 
 ## Task 3: Migration: tables, RLS, realtime, RPCs
 
@@ -83,7 +88,7 @@ current value, and Done sets have to par.
 
 ## Task 4: Office Prep Setup: upload, preview, confirm; load Fall 26
 
-**Description:** `/office/prep/setup` (office nav entry "Prep Sheets"). Pick a file, then a preview shows the station,
+**Description:** `/office/prep/setup` (office nav entry "Prep Sheets"). Pick a file, then a preview shows the station (name suggested from the file name, editable),
 sections, items, par text and parsed par, with unparsed ones flagged. Confirm calls `prep_replace_station`. New station
 if the name is new.
 
