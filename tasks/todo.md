@@ -94,7 +94,7 @@ realtime, anon can execute all 4 functions.
 
 ## Phase 2: Data in
 
-## Task 4: Office Prep Setup: upload, preview, confirm; load Fall 26
+## Task 4: Office Prep Setup: upload, preview, confirm; load Fall 26 ✅ DONE
 
 **Description:** `/office/prep/setup` (office nav entry "Prep Sheets"). Pick a file, then a preview shows the station (name suggested from the file name, editable),
 sections, items, par text and parsed par, with unparsed ones flagged. Confirm calls `prep_replace_station`. New station
@@ -102,8 +102,9 @@ if the name is new.
 
 **Acceptance criteria:**
 - [x] The preview writes nothing; only Confirm writes. Each blank-par row has a Section/Item toggle.
-- [ ] **On Ryan's OK,** the five Fall 26 sheets are loaded into prod through this page, and a `SELECT` shows item counts
-      matching T2.
+- [x] **On Ryan's OK (11-05),** the five Fall 26 sheets were loaded into prod through this page, with Citrus Vinaigrette
+      flipped to Item. A `SELECT` shows Fry 27 / Grill 12 / Lunch 63 / Salad 51 / Sautee 19 = 172, sections 0/3/6/5/4, no-par
+      items only Peppernata, Roasted Shallot and Citrus Vinaigrette, and 0 typos left.
 - [x] Re-uploading the same file keeps every item's id and state (a no-op). Checked on `ZZ Test`: "0 added, 7 updated, 0 removed", same 7 ids.
 
 **As built (code done, `ZZ Test` checked):** `PrepSetup.jsx` lists the stations with item counts, then file → preview
@@ -114,7 +115,7 @@ after `/office/roster-coverage`, both away from local main's unpushed edits to t
 CRLF in git, so it was edited at the byte level to keep the diff to 2 lines.
 
 **Verification:** T 115 · B · C on `ZZ Test` (upload, flip, save, re-upload = no-op, 0 console errors). The real five are
-still to load, on Ryan's OK.
+loaded (see above).
 
 **Dependencies:** T2, T3
 
@@ -124,7 +125,8 @@ still to load, on Ryan's OK.
 **Estimated scope:** M
 
 ### Checkpoint B: Data in
-- [ ] All five stations are in prod and match the paper sheets. Ryan eyeballs one station.
+- [x] All five stations are in prod and match the paper sheets (SQL counts above).
+- [ ] Ryan eyeballs one station (on the kitchen sheet once T5 is built).
 
 ## Phase 3: Crew flow
 
