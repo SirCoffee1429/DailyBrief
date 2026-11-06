@@ -130,7 +130,7 @@ loaded (see above).
 
 ## Phase 3: Crew flow
 
-## Task 5: Kitchen station sheet: count, quick buttons, color, to-prep, name
+## Task 5: Kitchen station sheet: count, quick buttons, color, to-prep, name ✅ DONE
 
 **Description:** `/kitchen/prep` (Kitchen nav entry "Prep Sheets"). Station picker, then sections and item lines: par,
 a Have box with Out/¼/½/¾/Full, a color chip, and "prep N unit". A name dropdown (active `employees`) is remembered in
@@ -138,12 +138,22 @@ a Have box with Out/¼/½/¾/Full, a color chip, and "prep N unit". A name dropd
 highlighted.
 
 **Acceptance criteria:**
-- [ ] Salmon par 20: Have 4 shows Red "prep 16 ea"; 12 shows Yellow; 15 shows Green. Quick ½ on a `1/3 pan` par shows
+- [x] Salmon par 20: Have 4 shows Red "prep 16 ea"; 12 shows Yellow; 15 shows Green. Quick ½ on a `1/3 pan` par shows
       "0.5 of a 1/3 pan", Yellow.
-- [ ] A change survives a reload. The name is remembered after a reload. No-par items show grey and still save.
-- [ ] Usable at phone width (375px): no sideways scroll, and buttons are thumb-sized.
+- [x] A change survives a reload. The name is remembered after a reload. No-par items show grey and still save.
+- [x] Usable at phone width (375px): no sideways scroll, and buttons are thumb-sized.
 
-**Verification:** T (any new logic) · B · C at 375px on `ZZ Test`
+**As built (code done, `ZZ Test` checked):** `PrepSheets.jsx` at `/kitchen/prep?station=<id>` (the station is in the
+URL, so a reload or the T9 tile lands on it). Kitchen nav "Prep Sheets" sits between Sales and Time Off. A name dropdown
+(active `employees`) is remembered under `localStorage['prepSheets.employeeId']`, and a name that left the roster is
+forgotten. The Have box saves on blur or Enter (blank or unchanged saves nothing); quick buttons save on tap, and the one
+matching the current count is highlighted. With no name, nothing saves: the line says so and the name box is
+highlighted. New tested helpers in `lib/prepSheets.js`: `unitSuffix`, `formatAmount` (pans read "0.5 of a 1/3 pan" under
+one pan, "1.5 × 1/3 pan" from one up), `lineStatus`, `groupBySection`, `parseHaveInput` (144 tests).
+
+**Verification:** T 144 · B · C on `ZZ Test`: Salmon 4 Red "prep 16 ea" / 12 Yellow / 15 Green, Broccoli 0.5 "of a
+1/3 pan" Red, Peppernata (no par) saves 3, −1 refused, no-name save refused; reload keeps counts and name; 6 history
+rows, all Ryan Coffee; at 375px no sideways scroll and every button 44px tall; 0 console errors.
 
 **Dependencies:** T1, T3, T4
 

@@ -24,3 +24,42 @@
 .prep-preview-section td { font-weight: 700; color: var(--accent); background: var(--accent-subtle); padding-top: 0.6rem; }
 
 .prep-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* ─── Kitchen station sheet (phone first: 375px, thumb-sized buttons) ─── */
+.prep-name { margin: 0 0 1rem; max-width: 22rem; }
+.prep-name select { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); padding: 0 0.6rem; min-height: 44px; font-size: var(--font-size-base); }
+.prep-name-missing select { border-color: var(--warning); box-shadow: 0 0 0 2px var(--warning-bg); }
+
+.prep-station-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.prep-station-tab { min-height: 44px; padding: 0 1rem; border-radius: var(--radius-full); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: var(--font-size-base); font-weight: 600; cursor: pointer; }
+.prep-station-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.prep-section { margin-bottom: 1.25rem; }
+.prep-section-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--accent); margin: 0 0 0.5rem; }
+
+.prep-line { background: var(--bg-card); border: 1px solid var(--border-color); border-left: 6px solid var(--border-color-hover); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 0.6rem; min-width: 0; }
+.prep-line-red { border-left-color: var(--danger); }
+.prep-line-yellow { border-left-color: var(--warning); }
+.prep-line-green { border-left-color: var(--success); }
+
+.prep-line-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.prep-line-name { font-weight: 600; color: var(--text-bright); font-size: var(--font-size-base); overflow-wrap: anywhere; }
+.prep-chip { flex-shrink: 0; padding: 0.15rem 0.6rem; border-radius: var(--radius-full); font-size: var(--font-size-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.prep-chip-red { background: var(--danger-bg); color: var(--danger); }
+.prep-chip-yellow { background: var(--warning-bg); color: var(--warning); }
+.prep-chip-green { background: var(--success-bg); color: var(--success); }
+.prep-chip-grey { background: var(--bg-glass); color: var(--text-muted); }
+
+.prep-line-par { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem 0.75rem; margin: 0.35rem 0 0.6rem; color: var(--text-secondary); font-size: var(--font-size-sm); }
+.prep-line-need { color: var(--text-bright); }
+
+.prep-line-have { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.prep-have { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.prep-have-label { color: var(--text-secondary); font-size: var(--font-size-sm); }
+.prep-have input { width: 5.5rem; min-height: 44px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); padding: 0 0.6rem; font-size: 1.125rem; }
+.prep-have-unit { color: var(--text-secondary); font-size: var(--font-size-sm); }
+
+.prep-quick { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
+.prep-quick-btn { flex: 1 1 0; min-width: 0; min-height: 44px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-glass); color: var(--text-primary); font-size: var(--font-size-base); font-weight: 600; cursor: pointer; }
+.prep-quick-btn.active { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent); }
+.prep-quick-btn:disabled { opacity: 0.6; cursor: default; }

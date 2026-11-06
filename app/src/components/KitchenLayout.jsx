@@ -48,6 +48,7 @@ export default function KitchenLayout({ children }) {
         { to: '/kitchen/availability', label: 'Availability', icon: 'fa-solid fa-clock' },
         { to: '/kitchen/recipes', label: 'Recipes', icon: 'fa-solid fa-utensils' },
         { to: '/kitchen/sales', label: 'Sales', icon: 'fa-solid fa-chart-line' },
+        { to: '/kitchen/prep', label: 'Prep Sheets', icon: 'fa-solid fa-clipboard-check' },
         { to: '/kitchen/time-off', label: 'Time Off', icon: 'fa-regular fa-calendar' },
     ]
 

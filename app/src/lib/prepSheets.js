@@ -98,3 +98,58 @@ export function stationScore(items) {
     const score = counts.red * SCORE_WEIGHT.red + counts.yellow * SCORE_WEIGHT.yellow + counts.green * SCORE_WEIGHT.green
     return { ...counts, score }
 }
+
+// A pan par's unit, e.g. "1/3 pan". Pans read differently: "0.5 of a 1/3 pan", "2 × 1/3 pan".
+const PAN_UNIT = /pan$/
+
+// The words after an amount. Under one pan: "of a 1/3 pan"; otherwise "× 1/3 pan"; other units as is.
+export function unitSuffix(qty, unit) {
+    if (!unit) return ''
+    if (!PAN_UNIT.test(unit)) return unit
+    return qty != null && qty > 0 && qty < 1 ? `of a ${unit}` : `× ${unit}`
+}
+
+// An amount with its unit, as the crew reads it: "16 ea", "0.5 of a 1/3 pan".
+export function formatAmount(qty, unit) {
+    const n = round2(Number(qty))
+    return `${n} ${unitSuffix(n, unit)}`.trim()
+}
+
+// What one line shows: its color, the chip label, and how much to prep.
+// The database sends numerics as strings, so they are read as numbers here.
+export function lineStatus({ have, par_qty, par_unit }) {
+    const parQty = par_qty == null ? null : Number(par_qty)
+    const haveQty = have == null ? null : Number(have)
+    if (parQty == null || !(parQty > 0)) return { color: null, label: 'No par', prep: null }
+    const color = colorFor(haveQty, parQty)
+    if (!color) return { color: null, label: 'Not counted', prep: null }
+    const need = toPrep(haveQty, parQty)
+    return {
+        color,
+        label: color[0].toUpperCase() + color.slice(1),
+        prep: need > 0 ? `prep ${formatAmount(need, par_unit)}` : 'at par',
+    }
+}
+
+// Items (already in sheet order) → [{ section, items }], one group per run of the same section.
+export function groupBySection(items) {
+    const groups = []
+    for (const item of items) {
+        const last = groups.at(-1)
+        if (last && last.section === item.section) {
+            last.items.push(item)
+        } else {
+            groups.push({ section: item.section, items: [item] })
+        }
+    }
+    return groups
+}
+
+// A typed Have amount → { value, error }. Blank is "no change" (value null), not zero.
+export function parseHaveInput(text) {
+    const s = String(text ?? '').trim()
+    if (!s) return { value: null, error: null }
+    const n = Number(s)
+    if (!Number.isFinite(n) || n < 0) return { value: null, error: 'Enter how much you have (0 or more).' }
+    return { value: round2(n), error: null }
+}

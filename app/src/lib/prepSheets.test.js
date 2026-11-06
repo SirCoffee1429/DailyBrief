@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { parsePar, colorFor, toPrep, quickValues, stationScore } from './prepSheets.js'
+import {
+    parsePar, colorFor, toPrep, quickValues, stationScore,
+    unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
+} from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
 // with what it must parse to. "2 1/3 pans" = two 1/3 pans (owner, 2026-11-04).
@@ -177,5 +180,110 @@ describe('stationScore', () => {
 
     it('is all zero for an empty station', () => {
         expect(stationScore([])).toEqual({ red: 0, yellow: 0, green: 0, uncounted: 0, score: 0 })
+    })
+})
+
+describe('unitSuffix / formatAmount', () => {
+    it.each([
+        [16, 'ea', '16 ea'],
+        [0, 'ea', '0 ea'],
+        [2.5, 'bag', '2.5 bag'],
+        [7.7, 'lb', '7.7 lb'],
+        [0.5, '1/3 pan', '0.5 of a 1/3 pan'],
+        [0.25, '1/6 pan', '0.25 of a 1/6 pan'],
+        [1, '1/3 pan', '1 × 1/3 pan'],
+        [1.5, '1/3 pan', '1.5 × 1/3 pan'],
+        [0, '1/3 pan', '0 × 1/3 pan'],
+    ])('%s %s → %s', (qty, unit, text) => {
+        expect(formatAmount(qty, unit)).toBe(text)
+    })
+
+    it('rounds float noise away', () => {
+        expect(formatAmount(20 - 12.3, 'ea')).toBe('7.7 ea')
+        expect(formatAmount(1 / 3, 'qt')).toBe('0.33 qt')
+    })
+
+    it('the Have box suffix follows the same pan wording', () => {
+        expect(unitSuffix(0.5, '1/3 pan')).toBe('of a 1/3 pan')
+        expect(unitSuffix(2, '1/3 pan')).toBe('× 1/3 pan')
+        expect(unitSuffix(null, '1/3 pan')).toBe('× 1/3 pan')
+        expect(unitSuffix(4, 'ea')).toBe('ea')
+        expect(unitSuffix(4, null)).toBe('')
+    })
+})
+
+describe('lineStatus', () => {
+    const salmon = have => ({ have, par_qty: 20, par_unit: 'ea' })
+
+    it('Salmon par 20: 4 is Red "prep 16 ea", 12 Yellow, 15 Green (task 5 criteria)', () => {
+        expect(lineStatus(salmon(4))).toEqual({ color: 'red', label: 'Red', prep: 'prep 16 ea' })
+        expect(lineStatus(salmon(12))).toEqual({ color: 'yellow', label: 'Yellow', prep: 'prep 8 ea' })
+        expect(lineStatus(salmon(15))).toEqual({ color: 'green', label: 'Green', prep: 'prep 5 ea' })
+    })
+
+    it('at or over par needs nothing', () => {
+        expect(lineStatus(salmon(20)).prep).toBe('at par')
+        expect(lineStatus(salmon(25)).prep).toBe('at par')
+    })
+
+    it('½ of a one-pan par is "0.5 of a 1/3 pan" and Yellow', () => {
+        const [, , half] = quickValues(1)
+        expect(half.value).toBe(0.5)
+        expect(lineStatus({ have: half.value, par_qty: 1, par_unit: '1/3 pan' }))
+            .toEqual({ color: 'yellow', label: 'Yellow', prep: 'prep 0.5 of a 1/3 pan' })
+    })
+
+    it('not counted yet is grey "Not counted"', () => {
+        expect(lineStatus(salmon(null))).toEqual({ color: null, label: 'Not counted', prep: null })
+    })
+
+    it('an item with no par is grey "No par", counted or not', () => {
+        expect(lineStatus({ have: null, par_qty: null, par_unit: null })).toEqual({ color: null, label: 'No par', prep: null })
+        expect(lineStatus({ have: 3, par_qty: null, par_unit: null })).toEqual({ color: null, label: 'No par', prep: null })
+    })
+
+    it('reads numeric strings from the database as numbers', () => {
+        expect(lineStatus({ have: '4', par_qty: '20', par_unit: 'ea' }).prep).toBe('prep 16 ea')
+    })
+})
+
+describe('groupBySection', () => {
+    it('groups items into their sections in sheet order, keeping runs together', () => {
+        const items = [
+            { id: 1, section: null }, { id: 2, section: 'Protein' }, { id: 3, section: 'Protein' },
+            { id: 4, section: 'Sauces' },
+        ]
+        expect(groupBySection(items)).toEqual([
+            { section: null, items: [items[0]] },
+            { section: 'Protein', items: [items[1], items[2]] },
+            { section: 'Sauces', items: [items[3]] },
+        ])
+    })
+
+    it('an empty list has no sections', () => {
+        expect(groupBySection([])).toEqual([])
+    })
+})
+
+describe('parseHaveInput', () => {
+    it.each([
+        ['12', 12],
+        [' 4.5 ', 4.5],
+        ['0', 0],
+        ['.5', 0.5],
+        ['1.234', 1.23],
+    ])('"%s" → %s', (text, value) => {
+        expect(parseHaveInput(text)).toEqual({ value, error: null })
+    })
+
+    it('blank means "no change", not zero', () => {
+        expect(parseHaveInput('')).toEqual({ value: null, error: null })
+        expect(parseHaveInput('   ')).toEqual({ value: null, error: null })
+    })
+
+    it.each(['-1', 'abc', '1/2', '1e400'])('"%s" is refused with a message', text => {
+        const result = parseHaveInput(text)
+        expect(result.value).toBeNull()
+        expect(result.error).toMatch(/0 or more/)
     })
 })
