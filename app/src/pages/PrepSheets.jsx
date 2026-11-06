@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { groupBySection, COUNT_LABELS, lastCountText } from '../lib/prepSheets.js'
+import { groupBySection, COUNT_LABELS, lastCountText, applyItemChange, newerCount } from '../lib/prepSheets.js'
 import PrepLine from '../components/PrepLine.jsx'
 import '../prepSheets.css'
 
@@ -33,6 +33,21 @@ export default function PrepSheets() {
 
     useEffect(() => { loadStationsAndCrew() }, [])
     useEffect(() => { if (station) loadStation(station.id) }, [station?.id])
+
+    // Live updates: another device's change to the open station shows here without a reload. One channel per open
+    // station, removed when the cook switches stations or leaves the page.
+    useEffect(() => {
+        if (!station) return
+        const filter = `station_id=eq.${station.id}`
+        const channel = supabase
+            .channel(`prep_station_${station.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_items', filter },
+                change => setItems(prev => applyItemChange(prev, change)))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prep_counts', filter },
+                change => setLastCount(prev => newerCount(prev, change.new)))
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
+    }, [station?.id])
 
     // Active stations and the active crew roster, both for pickers.
     async function loadStationsAndCrew() {

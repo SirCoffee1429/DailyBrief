@@ -7,6 +7,10 @@ import {
 // then Done / Partial / Note, and who changed it last. `onRecord(kind, { amount, note })` saves and resolves true/false.
 export default function PrepLine({ item, state, onRecord, onRefuse }) {
     const [open, setOpen] = useState(null) // null | 'partial' | 'note'
+    // The Have box is keyed on the saved value so a save (or a refused entry) resets it to what's stored. While the
+    // cook is typing in it, the key is held, so a live change from another device can't wipe what they're typing.
+    const haveKey = `${item.have}-${state.error ?? ''}`
+    const [editKey, setEditKey] = useState(null)
     const status = lineStatus(item)
     const have = item.have == null ? null : Number(item.have)
     const parQty = item.par_qty == null ? null : Number(item.par_qty)
@@ -52,12 +56,12 @@ export default function PrepLine({ item, state, onRecord, onRefuse }) {
             <div className="prep-line-have">
                 <label className="prep-have">
                     <span className="prep-have-label">Have</span>
-                    {/* Keyed on the saved value so a save (or a refused entry) resets the box to what's stored. */}
                     <input
-                        key={`${item.have}-${state.error ?? ''}`}
+                        key={editKey ?? haveKey}
                         type="number" inputMode="decimal" min="0" step="any"
                         defaultValue={have ?? ''} placeholder="—"
-                        onBlur={commitHave}
+                        onFocus={() => setEditKey(haveKey)}
+                        onBlur={e => { setEditKey(null); commitHave(e) }}
                         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                         aria-label={`How much ${item.name} you have`}
                     />

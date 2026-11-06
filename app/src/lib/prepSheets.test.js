@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     parsePar, colorFor, toPrep, quickValues, stationScore,
     unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
-    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText,
+    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount,
 } from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
@@ -339,5 +339,46 @@ describe('lastCountText', () => {
 
     it('no count yet', () => {
         expect(lastCountText(null, now)).toBe('No count finished yet')
+    })
+})
+
+describe('applyItemChange (a live change from another device)', () => {
+    const a = { id: 'a', name: 'Salmon', have: 4, sort_order: 1 }
+    const b = { id: 'b', name: 'Broccoli', have: 1, sort_order: 2 }
+    const c = { id: 'c', name: 'Chives', have: null, sort_order: 3 }
+    const items = [a, b, c]
+
+    it('an update replaces that line and leaves the rest alone', () => {
+        const out = applyItemChange(items, { eventType: 'UPDATE', new: { ...b, have: 2, active: true } })
+        expect(out.map(i => i.have)).toEqual([4, 2, null])
+        expect(out[0]).toBe(a)
+        expect(items[1].have).toBe(1) // the old list is not changed
+    })
+
+    it('a line taken off the sheet (active false) disappears', () => {
+        const out = applyItemChange(items, { eventType: 'UPDATE', new: { ...b, active: false } })
+        expect(out.map(i => i.id)).toEqual(['a', 'c'])
+    })
+
+    it('a new or re-activated line goes in at its sheet position', () => {
+        const d = { id: 'd', name: 'Dill', have: null, sort_order: 2.5, active: true }
+        expect(applyItemChange(items, { eventType: 'INSERT', new: d }).map(i => i.id)).toEqual(['a', 'b', 'd', 'c'])
+        const back = applyItemChange([a, c], { eventType: 'UPDATE', new: { ...b, active: true } })
+        expect(back.map(i => i.id)).toEqual(['a', 'b', 'c'])
+    })
+
+    it('nothing loaded yet: stays not loaded', () => {
+        expect(applyItemChange(null, { eventType: 'UPDATE', new: { ...a, active: true } })).toBeNull()
+    })
+})
+
+describe('newerCount', () => {
+    const older = { label: 'morning', employee_name: 'Jake', created_at: '2026-11-05T14:00:00+00:00' }
+    const newer = { label: 'end_of_night', employee_name: 'Ryan', created_at: '2026-11-06T03:36:00+00:00' }
+
+    it('keeps whichever Finish count is latest', () => {
+        expect(newerCount(older, newer)).toBe(newer)
+        expect(newerCount(newer, older)).toBe(newer)
+        expect(newerCount(null, older)).toBe(older)
     })
 })

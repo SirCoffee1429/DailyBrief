@@ -186,3 +186,20 @@ export function lastCountText(count, now = new Date()) {
     const label = COUNT_LABELS.find(c => c.key === count.label)?.label ?? count.label
     return `${label}, ${count.employee_name}, ${formatStamp(count.created_at, now)}`
 }
+
+// A live change to one prep_items row (a Supabase realtime INSERT/UPDATE) applied to the open station's lines, in
+// sheet order. A line taken off the sheet (active false) drops out; a new one goes in at its sort_order. Rows are
+// never deleted (retired instead), and realtime doesn't send filtered DELETEs. Returns a new list. Before the station
+// has loaded (null) it stays null: the load brings the latest anyway.
+export function applyItemChange(items, { new: row }) {
+    if (!items) return items
+    const rest = items.filter(i => i.id !== row.id)
+    if (!row.active) return rest
+    return [...rest, row].sort((x, y) => x.sort_order - y.sort_order)
+}
+
+// The station header shows the latest Finish count, whichever arrives first.
+export function newerCount(current, incoming) {
+    if (!current) return incoming
+    return new Date(incoming.created_at) > new Date(current.created_at) ? incoming : current
+}

@@ -126,7 +126,7 @@ loaded (see above).
 
 ### Checkpoint B: Data in
 - [x] All five stations are in prod and match the paper sheets (SQL counts above).
-- [ ] Ryan eyeballs one station (on the kitchen sheet once T5 is built).
+- [x] Ryan eyeballs one station (on the kitchen sheet once T5 is built). Ryan checked it himself, 11-06: all good.
 
 ## Phase 3: Crew flow
 
@@ -191,16 +191,29 @@ sideways scroll with Partial and the picker open, all buttons 44px; 0 console er
 
 **Estimated scope:** S
 
-## Task 7: Live updates on the station sheet
+## Task 7: Live updates on the station sheet ✅ DONE
 
-**Description:** Subscribe to `prep_item_state` and `prep_counts` and reload the open station on change. Unsubscribe on
+**Description:** Subscribe to `prep_items` (where the counts live) and `prep_counts` and reload the open station on change. Unsubscribe on
 leave and on station switch. A Have box being typed in is not overwritten mid-edit.
 
 **Acceptance criteria:**
-- [ ] With two tabs on the same station, a change in one shows in the other without a reload, within a few seconds.
-- [ ] Focused input isn't clobbered; no duplicate channels after switching stations (checked in the console).
+- [x] With two tabs on the same station, a change in one shows in the other without a reload, within a few seconds.
+- [x] Focused input isn't clobbered; no duplicate channels after switching stations (checked in the console).
 
-**Verification:** B · C with two tabs
+**As built:** one channel per open station (`prep_station_<id>`, filtered on `station_id`), removed on station switch
+and on leaving the page. A `prep_items` change is merged straight into the open list (`applyItemChange`: replace the
+line, drop it if retired, insert at `sort_order`); no reload, so open Partial/Note boxes stay open. A new `prep_counts`
+row updates the header (`newerCount` keeps the latest). The Have box holds its key while focused, so a remote change
+can't wipe what's being typed; the remote value shows once the cook leaves the box (if they typed something else, theirs
+saves: last one wins). Both tables were already in the realtime publication: no migration. Known small gap: a change
+landing in the ~1 round trip while a station first loads isn't applied (the next change or a reload shows it).
+
+**Verification:** T 162 (RED: the 6 new tests failed first) · B · C with two tabs on `ZZ Test`: Salmon 12 saved in A
+showed in B as 12 / Yellow / "Ryan Coffee, 9:57am" with no reload; B was mid-typing "5" in Marinara while A saved 2: B's
+box kept "5", same element, still focused; B leaving the box saved 5, which showed in A. Morning Finish count in B showed
+in A's header; Done on Broccoli in B showed in A after switching all 6 stations and back. Console: 1 `prep_station_`
+channel after every switch, 0 after leaving to /kitchen; 0 console errors. `SELECT`: one `prep_entries` row per action
+and one `prep_counts` row (morning). No new UI, so no 375px check.
 
 **Dependencies:** T6
 
