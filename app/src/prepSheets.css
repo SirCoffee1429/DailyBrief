@@ -63,3 +63,23 @@
 .prep-quick-btn { flex: 1 1 0; min-width: 0; min-height: 44px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-glass); color: var(--text-primary); font-size: var(--font-size-base); font-weight: 600; cursor: pointer; }
 .prep-quick-btn.active { border-color: var(--accent); background: var(--accent-subtle); color: var(--accent); }
 .prep-quick-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ─── Done / Partial / Note, last change, Finish count ─── */
+.prep-actions-row { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+.prep-act { flex: 1 1 0; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); font-size: var(--font-size-sm); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.prep-act.active { border-color: var(--accent); color: var(--accent); }
+.prep-act:disabled { opacity: 0.45; cursor: default; }
+.prep-act-done { border-color: var(--success); color: var(--success); }
+
+.prep-inline-form { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.prep-inline-form .prep-act { flex: 0 0 auto; padding: 0 1rem; }
+.prep-note-input { flex: 1 1 12rem; min-width: 0; min-height: 44px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); padding: 0 0.6rem; font-size: var(--font-size-base); }
+.prep-note { margin: 0.5rem 0 0; color: var(--warning); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+.prep-stamp { margin: 0.4rem 0 0; color: var(--text-muted); font-size: var(--font-size-xs); }
+
+.prep-finish { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1rem; }
+.prep-finish-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+.prep-finish-head .prep-act { flex: 0 0 auto; padding: 0 0.9rem; }
+.prep-finish-station { font-weight: 700; color: var(--text-bright); font-size: var(--font-size-lg); }
+.prep-finish-pick { margin-top: 0.75rem; }
+.prep-finish-options { display: flex; gap: 0.4rem; margin-top: 0.4rem; }

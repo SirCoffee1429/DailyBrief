@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import {
-    lineStatus, quickValues, unitSuffix, groupBySection, parseHaveInput,
-} from '../lib/prepSheets.js'
+import { groupBySection, COUNT_LABELS, lastCountText } from '../lib/prepSheets.js'
+import PrepLine from '../components/PrepLine.jsx'
 import '../prepSheets.css'
 
 // The cook's name is remembered on this device, so they pick it once (spec: no typing).
@@ -12,7 +11,10 @@ const EMPLOYEE_KEY = 'prepSheets.employeeId'
 // The columns one sheet line needs.
 const ITEM_COLUMNS = 'id, section, name, par_text, par_qty, par_unit, have, note, changed_at, changed_by, sort_order'
 
-// Kitchen → Prep Sheets: pick a station, then count each item. Every count saves the moment it's entered.
+// The Finish count picker, closed.
+const FINISH_CLOSED = { open: false, saving: false, error: '' }
+
+// Kitchen → Prep Sheets: pick a station, then count each item. Every change saves the moment it's entered.
 // The open station lives in the URL (?station=<id>) so a reload, or a link from the dashboard, lands on it.
 export default function PrepSheets() {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -23,12 +25,14 @@ export default function PrepSheets() {
     const [items, setItems] = useState(null)
     const [loadError, setLoadError] = useState('')
     const [lineState, setLineState] = useState({})
+    const [lastCount, setLastCount] = useState(null)
+    const [finish, setFinish] = useState(FINISH_CLOSED)
     const nameRef = useRef(null)
 
     const station = stations.find(s => s.id === searchParams.get('station')) ?? null
 
     useEffect(() => { loadStationsAndCrew() }, [])
-    useEffect(() => { if (station) loadItems(station.id) }, [station?.id])
+    useEffect(() => { if (station) loadStation(station.id) }, [station?.id])
 
     // Active stations and the active crew roster, both for pickers.
     async function loadStationsAndCrew() {
@@ -47,21 +51,26 @@ export default function PrepSheets() {
         if (!crewRes.data.some(e => e.id === localStorage.getItem(EMPLOYEE_KEY))) pickEmployee('')
     }
 
-    // One station's items, in sheet order.
-    async function loadItems(stationId) {
+    // One station's items in sheet order, and its last Finish count.
+    async function loadStation(stationId) {
         setItems(null)
         setLineState({})
-        const { data, error } = await supabase
-            .from('prep_items').select(ITEM_COLUMNS)
-            .eq('station_id', stationId).eq('active', true)
-            .order('sort_order')
-        if (error) {
-            console.error('Failed to load prep items:', error)
+        setLastCount(null)
+        setFinish(FINISH_CLOSED)
+        const [itemsRes, countRes] = await Promise.all([
+            supabase.from('prep_items').select(ITEM_COLUMNS)
+                .eq('station_id', stationId).eq('active', true).order('sort_order'),
+            supabase.from('prep_counts').select('label, employee_name, created_at')
+                .eq('station_id', stationId).order('created_at', { ascending: false }).limit(1),
+        ])
+        if (itemsRes.error || countRes.error) {
+            console.error('Failed to load prep station:', itemsRes.error ?? countRes.error)
             setLoadError('Could not load this station. Refresh to try again.')
             return
         }
         setLoadError('')
-        setItems(data)
+        setItems(itemsRes.data)
+        setLastCount(countRes.data[0] ?? null)
     }
 
     // The name dropdown: remembered on this device.
@@ -72,30 +81,53 @@ export default function PrepSheets() {
         else localStorage.removeItem(EMPLOYEE_KEY)
     }
 
-    // Saves one count. Without a name nothing is saved: the line says so and the name box is highlighted.
-    async function saveCount(item, amount) {
-        if (!employeeId) {
-            setNameMissing(true)
+    // Every save needs a name. Without one the name box is highlighted and focused. Returns whether a name is set.
+    function haveName() {
+        if (employeeId) return true
+        setNameMissing(true)
+        nameRef.current?.focus()
+        return false
+    }
+
+    // A line's own message (a refused amount or a failed save).
+    function setLineError(itemId, message) {
+        setLineState(prev => ({ ...prev, [itemId]: { error: message } }))
+    }
+
+    // Saves one change to an item (count / done / partial / note). Resolves true once it's saved.
+    async function record(item, kind, { amount = null, note = null }) {
+        if (!haveName()) {
             setLineError(item.id, 'Not saved: pick your name first.')
-            nameRef.current?.focus()
-            return
+            return false
         }
         setLineState(prev => ({ ...prev, [item.id]: { saving: true } }))
         const { data, error } = await supabase.rpc('prep_record', {
-            p_item_id: item.id, p_kind: 'count', p_amount: amount, p_note: null, p_employee_id: employeeId,
+            p_item_id: item.id, p_kind: kind, p_amount: amount, p_note: note, p_employee_id: employeeId,
         })
         if (error) {
             console.error('prep_record failed:', error)
-            setLineState(prev => ({ ...prev, [item.id]: { error: error.message || 'Not saved. Try again.' } }))
-            return
+            setLineError(item.id, error.message || 'Not saved. Try again.')
+            return false
         }
         setItems(prev => prev.map(i => (i.id === data.id ? data : i)))
         setLineState(prev => ({ ...prev, [item.id]: {} }))
+        return true
     }
 
-    // A line's own message (a refused amount) without a save.
-    function setLineError(itemId, message) {
-        setLineState(prev => ({ ...prev, [itemId]: { error: message } }))
+    // Finish count: stamps the station with the chosen label, the name and the time.
+    async function finishCount(label) {
+        if (!haveName()) return
+        setFinish({ open: true, saving: true, error: '' })
+        const { data, error } = await supabase.rpc('prep_finish_count', {
+            p_station_id: station.id, p_label: label, p_employee_id: employeeId,
+        })
+        if (error) {
+            console.error('prep_finish_count failed:', error)
+            setFinish({ open: true, saving: false, error: error.message || 'Not saved. Try again.' })
+            return
+        }
+        setLastCount(data)
+        setFinish(FINISH_CLOSED)
     }
 
     return (
@@ -137,13 +169,21 @@ export default function PrepSheets() {
             {station && !items && !loadError && <p className="prep-muted">Loading {station.name}…</p>}
             {station && items?.length === 0 && <p className="prep-muted">{station.name} has no items yet.</p>}
 
+            {station && items && (
+                <FinishCount
+                    station={station} lastCount={lastCount} finish={finish}
+                    onToggle={() => setFinish(f => ({ ...f, open: !f.open, error: '' }))}
+                    onPick={finishCount}
+                />
+            )}
+
             {station && items && groupBySection(items).map((group, i) => (
                 <section key={`${group.section}-${i}`} className="prep-section">
                     {group.section && <h2 className="prep-section-title">{group.section}</h2>}
                     {group.items.map(item => (
                         <PrepLine
                             key={item.id} item={item} state={lineState[item.id] ?? {}}
-                            onSave={amount => saveCount(item, amount)}
+                            onRecord={(kind, fields) => record(item, kind, fields)}
                             onRefuse={message => setLineError(item.id, message)}
                         />
                     ))}
@@ -153,60 +193,36 @@ export default function PrepSheets() {
     )
 }
 
-// One item: name and color chip, the par and how much to prep, then the Have box and quick buttons.
-function PrepLine({ item, state, onSave, onRefuse }) {
-    const status = lineStatus(item)
-    const have = item.have == null ? null : Number(item.have)
-    const parQty = item.par_qty == null ? null : Number(item.par_qty)
-
-    // The Have box saves when the cook leaves it or presses Enter. Blank or unchanged saves nothing.
-    function commit(e) {
-        const { value, error } = parseHaveInput(e.target.value)
-        if (error) return onRefuse(error)
-        if (value == null || value === have) return
-        onSave(value)
-    }
-
+// The station header: its last Finish count, and the button that stamps a new one.
+// Finishing never blocks anything: items left alone keep their last value (spec).
+function FinishCount({ station, lastCount, finish, onToggle, onPick }) {
     return (
-        <div className={`prep-line prep-line-${status.color ?? 'grey'}`}>
-            <div className="prep-line-top">
-                <span className="prep-line-name">{item.name}</span>
-                <span className={`prep-chip prep-chip-${status.color ?? 'grey'}`}>{status.label}</span>
+        <div className="prep-finish">
+            <div className="prep-finish-head">
+                <div>
+                    <div className="prep-finish-station">{station.name}</div>
+                    <div className="prep-muted">Last count: {lastCountText(lastCount)}</div>
+                </div>
+                <button
+                    type="button" className={`prep-act prep-act-done${finish.open ? ' active' : ''}`}
+                    onClick={onToggle} disabled={finish.saving}
+                >
+                    <i className="fa-solid fa-flag-checkered" /> Finish count
+                </button>
             </div>
-            <div className="prep-line-par">
-                <span>Par {item.par_text || '—'}</span>
-                {status.prep && <strong className="prep-line-need">{status.prep}</strong>}
-            </div>
-            <div className="prep-line-have">
-                <label className="prep-have">
-                    <span className="prep-have-label">Have</span>
-                    {/* Keyed on the saved value so a save (or a refused entry) resets the box to what's stored. */}
-                    <input
-                        key={`${item.have}-${state.error ?? ''}`}
-                        type="number" inputMode="decimal" min="0" step="any"
-                        defaultValue={have ?? ''} placeholder="—"
-                        onBlur={commit}
-                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                        aria-label={`How much ${item.name} you have`}
-                    />
-                    <span className="prep-have-unit">{unitSuffix(have, item.par_unit)}</span>
-                </label>
-                {state.saving && <span className="prep-muted">Saving…</span>}
-            </div>
-            {parQty != null && (
-                <div className="prep-quick">
-                    {quickValues(parQty).map(q => (
-                        <button
-                            key={q.label} type="button"
-                            className={`prep-quick-btn${have === q.value ? ' active' : ''}`}
-                            onClick={() => onSave(q.value)} disabled={state.saving}
-                        >
-                            {q.label}
-                        </button>
-                    ))}
+            {finish.open && (
+                <div className="prep-finish-pick">
+                    <span className="prep-muted">Which count did you just finish?</span>
+                    <div className="prep-finish-options">
+                        {COUNT_LABELS.map(c => (
+                            <button key={c.key} type="button" className="prep-act" onClick={() => onPick(c.key)} disabled={finish.saving}>
+                                {c.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
-            {state.error && <p className="prep-error">{state.error}</p>}
+            {finish.error && <p className="prep-error">{finish.error}</p>}
         </div>
     )
 }

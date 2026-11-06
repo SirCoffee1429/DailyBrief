@@ -162,17 +162,28 @@ rows, all Ryan Coffee; at 375px no sideways scroll and every button 44px tall; 0
 
 **Estimated scope:** M
 
-## Task 6: Done, Partial, note, Finish count
+## Task 6: Done, Partial, note, Finish count ✅ DONE
 
 **Description:** On each line: **Done** (have = par), **Partial** (enter amount made, have += amount), and a note
 (add/edit/clear). On the station: **Finish count**, which picks End of Night / Morning / Night Start, and the station
 header shows the last count "End of Night, Jake, 10:42pm". The line shows the last change's name and time.
 
 **Acceptance criteria:**
-- [ ] Done from 4 gives 20, Green; Partial +5 from 4 gives 9, still Red; each makes one `prep_entries` row with the name.
-- [ ] Notes persist and clear. Finish count makes a `prep_counts` row, and the header shows it.
+- [x] Done from 4 gives 20, Green; Partial +5 from 4 gives 9, still Red; each makes one `prep_entries` row with the name.
+- [x] Notes persist and clear. Finish count makes a `prep_counts` row, and the header shows it.
 
-**Verification:** B · C on `ZZ Test` + `SELECT` on `prep_entries`/`prep_counts`
+**As built (code done, `ZZ Test` checked):** each line has Done (off when there's no par) / Partial ("Made N" box,
+added on Enter) / Note (Save, and Clear when a note exists); boxes close only once the save went through. The note shows
+under the line, then "Ryan Coffee, 10:35pm" for the last change. The station header shows "Last count: End of Night,
+Ryan Coffee, 10:36pm" and a Finish count button opening End of Night / Morning / Night Start. Every save goes through one
+`record(item, kind, …)`; with no name nothing saves and the name box is highlighted. The line moved to
+`components/PrepLine.jsx` (page ~230 lines). New tested helpers: `parseMadeInput`, `COUNT_LABELS`, `formatStamp`
+("10:42pm" today, "Nov 4, 10:42pm" otherwise), `lastCountText` (157 tests, RED checked by stashing the code: 13 fail).
+
+**Verification:** T 157 · B · C on `ZZ Test`: 4 → Done = 20 Green "at par"; 4 → Partial 5 = 9 Red "prep 11 ea"; note
+kept over a reload, then cleared; End of Night count shown in the header after a reload. `SELECT`: one `prep_entries`
+row per action (count/done/count/partial/note/note-cleared), all Ryan Coffee, and one `prep_counts` row. 375px: no
+sideways scroll with Partial and the picker open, all buttons 44px; 0 console errors.
 
 **Dependencies:** T5
 

@@ -153,3 +153,36 @@ export function parseHaveInput(text) {
     if (!Number.isFinite(n) || n < 0) return { value: null, error: 'Enter how much you have (0 or more).' }
     return { value: round2(n), error: null }
 }
+
+// A Partial's "how much I made" → { value, error }. It must add something, so 0 and blank are refused.
+export function parseMadeInput(text) {
+    const { value } = parseHaveInput(text)
+    if (value == null || value <= 0) return { value: null, error: 'Enter how much you made (more than 0).' }
+    return { value, error: null }
+}
+
+// The Finish count choices: the database keys and how the kitchen says them.
+export const COUNT_LABELS = [
+    { key: 'end_of_night', label: 'End of Night' },
+    { key: 'morning', label: 'Morning' },
+    { key: 'night_start', label: 'Night Start' },
+]
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// A saved time in local time: "10:42pm" today, "Nov 4, 10:42pm" another day, with the year if it isn't this year.
+export function formatStamp(iso, now = new Date()) {
+    const d = new Date(iso)
+    const hour = d.getHours() % 12 || 12
+    const time = `${hour}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`
+    if (d.toDateString() === now.toDateString()) return time
+    const year = d.getFullYear() === now.getFullYear() ? '' : ` ${d.getFullYear()}`
+    return `${MONTHS[d.getMonth()]} ${d.getDate()}${year}, ${time}`
+}
+
+// The station header's last Finish count: "End of Night, Jake, 10:42pm".
+export function lastCountText(count, now = new Date()) {
+    if (!count) return 'No count finished yet'
+    const label = COUNT_LABELS.find(c => c.key === count.label)?.label ?? count.label
+    return `${label}, ${count.employee_name}, ${formatStamp(count.created_at, now)}`
+}

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     parsePar, colorFor, toPrep, quickValues, stationScore,
     unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
+    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText,
 } from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
@@ -285,5 +286,58 @@ describe('parseHaveInput', () => {
         const result = parseHaveInput(text)
         expect(result.value).toBeNull()
         expect(result.error).toMatch(/0 or more/)
+    })
+})
+
+describe('parseMadeInput (Partial)', () => {
+    it('takes an amount over 0', () => {
+        expect(parseMadeInput('5')).toEqual({ value: 5, error: null })
+        expect(parseMadeInput(' 0.5 ')).toEqual({ value: 0.5, error: null })
+    })
+
+    it.each(['', '0', '-2', 'abc'])('"%s" is refused: a partial must add something', text => {
+        expect(parseMadeInput(text)).toEqual({ value: null, error: 'Enter how much you made (more than 0).' })
+    })
+})
+
+describe('COUNT_LABELS', () => {
+    it("are the three counts the database accepts, in the kitchen's words", () => {
+        expect(COUNT_LABELS).toEqual([
+            { key: 'end_of_night', label: 'End of Night' },
+            { key: 'morning', label: 'Morning' },
+            { key: 'night_start', label: 'Night Start' },
+        ])
+    })
+})
+
+describe('formatStamp', () => {
+    // Local times, so the test reads the same in any time zone.
+    const now = new Date(2026, 10, 5, 23, 0)
+
+    it.each([
+        [new Date(2026, 10, 5, 22, 42), '10:42pm'],
+        [new Date(2026, 10, 5, 0, 5), '12:05am'],
+        [new Date(2026, 10, 5, 12, 0), '12:00pm'],
+        [new Date(2026, 10, 5, 9, 7), '9:07am'],
+    ])('today: %s → %s', (when, text) => {
+        expect(formatStamp(when.toISOString(), now)).toBe(text)
+    })
+
+    it('another day also shows the date', () => {
+        expect(formatStamp(new Date(2026, 10, 4, 22, 42).toISOString(), now)).toBe('Nov 4, 10:42pm')
+        expect(formatStamp(new Date(2025, 10, 5, 8, 0).toISOString(), now)).toBe('Nov 5 2025, 8:00am')
+    })
+})
+
+describe('lastCountText', () => {
+    const now = new Date(2026, 10, 5, 23, 0)
+
+    it('"End of Night, Jake, 10:42pm" (the spec example)', () => {
+        const count = { label: 'end_of_night', employee_name: 'Jake', created_at: new Date(2026, 10, 5, 22, 42).toISOString() }
+        expect(lastCountText(count, now)).toBe('End of Night, Jake, 10:42pm')
+    })
+
+    it('no count yet', () => {
+        expect(lastCountText(null, now)).toBe('No count finished yet')
     })
 })
