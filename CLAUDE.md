@@ -128,9 +128,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 
 - **`main`** — primary workspace and Vercel's production branch. Non-scheduler work here. To ship
   ONE change while main holds unpushed work: branch off `origin/main`, push `<branch>:main`, MERGE back
-- **`auto-scheduler`** — BOH schedule generator, worked in bursts. **Local only, never pushed**.
-  Prod `generate-schedule` v17 (`7dfe506`) stays as is (owner, 09-28) — deploy nothing newer, never
-  merge or push unasked. Merge `main` INTO it at the start of a scheduler session.
+- **`auto-scheduler`** — BOH schedule generator, **local only, never pushed**. Prod `generate-schedule` v17 (`7dfe506`)
+  stays as is (owner, 09-28): deploy nothing newer, never merge/push unasked; merge `main` INTO it at a scheduler session's start.
+- **`prep-sheets`** — Station Prep Sheets in worktree `../DailyBrief-prep-sheets` (off `origin/main`), ships ALONE; status in its `tasks/todo.md`
 
 ---
 

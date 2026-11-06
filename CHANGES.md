@@ -193,30 +193,11 @@
 - 10-08 — Dish Drafter Stops Swapping Foods (v8 → v11) — it read its EXISTING NAMES list as the only foods allowed (tenderloin → shoulder tender, 0 new names in bad runs). Rules 11-12 (new names expected, never substitute); telling the model to keep swaps out of its note made them SILENT, so that was removed. → [full](docs/changelog/2026-10.md#2026-10-08--dish-drafter-stops-swapping-foods-draft-dish-specs-v8--v11)
 - 10-09 — Drafter: Dijon Kept Separate, Batches of 4, Repeatable Check in the Repo — `draft-dish-specs` v12: Dijon is never grain mustard (owner). The rule alone failed inside a batch; **batch size is the lever** (12 → swaps, 8 → 2 runs with swaps, 4 → 0 in 12 runs), so `DRAFT_BATCH` 8 → 4. `drafter_check.ts` scores the deployed function N times and exits 1 on any swap. → [full](docs/changelog/2026-10.md#2026-10-09--drafter-dijon-kept-separate-batches-of-4-repeatable-check-in-the-repo)
 - 10-10 — Drafter Retries Malformed JSON Once; Beef Tenderloin Respecced — v13: a non-JSON reply is retried ONCE inside the same 130s budget (API errors/timeouts are not); `retry_test.ts` 4/4, mutation-checked. Owner: "tenderloin should be tenderloin" — Action Stations moved off `shoulder tender`. → [full](docs/changelog/2026-10.md#2026-10-10--drafter-retries-malformed-json-once-beef-tenderloin-respecced)
+- 10-10 — Time Off Calendar: Days Line Up Under Their Weekday Again (shipped on its own, `21cee39`) — not a date bug: the weekday header and day grid are separate `repeat(7, 1fr)` grids and long names widened their column; both now `minmax(0, 1fr)`, checked 7/7 header-cell alignment on the live page. → [full](docs/changelog/2026-10.md#2026-10-10--time-off-calendar-days-line-up-under-their-weekday-again)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-10 — Time Off Calendar: Days Line Up Under Their Weekday Again
-
-**File(s) Changed:** `app/src/index.css` **Type:** `fix` — shipped ALONE as `21cee39` (pushed
-`fix/time-off-columns:main` from `origin/main`), merged back into local main as `1061a58`.
-
-**Details:**
-
-- **Report:** October requests looked "pushed forward a day" (the 6th showing as the 7th).
-- **Not a date bug.** The DB held the right dates and the page put each in the right cell (checked in Chrome
-  on America/Chicago). The cells had slid out from under the headers: the weekday row and the day grid are
-  two SEPARATE grids, both `repeat(7, 1fr)`, and a bare `1fr` cannot shrink below its content's min width,
-  so long names (Bella Hammond, Katelyn Zeidler) widened their day column. On the live page the 28th sat
-  under MON-TUE and Tue the 6th under WED.
-- **Fix:** both grids `repeat(7, minmax(0, 1fr))`; long names truncate with the pill's existing ellipsis.
-- **Verified:** the same CSS injected on the live page gave 7/7 header lefts = cell lefts and 0 horizontal
-  overflow; `npm run build` passes on the shipped tree; the live CSS bundle serves the new rule. Mobile
-  width not checked separately.
-
----
 
 ### 2026-10-13 — Office Tasks Tab: Add Kitchen Tasks Without a Briefing (shipped on its own)
 
@@ -485,3 +466,30 @@ warning. Pushing `main` would put the new vite, react-router and xlsx in the liv
 - Checked first: nothing else in `.claude/` (commands, agents, skills, references) reads a spec by path; `/build` reads
   `tasks/todo.md`, unchanged. No `SPEC.md`, `spec/` or `tasks/` existed, so nothing to move.
 - Logged as a local edit in `VENDORED_SKILLS.md` so a future upstream re-copy re-applies it. Committed `7010efc`, not pushed.
+
+---
+
+### 2026-11-04 → (in progress) — Station Prep Sheets, Built on Its Own Ship Branch
+
+**File(s) Changed:** on branch `prep-sheets` (worktree `../DailyBrief-prep-sheets`, off `origin/main` `7ac0e01`):
+`spec/prep-sheets.md`, `tasks/plan.md`, `tasks/todo.md`, `app/src/lib/prepSheets.js` + test, `app/package.json`/lockfile
+**Type:** `feature` — in progress, **not pushed**; ships alone (push `prep-sheets:main`, then merge back here).
+**Summary:** The five paper station prep sheets (`prepsheets/`, Fall 26) become one running list per station: on-hand vs
+par, automatic Red <50% / Yellow <75% / Green, to-prep, Done/Partial, notes, Finish count, all live. Plus an office
+overview ranked by 2 × red + yellow, a Kitchen dashboard tile, setup editing and spreadsheet upload. Spec approved 11-04.
+
+- **T1 `bad3fd0`:** `parsePar`/`colorFor`/`toPrep`/`quickValues`/`stationScore`, 79 tests covering every real par.
+  Vitest 5.1.0 added to the branch (Ryan's OK) so tests run where the code ships.
+- **T2 `dddb1fd`:** `lib/prepSheetUpload.js` reads a sheet into preview lines (station name from the file name; blank-par
+  row = section only if the next line has a par; typo fixes). 172 items across the five sheets, 0 unparsed; 112 tests.
+- **T3:** migration `20261105174946_prep_sheets` **applied to prod 11-05 (Ryan's OK)**: 4 tables, 8 policies, realtime on 3,
+  RPCs `prep_record`/`prep_finish_count`/`prep_replace_station`. Smoke test passed before and after (as anon), and left 0 rows.
+- **T4 `1ee44a8`:** `/office/prep/setup`: station list + upload preview (Section/Item switch, unreadable pars flagged) →
+  Confirm → `prep_replace_station`. Browser-checked on a throwaway `ZZ Test` station (still in prod, retired at the end).
+- **Fall 26 loaded into prod (11-05, Ryan's OK)** through the page: Fry 27 / Grill 12 / Lunch 63 / Salad 51 / Sautee 19 = 172
+  items, SQL-checked against the hand count. Not visible on the live site until the code ships.
+- **T5 `7ce378b`:** `/kitchen/prep` (Kitchen nav "Prep Sheets"): station tabs, then each line with par, Have box + Out/¼/½/¾/Full,
+  color chip and "prep N unit". Every count saves at once via `prep_record`, under a roster name remembered on the device.
+  Browser-checked on `ZZ Test` at 375px (Salmon 4/12/15 → Red/Yellow/Green, reload keeps counts + name); 144 tests.
+- **Next (11-05):** Ryan eyeballs one real station on the sheet (Checkpoint B, needs local dev), then `/build Task 6`
+  (Done/Partial/note/Finish count). 5 commits + T5 on `prep-sheets`, none pushed; ZZ Test holds 6 test counts.
