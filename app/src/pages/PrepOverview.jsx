@@ -1,61 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase.js'
-import { rankStations, applyItemChange, newerCount, lastCountText, formatStamp } from '../lib/prepSheets.js'
+import { rankStations, lastCountText, formatStamp } from '../lib/prepSheets.js'
+import { usePrepBoard } from '../lib/usePrepBoard.js'
 import '../prepSheets.css'
 
 // Office → Prep Overview: every station ranked by how much prep it has left (2 × red + yellow), so the office knows
 // where to send help. Tap a station to open its sheet. Live: any count, Finish count or station change shows at once.
 export default function PrepOverview() {
-    const [stations, setStations] = useState(null)
-    const [items, setItems] = useState(null)
-    const [latestCounts, setLatestCounts] = useState({})
-    const [loadError, setLoadError] = useState('')
-
+    const { stations, items, latestCounts, loadError } = usePrepBoard('prep_overview')
     const ranked = useMemo(
         () => (stations && items ? rankStations(stations, items, latestCounts) : null),
         [stations, items, latestCounts],
     )
-
-    useEffect(() => { load() }, [])
-
-    // Live updates across every station. Item and Finish count changes merge straight in; a station added, renamed
-    // or retired (Setup) reloads everything.
-    useEffect(() => {
-        const channel = supabase
-            .channel('prep_overview')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_items' },
-                change => setItems(prev => applyItemChange(prev, change)))
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prep_counts' },
-                ({ new: count }) => setLatestCounts(prev => ({
-                    ...prev, [count.station_id]: newerCount(prev[count.station_id], count),
-                })))
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_stations' }, () => load())
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [])
-
-    // Active stations, each with its last Finish count, and every active line (well under PostgREST's 1000-row cap:
-    // five stations hold ~175 lines).
-    async function load() {
-        const [stationsRes, itemsRes] = await Promise.all([
-            supabase.from('prep_stations')
-                .select('id, name, prep_counts(station_id, label, employee_name, created_at)')
-                .eq('active', true)
-                .order('created_at', { referencedTable: 'prep_counts', ascending: false })
-                .limit(1, { referencedTable: 'prep_counts' }),
-            supabase.from('prep_items').select('id, station_id, have, par_qty, changed_at, sort_order').eq('active', true),
-        ])
-        if (stationsRes.error || itemsRes.error) {
-            console.error('Failed to load the prep overview:', stationsRes.error ?? itemsRes.error)
-            setLoadError('Could not load the prep overview. Refresh to try again.')
-            return
-        }
-        setLoadError('')
-        setStations(stationsRes.data.map(({ id, name }) => ({ id, name })))
-        setLatestCounts(Object.fromEntries(stationsRes.data.map(s => [s.id, s.prep_counts[0] ?? null])))
-        setItems(itemsRes.data)
-    }
 
     return (
         <div className="prep-page">

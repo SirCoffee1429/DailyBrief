@@ -259,15 +259,23 @@ browser), not Ryan; flagged to Ryan.
 
 **Estimated scope:** M
 
-## Task 9: Kitchen dashboard tile (live)
+## Task 9: Kitchen dashboard tile (live) ✅ DONE
 
 **Description:** A small tile on the Kitchen dashboard: each station's Red and Yellow counts, with tap-through to
 `/kitchen/prep?station=…`. Live.
 
 **Acceptance criteria:**
-- [ ] The counts match the overview; tap opens that station; nothing else on the dashboard moves or breaks.
+- [x] The counts match the overview; tap opens that station; nothing else on the dashboard moves or breaks.
 
-**Verification:** B · C (dashboard at desktop and 375px)
+**As built:** `PrepStationTile.jsx`, added LAST on the Kitchen dashboard (below Briefing/Tasks, so nothing above moves):
+each station in sheet order with "N red" / "N yellow", a row taps to `/kitchen/prep?station=<id>`. The overview's load +
+live code moved into `lib/usePrepBoard.js` (one channel per caller), shared by the overview and the tile; the counts come
+from the tested `stationCounts` (`rankStations` = `stationCounts` + sort), so both screens count the same way.
+
+**Verification:** T 168 (RED: `stationCounts is not a function`) · B · C: tile = SQL for all six (ZZ 2/0, Fry 5/5,
+Grill 4/3, Lunch 11/21, Salad 18/14, Sautee 5/8); Broccoli Out on `ZZ Test` (as Ryan Coffee) → tile 2 → 3 red, no reload;
+tap opens ZZ Test's sheet; 375px no sideways scroll, rows 44px (only the existing weather strip overflows, inside its own
+scroller). Overview re-checked after the hook move: same ranking, and Broccoli Full live → ZZ score 6 → 4. 0 console errors.
 
 **Dependencies:** T8
 

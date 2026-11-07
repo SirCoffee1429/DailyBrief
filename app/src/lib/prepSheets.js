@@ -204,17 +204,20 @@ export function newerCount(current, incoming) {
     return new Date(incoming.created_at) > new Date(current.created_at) ? incoming : current
 }
 
-// The office overview: every station with its color counts, last Finish count and latest change, most work first
-// (score = 2 x red + yellow), ties by name. `items` are all active lines (any station); `latestCounts` maps a
-// station id to its last Finish count.
+// Every station, in the order given, with its color counts and score, its last Finish count and its latest change.
+// `items` are all active lines (any station); `latestCounts` maps a station id to its last Finish count.
+export function stationCounts(stations, items, latestCounts) {
+    return stations.map(station => {
+        const lines = items.filter(i => i.station_id === station.id)
+        const counts = stationScore(lines.map(i => ({ have: i.have, parQty: i.par_qty })))
+        const lastUpdate = lines.reduce((latest, i) =>
+            (i.changed_at && (!latest || new Date(i.changed_at) > new Date(latest)) ? i.changed_at : latest), null)
+        return { ...station, ...counts, lastCount: latestCounts[station.id] ?? null, lastUpdate }
+    })
+}
+
+// The office overview: the same, most work first (score = 2 x red + yellow), ties by name.
 export function rankStations(stations, items, latestCounts) {
-    return stations
-        .map(station => {
-            const lines = items.filter(i => i.station_id === station.id)
-            const counts = stationScore(lines.map(i => ({ have: i.have, parQty: i.par_qty })))
-            const lastUpdate = lines.reduce((latest, i) =>
-                (i.changed_at && (!latest || new Date(i.changed_at) > new Date(latest)) ? i.changed_at : latest), null)
-            return { ...station, ...counts, lastCount: latestCounts[station.id] ?? null, lastUpdate }
-        })
+    return stationCounts(stations, items, latestCounts)
         .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
 }

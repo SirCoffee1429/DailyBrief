@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     parsePar, colorFor, toPrep, quickValues, stationScore,
     unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
-    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount, rankStations,
+    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount, rankStations, stationCounts,
 } from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
@@ -415,5 +415,23 @@ describe('rankStations (office overview)', () => {
 
     it('a station with no items yet still shows, at score 0', () => {
         expect(rankStations([{ id: 'z', name: 'New' }], [], {})[0]).toMatchObject({ name: 'New', score: 0, uncounted: 0 })
+    })
+})
+
+describe('stationCounts (kitchen dashboard tile)', () => {
+    const stations = [{ id: 'f', name: 'Fry' }, { id: 'g', name: 'Grill' }]
+    const items = [
+        { station_id: 'g', have: 1, par_qty: 20 }, { station_id: 'g', have: 12, par_qty: 20 },
+        { station_id: 'f', have: 20, par_qty: 20 },
+    ]
+
+    it('keeps the stations in sheet order (no ranking) with their counts', () => {
+        expect(stationCounts(stations, items, {}).map(s => `${s.name} ${s.red}/${s.yellow} ${s.score}`))
+            .toEqual(['Fry 0/0 0', 'Grill 1/1 3'])
+    })
+
+    it('gives the same numbers the overview ranks', () => {
+        const byId = Object.fromEntries(rankStations(stations, items, {}).map(s => [s.id, s]))
+        for (const s of stationCounts(stations, items, {})) expect(s).toEqual(byId[s.id])
     })
 })

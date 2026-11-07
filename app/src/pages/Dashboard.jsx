@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
+import PrepStationTile from '../components/PrepStationTile.jsx'
 import { localDateString, formatBriefingByline } from '../lib/dates.js'
 
 
@@ -199,6 +200,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            <PrepStationTile />
         </div>
     )
 }
