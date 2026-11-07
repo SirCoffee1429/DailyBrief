@@ -189,8 +189,8 @@ export function lastCountText(count, now = new Date()) {
 
 // A live change to one prep_items row (a Supabase realtime INSERT/UPDATE) applied to the open station's lines, in
 // sheet order. A line taken off the sheet (active false) drops out; a new one goes in at its sort_order. Rows are
-// never deleted (retired instead), and realtime doesn't send filtered DELETEs. Returns a new list. Before the station
-// has loaded (null) it stays null: the load brings the latest anyway.
+// never deleted (retired instead), so DELETEs aren't handled. Returns a new list. Before the lines have loaded (null)
+// it stays null: the load brings the latest anyway.
 export function applyItemChange(items, { new: row }) {
     if (!items) return items
     const rest = items.filter(i => i.id !== row.id)
@@ -202,4 +202,19 @@ export function applyItemChange(items, { new: row }) {
 export function newerCount(current, incoming) {
     if (!current) return incoming
     return new Date(incoming.created_at) > new Date(current.created_at) ? incoming : current
+}
+
+// The office overview: every station with its color counts, last Finish count and latest change, most work first
+// (score = 2 x red + yellow), ties by name. `items` are all active lines (any station); `latestCounts` maps a
+// station id to its last Finish count.
+export function rankStations(stations, items, latestCounts) {
+    return stations
+        .map(station => {
+            const lines = items.filter(i => i.station_id === station.id)
+            const counts = stationScore(lines.map(i => ({ have: i.have, parQty: i.par_qty })))
+            const lastUpdate = lines.reduce((latest, i) =>
+                (i.changed_at && (!latest || new Date(i.changed_at) > new Date(latest)) ? i.changed_at : latest), null)
+            return { ...station, ...counts, lastCount: latestCounts[station.id] ?? null, lastUpdate }
+        })
+        .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
 }

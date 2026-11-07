@@ -222,22 +222,35 @@ and one `prep_counts` row (morning). No new UI, so no 375px check.
 **Estimated scope:** S
 
 ### Checkpoint C: Crew flow
-- [ ] The full cook cycle at 375px on `ZZ Test`: pick a name → count → Done → Partial → note → Finish count, live in a
-      second tab. Review with Ryan.
+- [x] The full cook cycle at 375px on `ZZ Test`: pick a name → count → Done → Partial → note → Finish count, live in a
+      second tab. Review with Ryan. Ryan ran it himself, 11-06: everything worked, passes.
 
 ## Phase 4: Manager view + polish
 
-## Task 8: Office Prep Overview (ranked, live)
+## Task 8: Office Prep Overview (ranked, live) ✅ DONE
 
 **Description:** `/office/prep`: one card per active station, sorted by score (2 × R + Y) highest first. Shows R/Y/G and
 not-counted counts, the last Finish count (label, name, time) and the last update time. Tap a card for that station's
 sheet (read and write, same component as T5). Live via the same subscriptions.
 
 **Acceptance criteria:**
-- [ ] The ranking matches `stationScore` on the current data (spot-checked by SQL), and ties sort by name.
-- [ ] A change on a kitchen tab re-ranks the overview live.
+- [x] The ranking matches `stationScore` on the current data (spot-checked by SQL), and ties sort by name.
+- [x] A change on a kitchen tab re-ranks the overview live.
 
-**Verification:** T (sorting helper if added) · B · C
+**As built:** `PrepOverview.jsx` at `/office/prep`; the office nav "Prep Sheets" now opens it (a Setup button leads to
+`/office/prep/setup`). One card per active station: score, red / yellow / green chips, "N not counted" when any, "Last
+count: …" and "Last update: …". Ranking is the tested `rankStations` (uses `stationScore`; ties by name). A card opens
+`/office/prep/sheet?station=<id>`: the T5 sheet component inside the office shell. Live on one `prep_overview` channel:
+item changes merge in (`applyItemChange`), Finish counts via `newerCount`, a station change (Setup) reloads. Last counts
+load in the same query as the stations (embedded `prep_counts`, newest 1).
+
+**Verification:** T 166 (RED: `rankStations is not a function`) · B · C: all six cards match SQL exactly (Salad 50,
+Lunch 43, Sautee 18, Fry 15, Grill 11, ZZ Test 1, with the same R/Y/G/not-counted counts), and every "Last count" matches
+the latest `prep_counts` row. Kitchen tab on `ZZ Test`: Spicy Mayo and Salmon Out + Night Start → the overview went
+from score 1 to 4 with the new last count and update time, no reload. ZZ Test can't pass Grill without touching a real
+station, so the re-sort is covered by the unit test. Card → office sheet with 7 lines, overview channel removed.
+375px: no sideways scroll; 0 console errors. Those 3 test saves went in as Alex Heger (the name remembered in that
+browser), not Ryan; flagged to Ryan.
 
 **Dependencies:** T7
 

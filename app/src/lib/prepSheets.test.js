@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     parsePar, colorFor, toPrep, quickValues, stationScore,
     unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
-    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount,
+    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount, rankStations,
 } from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
@@ -380,5 +380,40 @@ describe('newerCount', () => {
         expect(newerCount(older, newer)).toBe(newer)
         expect(newerCount(newer, older)).toBe(newer)
         expect(newerCount(null, older)).toBe(older)
+    })
+})
+
+describe('rankStations (office overview)', () => {
+    const item = (station_id, have, par_qty, changed_at = null) => ({ station_id, have, par_qty, changed_at })
+    const stations = [{ id: 'f', name: 'Fry' }, { id: 'g', name: 'Grill' }, { id: 's', name: 'Salad' }, { id: 'l', name: 'Lunch' }]
+    const items = [
+        // Grill: 1 red, 1 yellow, 1 green, 1 not counted, 1 no par -> score 3
+        item('g', 4, 20, '2026-11-06T15:00:00Z'), item('g', 12, 20, '2026-11-06T16:30:00Z'), item('g', 15, 20),
+        item('g', null, 20), item('g', 3, null, '2026-11-06T17:00:00Z'),
+        // Salad: 2 yellow -> score 2. Fry: 1 red as numeric strings -> score 2 (ties Salad)
+        item('s', 10, 20), item('s', 10, 20), item('f', '1', '20'),
+        // Lunch: nothing counted -> score 0
+        item('l', null, 8),
+    ]
+    const counts = { g: { label: 'end_of_night', employee_name: 'Jake', created_at: '2026-11-06T04:00:00Z' } }
+    const ranked = rankStations(stations, items, counts)
+
+    it('most work first (2 x red + yellow), ties by name', () => {
+        expect(ranked.map(r => `${r.name} ${r.score}`)).toEqual(['Grill 3', 'Fry 2', 'Salad 2', 'Lunch 0'])
+    })
+
+    it('counts each color and the not-counted lines; no-par lines are left out', () => {
+        expect(ranked[0]).toMatchObject({ red: 1, yellow: 1, green: 1, uncounted: 1 })
+        expect(ranked[3]).toMatchObject({ red: 0, yellow: 0, green: 0, uncounted: 1 })
+    })
+
+    it('carries the last Finish count and the latest change on any line (no-par lines too)', () => {
+        expect(ranked[0].lastCount).toBe(counts.g)
+        expect(ranked[0].lastUpdate).toBe('2026-11-06T17:00:00Z')
+        expect(ranked[3]).toMatchObject({ lastCount: null, lastUpdate: null })
+    })
+
+    it('a station with no items yet still shows, at score 0', () => {
+        expect(rankStations([{ id: 'z', name: 'New' }], [], {})[0]).toMatchObject({ name: 'New', score: 0, uncounted: 0 })
     })
 })

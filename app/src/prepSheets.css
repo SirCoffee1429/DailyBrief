@@ -83,3 +83,11 @@
 .prep-finish-station { font-weight: 700; color: var(--text-bright); font-size: var(--font-size-lg); }
 .prep-finish-pick { margin-top: 0.75rem; }
 .prep-finish-options { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+/* ─── Office overview: one card per station, most prep left first ─── */
+.prep-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
+.prep-overview-card { display: block; color: inherit; text-decoration: none; min-width: 0; }
+.prep-overview-card:hover { border-color: var(--accent); }
+.prep-overview-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.6rem; }
+.prep-overview-name { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-bright); overflow-wrap: anywhere; }
+.prep-overview-score { flex-shrink: 0; font-weight: 700; color: var(--accent); }
+.prep-overview-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }

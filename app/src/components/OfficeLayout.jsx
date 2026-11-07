@@ -113,7 +113,7 @@ export default function OfficeLayout({ children }) {
                             </span>
                         )}
                     </NavLink>
-                    <NavLink to="/office/prep/setup" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
+                    <NavLink to="/office/prep" onClick={closeSidebar} className={({ isActive }) => `office-v2-nav-link ${isActive ? 'active' : ''}`}>
                         <i className="fa-solid fa-clipboard-check office-v2-nav-icon" />
                         <span style={{ marginLeft: '0.75rem' }}>Prep Sheets</span>
                     </NavLink>
