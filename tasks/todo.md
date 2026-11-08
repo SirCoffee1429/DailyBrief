@@ -90,7 +90,8 @@ realtime, anon can execute all 4 functions.
 **Estimated scope:** S
 
 ### Checkpoint A: Foundation
-- [ ] T passes, B passes, the migration is live, and the smoke test is clean. Review with Ryan.
+- [x] T passes, B passes, the migration is live, and the smoke test is clean. Review with Ryan. (Passed 11-05: applied with
+  Ryan's OK, smoke test clean before and after; see T3.)
 
 ## Phase 2: Data in
 

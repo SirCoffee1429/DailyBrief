@@ -145,16 +145,17 @@ export function colorFor(have, parQty) {
 
 ## Success Criteria
 
-- [ ] All five Fall 26 sheets are loaded: every item, section and par matches the paper file, and typos are fixed.
-- [ ] Salmon at par 20: have 4 shows Red "prep 16", have 12 shows Yellow, have 15 shows Green. Done sets 20 (Green).
+- [x] All five Fall 26 sheets are loaded: every item, section and par matches the paper file, and typos are fixed.
+- [x] Salmon at par 20: have 4 shows Red "prep 16", have 12 shows Yellow, have 15 shows Green. Done sets 20 (Green).
       Partial +5 from 4 sets 9 (still Red).
-- [ ] Quick buttons set 0 / ¼ / ½ / ¾ / full par in the par's unit, also for pan pars.
-- [ ] Every change saves instantly with the chosen name and time, survives a page reload, and appears on another open
+- [x] Quick buttons set 0 / ¼ / ½ / ¾ / full par in the par's unit, also for pan pars.
+- [x] Every change saves instantly with the chosen name and time, survives a page reload, and appears on another open
       device's sheet, overview and tile without a reload.
-- [ ] The name dropdown lists active `employees` and remembers the last pick on that device.
-- [ ] Finish count stamps the station with label, name and time, and the overview shows it.
-- [ ] The overview ranks stations by 2 × Red + Yellow, and the kitchen tile shows red/yellow counts per station.
-- [ ] Office can edit an item's par and see it on the kitchen sheet. An upload previews first and only replaces the list
+- [x] The name dropdown lists active `employees` (on the office sheet: managers only, owner 11-08) and remembers the
+      last pick on that device.
+- [x] Finish count stamps the station with label, name and time, and the overview shows it.
+- [x] The overview ranks stations by 2 × Red + Yellow, and the kitchen tile shows red/yellow counts per station.
+- [x] Office can edit an item's par and see it on the kitchen sheet. An upload previews first and only replaces the list
       on confirm. An item kept by name keeps its count.
 - [ ] Tests pass, `npm run build` passes, the phone-width browser check passes, and only this feature reaches production.
 
