@@ -334,6 +334,8 @@ updates are fine here)
   B · C: Salad sheet screenshot; 375px no sideways scroll.
 - [x] Overview + Kitchen tile: the "N red" chip is solid red when N > 0 (`prep-chip-red-solid`), calm at 0. B · C: tile
   shows all six solid (every station has red now); a test "0 red" chip computed calm. Overview not opened (office gate).
+- [x] Kitchen dashboard tile moved up: directly under Lunch & Dinner Features, above the briefing/tasks row. B · C:
+  44px gap above and below, screenshot.
 - [x] Notes larger: 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note checked on screen.
 
 ## Phase 5: Ship

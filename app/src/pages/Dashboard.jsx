@@ -131,6 +131,8 @@ export default function Dashboard() {
 
             <WeeklyFeatures readOnly />
 
+            <PrepStationTile />
+
             <div className="kitchen-brief-grid">
                 <div className="dash-card morning-notes-card">
                     {todaysBriefings.length > 0 ? (
@@ -199,8 +201,6 @@ export default function Dashboard() {
                     {todaysBriefings.length > 0 && <div className="updated-text">Updated 5m ago</div>}
                 </div>
             </div>
-
-            <PrepStationTile />
         </div>
     )
 }
