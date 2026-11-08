@@ -53,6 +53,16 @@
 .prep-line-par { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.25rem 0.75rem; margin: 0.35rem 0 0.6rem; color: var(--text-secondary); font-size: var(--font-size-sm); }
 .prep-line-need { color: var(--text-bright); }
 
+/* On the sheet, Red stands out most (owner, 11-08): a solid red chip, a red-tinted card with a thick red edge, and
+   "prep N" in larger red. Yellow gets a thicker edge and an outlined chip; Green stays quiet. Scoped to sheet lines,
+   so the overview's and tile's "0 red" chips stay calm. */
+:root { --prep-red-solid: #dc2626; --prep-red-tint: rgba(248, 113, 113, 0.14); --prep-on-red: #fff; }
+.prep-line-red { border-color: var(--danger); border-left: 10px solid var(--prep-red-solid); background: var(--prep-red-tint); }
+.prep-line-yellow { border-left-width: 8px; }
+.prep-line .prep-chip-red { background: var(--prep-red-solid); color: var(--prep-on-red); font-size: var(--font-size-sm); }
+.prep-line .prep-chip-yellow { box-shadow: inset 0 0 0 1px var(--warning); }
+.prep-line-red .prep-line-need { color: var(--danger); font-size: var(--font-size-lg); }
+
 .prep-line-have { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .prep-have { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .prep-have-label { color: var(--text-secondary); font-size: var(--font-size-sm); }

@@ -329,6 +329,9 @@ updates are fine here)
 - [x] Notes larger: `.prep-note` 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note reads 18px/600.
 - [x] Finish count choices in the order of the day: Morning, Night Start, End of Night (UI order only; the database
   keys are unchanged). Spec updated. T 181 (RED: old order) · B · C: picker lists Morning / Night Start / End of Night.
+- [x] Red stands out on the sheet: solid red chip (white text), red-tinted card with a 10px red edge, "prep N" larger in
+  red; yellow gets an 8px edge and an outlined chip; green unchanged. Sheet lines only (overview/tile chips unchanged).
+  B · C: Salad sheet screenshot; 375px no sideways scroll.
 - [x] Notes larger: 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note checked on screen.
 
 ## Phase 5: Ship
