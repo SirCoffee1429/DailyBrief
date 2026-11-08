@@ -129,7 +129,8 @@ export default function PrepSheets({ office = false }) {
             setLineError(item.id, error.message || 'Not saved. Try again.')
             return false
         }
-        setItems(prev => prev.map(i => (i.id === data.id ? data : i)))
+        // The cook may have switched stations while this saved (the list is empty while the next one loads).
+        setItems(prev => prev && prev.map(i => (i.id === data.id ? data : i)))
         setLineState(prev => ({ ...prev, [item.id]: {} }))
         return true
     }
