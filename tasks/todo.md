@@ -326,6 +326,7 @@ updates are fine here)
   roster. The office side remembers its own name (`prepSheets.officeEmployeeId`), so a shared tablet's cook name is never
   cleared. Tested `officeNames` (T 181, RED: not a function) · B · C: office list = those 5, pick survives a reload, kitchen
   still 26 names and its remembered name untouched, 0 console errors.
+- [x] Notes larger: `.prep-note` 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note reads 18px/600.
 - [x] Notes larger: 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note checked on screen.
 
 ## Phase 5: Ship
