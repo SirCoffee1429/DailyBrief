@@ -491,5 +491,10 @@ overview ranked by 2 × red + yellow, a Kitchen dashboard tile, setup editing an
 - **T5 `7ce378b`:** `/kitchen/prep` (Kitchen nav "Prep Sheets"): station tabs, then each line with par, Have box + Out/¼/½/¾/Full,
   color chip and "prep N unit". Every count saves at once via `prep_record`, under a roster name remembered on the device.
   Browser-checked on `ZZ Test` at 375px (Salmon 4/12/15 → Red/Yellow/Green, reload keeps counts + name); 144 tests.
-- **Next (11-05):** Ryan eyeballs one real station on the sheet (Checkpoint B, needs local dev), then `/build Task 6`
-  (Done/Partial/note/Finish count). 5 commits + T5 on `prep-sheets`, none pushed; ZZ Test holds 6 test counts.
+- **T6 `8175acf`:** Done (= par) / Partial (+ made) / note (edit, clear) per line with "name, time" of the last change;
+  station header "Last count: End of Night, Ryan Coffee, 10:36pm" + Finish count picker. Line split to `PrepLine.jsx`; 157 tests.
+- **T7 `fd26efe` (11-06):** live updates per open station; a Have box being typed in is never overwritten. Checkpoints
+  B and C passed (Ryan). **T8 `859c3cf`:** `/office/prep` overview, ranked, live. **T9 `181507c`:** dashboard tile (11-07).
+- **T10 `835d3d0`:** Setup "Edit a station" (stations, sections, items: rename/move/re-par/retire/add). **11-08 Checkpoint D
+  fixes (Ryan):** office name list = managers + Ryan, larger notes, Finish count Morning→Night Start→End of Night, solid red
+  (sheet, overview, tile), tile under Features (`afa0c49`…`6dc5928`). 181 tests. **Next:** finish D, retire ZZ Test, T11.
