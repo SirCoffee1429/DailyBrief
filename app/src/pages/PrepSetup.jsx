@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase.js'
 import {
     readPrepFile, parsePrepRows, setLineKind, toSections, stationNameFromFile, toUploadPayload,
 } from '../lib/prepSheetUpload.js'
+import PrepStationEditor from '../components/PrepStationEditor.jsx'
 import '../prepSheets.css'
 
-// Office → Prep Sheets setup: see the stations, and upload a station's prep sheet spreadsheet.
+// Office → Prep Sheets setup: see the stations, edit one by hand, or upload a station's prep sheet spreadsheet.
 // The upload is a PREVIEW until Confirm; only Confirm writes (prep_replace_station, all or nothing).
 export default function PrepSetup() {
     const [stations, setStations] = useState([])
@@ -118,6 +119,8 @@ export default function PrepSetup() {
                     </ul>
                 )}
             </section>
+
+            <PrepStationEditor stations={stations} onStationsChanged={loadStations} />
 
             {/* Upload */}
             <section className="card prep-card">

@@ -98,3 +98,15 @@
 .prep-tile-row { display: flex; align-items: center; gap: 0.4rem; min-height: 44px; padding: 0.4rem 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); color: inherit; text-decoration: none; min-width: 0; }
 .prep-tile-row:hover { border-color: var(--accent); }
 .prep-tile-name { flex: 1 1 auto; min-width: 0; font-weight: 600; color: var(--text-bright); overflow-wrap: anywhere; }
+
+/* ─── Setup: edit a station by hand ─── */
+.prep-card-subtitle { font-size: var(--font-size-base); font-weight: 600; color: var(--text-bright); margin: 1rem 0 0.25rem; }
+.prep-edit-group { margin-top: 1rem; }
+.prep-edit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); }
+.prep-edit-station { margin-top: 1rem; }
+.prep-edit-section .prep-edit-input { font-weight: 700; color: var(--accent); }
+.prep-edit-add { border-bottom: none; }
+.prep-edit-input { flex: 1 1 12rem; min-width: 0; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); padding: 0.35rem 0.5rem; font-size: var(--font-size-sm); }
+.prep-edit-input-small { flex: 0 1 8rem; }
+.prep-edit-read { flex: 0 1 11rem; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.prep-edit-move { display: inline-flex; gap: 0.25rem; }

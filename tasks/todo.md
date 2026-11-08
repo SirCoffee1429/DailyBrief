@@ -284,16 +284,31 @@ scroller). Overview re-checked after the hook move: same ranking, and Broccoli F
 
 **Estimated scope:** S
 
-## Task 10: Office Setup item editing
+## Task 10: Office Setup item editing ✅ DONE
 
 **Description:** On `/office/prep/setup`: add, rename, retire and reorder items and sections, change pars (re-parsed with
 `parsePar`, unparsed flagged), and add, rename and retire stations. Retire, never delete.
 
 **Acceptance criteria:**
-- [ ] A par edit shows on an open kitchen sheet live; a retired item disappears from the sheet but keeps its history rows.
-- [ ] Reorder persists.
+- [x] A par edit shows on an open kitchen sheet live; a retired item disappears from the sheet but keeps its history rows.
+- [x] Reorder persists.
 
-**Verification:** B · C on `ZZ Test`
+**As built:** an "Edit a station" card (`PrepStationEditor.jsx`) on Setup, above the upload. Pick a station: rename or
+retire it (Retire asks once more); rename and move sections; per item rename, re-par, move within its section, retire;
+"Add item" per section, "Add section" (needs its first item), "Add station". Boxes save when you leave them (Enter too);
+a required name left blank goes back. Next to each par: how the app reads it ("24 × ea", "No par", "Not understood: no
+color"). Plain updates; reorder = one `upsert` of only the renumbered rows. The rules live in tested `lib/prepEdit.js`
+(`moveItem`, `moveSection`, `insertItem`, `orderUpdates`, `parPatch`: a par in a new unit clears `have`, like an upload).
+A failed save (a repeated name → "That name is already used here") remounts the boxes so they show the saved text again.
+
+**Verification:** T 179 (RED: `prepEdit.js` missing) · B · C on `ZZ Test`, kitchen sheet open beside Setup: Salmon par
+20 → 24 ea → kitchen "Par 24 ea / prep 24 ea" with no reload; Peppernata up + Sauces above Protein → kitchen order live,
+same after a Setup reload, SQL sort_order 0–6 matches; section renamed "Sauces Test"; "ZZ Temp Item" (3 qt) and section
+"ZZ New Section" added and live on the kitchen sheet; ZZ Temp Item counted once (as Ryan Coffee) then retired → gone
+from the sheet, SQL `active=false` with its 1 `prep_entries` row kept; rename Mystery → Marinara refused with the
+message and the box went back to "Mystery" (bug found here, fixed); "ZZ Temp Station" added then retired (tab gone,
+editor closed); ZZ Test renamed and back. 375px no sideways scroll; 0 console errors. Not live on an open kitchen sheet:
+a station rename/retire (it shows on reload; the sheet listens to items and counts only; not in this task's criteria).
 
 **Dependencies:** T4, T7
 
