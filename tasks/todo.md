@@ -318,7 +318,8 @@ updates are fine here)
 **Estimated scope:** M
 
 ### Checkpoint D: Complete
-- [ ] Every spec Success Criterion is ticked; T, B and C pass; `ZZ Test` station retired; review with Ryan.
+- [x] Every spec Success Criterion is ticked; T, B and C pass; review with Ryan. **Passed by Ryan 11-08.**
+- [ ] `ZZ Test` station retired (Ryan, when back at his computer: Setup → Edit a station → Retire).
 
 **Fixes from Ryan's Checkpoint D review (11-07):**
 - [x] Office sheet's "Your name" lists managers only: roster station "Manager" (Anthony Schmidt, Keelin Anderson, Matt
