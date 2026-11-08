@@ -161,11 +161,11 @@ export function parseMadeInput(text) {
     return { value, error: null }
 }
 
-// The Finish count choices: the database keys and how the kitchen says them.
+// The Finish count choices: the database keys and how the kitchen says them, in the order of the day (owner, 11-08).
 export const COUNT_LABELS = [
-    { key: 'end_of_night', label: 'End of Night' },
     { key: 'morning', label: 'Morning' },
     { key: 'night_start', label: 'Night Start' },
+    { key: 'end_of_night', label: 'End of Night' },
 ]
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

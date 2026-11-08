@@ -327,6 +327,8 @@ updates are fine here)
   cleared. Tested `officeNames` (T 181, RED: not a function) · B · C: office list = those 5, pick survives a reload, kitchen
   still 26 names and its remembered name untouched, 0 console errors.
 - [x] Notes larger: `.prep-note` 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note reads 18px/600.
+- [x] Finish count choices in the order of the day: Morning, Night Start, End of Night (UI order only; the database
+  keys are unchanged). Spec updated. T 181 (RED: old order) · B · C: picker lists Morning / Night Start / End of Night.
 - [x] Notes larger: 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note checked on screen.
 
 ## Phase 5: Ship

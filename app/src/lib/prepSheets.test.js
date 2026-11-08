@@ -301,11 +301,11 @@ describe('parseMadeInput (Partial)', () => {
 })
 
 describe('COUNT_LABELS', () => {
-    it("are the three counts the database accepts, in the kitchen's words", () => {
+    it("are the three counts the database accepts, in the kitchen's words, in the order of the day", () => {
         expect(COUNT_LABELS).toEqual([
-            { key: 'end_of_night', label: 'End of Night' },
             { key: 'morning', label: 'Morning' },
             { key: 'night_start', label: 'Night Start' },
+            { key: 'end_of_night', label: 'End of Night' },
         ])
     })
 })

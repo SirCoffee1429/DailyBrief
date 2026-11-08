@@ -42,7 +42,7 @@ Completely separate from the BEO order list and everything else in the app. **It
   pick is remembered on that device. No typing.
 - **Saving is instant.** Every number, Done, Partial or note saves the moment it's entered, stamped with the name and
   time, so nothing is lost if a phone dies.
-- **Finish count** button per station: the cook picks **End of Night / Morning / Night Start**, and the station is
+- **Finish count** button per station: the cook picks **Morning / Night Start / End of Night**, and the station is
   stamped e.g. "Sautee: End of Night count, Jake, 10:42pm". It never blocks: items left alone keep their last value.
 - **History is kept.** Every entry and every Finish count is stored. A page to browse history is NOT in v1.
 
