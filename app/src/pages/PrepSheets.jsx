@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { groupBySection, COUNT_LABELS, lastCountText, applyItemChange, newerCount } from '../lib/prepSheets.js'
+import { groupBySection, COUNT_LABELS, lastCountText, applyItemChange, newerCount, officeNames } from '../lib/prepSheets.js'
 import PrepLine from '../components/PrepLine.jsx'
 import '../prepSheets.css'
 
-// The cook's name is remembered on this device, so they pick it once (spec: no typing).
+// The cook's name is remembered on this device, so they pick it once (spec: no typing). The office sheet remembers its
+// own (a manager), so using one side never clears the name picked on the other.
 const EMPLOYEE_KEY = 'prepSheets.employeeId'
+const OFFICE_EMPLOYEE_KEY = 'prepSheets.officeEmployeeId'
 
 // The columns one sheet line needs.
 const ITEM_COLUMNS = 'id, section, name, par_text, par_qty, par_unit, have, note, changed_at, changed_by, sort_order'
@@ -16,11 +18,13 @@ const FINISH_CLOSED = { open: false, saving: false, error: '' }
 
 // Kitchen → Prep Sheets: pick a station, then count each item. Every change saves the moment it's entered.
 // The open station lives in the URL (?station=<id>) so a reload, or a link from the dashboard, lands on it.
-export default function PrepSheets() {
+// `office`: the same sheet inside Office, where the name dropdown lists managers only.
+export default function PrepSheets({ office = false }) {
+    const employeeKey = office ? OFFICE_EMPLOYEE_KEY : EMPLOYEE_KEY
     const [searchParams, setSearchParams] = useSearchParams()
     const [stations, setStations] = useState([])
     const [employees, setEmployees] = useState([])
-    const [employeeId, setEmployeeId] = useState(() => localStorage.getItem(EMPLOYEE_KEY) || '')
+    const [employeeId, setEmployeeId] = useState(() => localStorage.getItem(employeeKey) || '')
     const [nameMissing, setNameMissing] = useState(false)
     const [items, setItems] = useState(null)
     const [loadError, setLoadError] = useState('')
@@ -49,11 +53,11 @@ export default function PrepSheets() {
         return () => { supabase.removeChannel(channel) }
     }, [station?.id])
 
-    // Active stations and the active crew roster, both for pickers.
+    // Active stations and the active crew roster (managers only on the office sheet), both for pickers.
     async function loadStationsAndCrew() {
         const [stationsRes, crewRes] = await Promise.all([
             supabase.from('prep_stations').select('id, name').eq('active', true).order('sort_order'),
-            supabase.from('employees').select('id, name').eq('active', true).order('name', { ascending: true }),
+            supabase.from('employees').select('id, name, primary_station').eq('active', true).order('name', { ascending: true }),
         ])
         if (stationsRes.error || crewRes.error) {
             console.error('Failed to load prep stations / crew:', stationsRes.error ?? crewRes.error)
@@ -61,9 +65,10 @@ export default function PrepSheets() {
             return
         }
         setStations(stationsRes.data)
-        setEmployees(crewRes.data)
-        // A remembered name that has since left the roster is forgotten.
-        if (!crewRes.data.some(e => e.id === localStorage.getItem(EMPLOYEE_KEY))) pickEmployee('')
+        const names = office ? officeNames(crewRes.data) : crewRes.data
+        setEmployees(names)
+        // A remembered name that has since left the list is forgotten.
+        if (!names.some(e => e.id === localStorage.getItem(employeeKey))) pickEmployee('')
     }
 
     // One station's items in sheet order, and its last Finish count.
@@ -92,8 +97,8 @@ export default function PrepSheets() {
     function pickEmployee(id) {
         setEmployeeId(id)
         setNameMissing(false)
-        if (id) localStorage.setItem(EMPLOYEE_KEY, id)
-        else localStorage.removeItem(EMPLOYEE_KEY)
+        if (id) localStorage.setItem(employeeKey, id)
+        else localStorage.removeItem(employeeKey)
     }
 
     // Every save needs a name. Without one the name box is highlighted and focused. Returns whether a name is set.

@@ -320,6 +320,13 @@ updates are fine here)
 ### Checkpoint D: Complete
 - [ ] Every spec Success Criterion is ticked; T, B and C pass; `ZZ Test` station retired; review with Ryan.
 
+**Fixes from Ryan's Checkpoint D review (11-07):**
+- [x] Office sheet's "Your name" lists managers only: roster station "Manager" (Anthony Schmidt, Keelin Anderson, Matt
+  Cone, Tyler Kemry) plus Ryan Coffee by name (his station stays Banquet; the scheduler reads it). Kitchen keeps the full
+  roster. The office side remembers its own name (`prepSheets.officeEmployeeId`), so a shared tablet's cook name is never
+  cleared. Tested `officeNames` (T 181, RED: not a function) · B · C: office list = those 5, pick survives a reload, kitchen
+  still 26 names and its remembered name untouched, 0 console errors.
+
 ## Phase 5: Ship
 
 ## Task 11: Review, push alone, merge back

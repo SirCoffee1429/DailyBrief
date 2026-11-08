@@ -221,3 +221,10 @@ export function rankStations(stations, items, latestCounts) {
     return stationCounts(stations, items, latestCounts)
         .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
 }
+
+// The office sheet's name dropdown: the roster's managers (station "Manager") plus the extra names the owner listed.
+// The roster has no manager flag, and Ryan's station stays Banquet because the scheduler reads it (owner, 2026-11-07).
+const OFFICE_EXTRA_NAMES = ['Ryan Coffee']
+export function officeNames(employees) {
+    return employees.filter(e => e.primary_station === 'Manager' || OFFICE_EXTRA_NAMES.includes(e.name))
+}

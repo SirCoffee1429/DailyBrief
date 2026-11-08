@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     parsePar, colorFor, toPrep, quickValues, stationScore,
     unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
-    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount, rankStations, stationCounts,
+    parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount, rankStations, stationCounts, officeNames,
 } from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
@@ -433,5 +433,24 @@ describe('stationCounts (kitchen dashboard tile)', () => {
     it('gives the same numbers the overview ranks', () => {
         const byId = Object.fromEntries(rankStations(stations, items, {}).map(s => [s.id, s]))
         for (const s of stationCounts(stations, items, {})) expect(s).toEqual(byId[s.id])
+    })
+})
+
+describe('officeNames', () => {
+    const crew = [
+        { id: '1', name: 'Anthony Schmidt', primary_station: 'Manager' },
+        { id: '2', name: 'Alex Heger', primary_station: 'Hot Line' },
+        { id: '3', name: 'Ryan Coffee', primary_station: 'Banquet' },
+        { id: '4', name: 'Matt Cone', primary_station: 'Manager' },
+        { id: '5', name: 'Bradyn Jenkins', primary_station: null },
+    ]
+
+    it('keeps the managers plus Ryan Coffee, in the order given', () => {
+        expect(officeNames(crew).map(e => e.name)).toEqual(['Anthony Schmidt', 'Ryan Coffee', 'Matt Cone'])
+    })
+
+    it('does not change the list it was given', () => {
+        officeNames(crew)
+        expect(crew).toHaveLength(5)
     })
 })
