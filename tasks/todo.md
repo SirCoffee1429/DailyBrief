@@ -332,6 +332,8 @@ updates are fine here)
 - [x] Red stands out on the sheet: solid red chip (white text), red-tinted card with a 10px red edge, "prep N" larger in
   red; yellow gets an 8px edge and an outlined chip; green unchanged. Sheet lines only (overview/tile chips unchanged).
   B · C: Salad sheet screenshot; 375px no sideways scroll.
+- [x] Overview + Kitchen tile: the "N red" chip is solid red when N > 0 (`prep-chip-red-solid`), calm at 0. B · C: tile
+  shows all six solid (every station has red now); a test "0 red" chip computed calm. Overview not opened (office gate).
 - [x] Notes larger: 14px → 18px semi-bold (item names are 16px). B · C: Salad → Romaine's note checked on screen.
 
 ## Phase 5: Ship

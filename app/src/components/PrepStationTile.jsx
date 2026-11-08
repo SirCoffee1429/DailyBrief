@@ -27,7 +27,7 @@ export default function PrepStationTile() {
                     {rows.map(s => (
                         <Link key={s.id} to={`/kitchen/prep?station=${s.id}`} className="prep-tile-row">
                             <span className="prep-tile-name">{s.name}</span>
-                            <span className="prep-chip prep-chip-red">{s.red} red</span>
+                            <span className={`prep-chip prep-chip-red${s.red > 0 ? ' prep-chip-red-solid' : ''}`}>{s.red} red</span>
                             <span className="prep-chip prep-chip-yellow">{s.yellow} yellow</span>
                         </Link>
                     ))}

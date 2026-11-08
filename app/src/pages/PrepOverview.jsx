@@ -50,7 +50,7 @@ function StationCard({ station }) {
                 <span className="prep-overview-score" title="2 × red + yellow">Score {station.score}</span>
             </div>
             <div className="prep-overview-counts">
-                <span className="prep-chip prep-chip-red">{station.red} red</span>
+                <span className={`prep-chip prep-chip-red${station.red > 0 ? ' prep-chip-red-solid' : ''}`}>{station.red} red</span>
                 <span className="prep-chip prep-chip-yellow">{station.yellow} yellow</span>
                 <span className="prep-chip prep-chip-green">{station.green} green</span>
                 {station.uncounted > 0 && <span className="prep-chip prep-chip-grey">{station.uncounted} not counted</span>}
