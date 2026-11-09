@@ -341,6 +341,13 @@ updates are fine here)
 - [x] Review fixes (11-08): a save landing after a station switch no longer blanks the page (`00e51ab`); the sheet's
   station tabs follow Setup live (channel `prep_sheet_stations` → reload; a retired open station closes). B · C: channel
   joined, ZZ Test gone from the tabs, 0 errors (live event not fired: needs a DB write).
+- [x] /ship fixes (11-09, Ryan's picks): (1) sheet, overview and tile reload whenever their live channel (re)joins, so
+  a tablet that slept or lost wifi catches up; (2) a late answer for a station already left is dropped (sheet and Setup
+  editor); (3) a new Setup item is saved after the last line, not at the top; (4) fraction pars read as amounts ("1/2
+  gal" = 0.5 gal, "1 1/2 qts" = 1.5), ranges/commas flagged "not understood" (`d8f8992`; all 55 distinct live pars read
+  as stored). T 184 · B · C: Fry list slowed 2.5s then Grill tapped → Grill's 12 items shown; socket dropped → sheet
+  refetched stations/items/count, tile refetched; 0 errors. Not browser-checked: the editor guard and new-item position
+  (office gate / needs a DB write).
 
 ## Phase 5: Ship
 

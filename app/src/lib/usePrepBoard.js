@@ -4,7 +4,8 @@ import { applyItemChange, newerCount } from './prepSheets.js'
 
 // Every active prep station (sheet order), each one's last Finish count, and every active line, kept live. Used by
 // the office overview and the kitchen dashboard tile. `channelName` must differ per caller (one channel per screen).
-// Item and Finish count changes merge straight in; a station added, renamed or retired (Setup) reloads everything.
+// Item and Finish count changes merge straight in; a station added, renamed or retired (Setup) reloads everything, and
+// so does every (re)join of the channel, so changes missed while a screen slept or lost wifi show up.
 export function usePrepBoard(channelName) {
     const [stations, setStations] = useState(null)
     const [items, setItems] = useState(null)
@@ -22,7 +23,7 @@ export function usePrepBoard(channelName) {
                     ...prev, [count.station_id]: newerCount(prev[count.station_id], count),
                 })))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_stations' }, () => load())
-            .subscribe()
+            .subscribe(status => { if (status === 'SUBSCRIBED') load() })
         return () => { supabase.removeChannel(channel) }
     }, [channelName])
 

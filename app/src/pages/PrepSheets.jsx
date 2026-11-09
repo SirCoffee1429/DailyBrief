@@ -36,30 +36,39 @@ export default function PrepSheets({ office = false }) {
     const station = stations.find(s => s.id === searchParams.get('station')) ?? null
 
     useEffect(() => { loadStationsAndCrew() }, [])
-    useEffect(() => { if (station) loadStation(station.id) }, [station?.id])
 
-    // Live updates: another device's change to the open station shows here without a reload. One channel per open
-    // station, removed when the cook switches stations or leaves the page.
+    // The open station, kept live: another device's change shows here without a reload. One channel per open station,
+    // removed when the cook switches stations or leaves the page. The station loads on open and again every time the
+    // channel (re)joins, so changes missed while a tablet slept or lost wifi show up. A late answer for a station the
+    // cook has already left is dropped, so one station's lines never show under another's name.
     useEffect(() => {
         if (!station) return
-        const filter = `station_id=eq.${station.id}`
+        const stationId = station.id
+        let open = true
+        const refresh = () => loadStation(stationId, () => open)
+        setItems(null)
+        setLineState({})
+        setLastCount(null)
+        setFinish(FINISH_CLOSED)
+        refresh()
+        const filter = `station_id=eq.${stationId}`
         const channel = supabase
-            .channel(`prep_station_${station.id}`)
+            .channel(`prep_station_${stationId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_items', filter },
                 change => setItems(prev => applyItemChange(prev, change)))
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prep_counts', filter },
                 change => setLastCount(prev => newerCount(prev, change.new)))
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
+            .subscribe(status => { if (status === 'SUBSCRIBED') refresh() })
+        return () => { open = false; supabase.removeChannel(channel) }
     }, [station?.id])
 
     // Live station list: a station added, renamed or retired in Setup shows here without a reload (a tablet stays open
-    // all day). If the open station is retired, its sheet closes.
+    // all day), also after a reconnect. If the open station is retired, its sheet closes.
     useEffect(() => {
         const channel = supabase
             .channel('prep_sheet_stations')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_stations' }, () => reloadStations())
-            .subscribe()
+            .subscribe(status => { if (status === 'SUBSCRIBED') reloadStations() })
         return () => { supabase.removeChannel(channel) }
     }, [])
 
@@ -88,18 +97,16 @@ export default function PrepSheets({ office = false }) {
         setStations(data)
     }
 
-    // One station's items in sheet order, and its last Finish count.
-    async function loadStation(stationId) {
-        setItems(null)
-        setLineState({})
-        setLastCount(null)
-        setFinish(FINISH_CLOSED)
+    // One station's items in sheet order, and its last Finish count. `isOpen()` says whether the cook is still on that
+    // station when the answer arrives; if not, it is dropped.
+    async function loadStation(stationId, isOpen) {
         const [itemsRes, countRes] = await Promise.all([
             supabase.from('prep_items').select(ITEM_COLUMNS)
                 .eq('station_id', stationId).eq('active', true).order('sort_order'),
             supabase.from('prep_counts').select('label, employee_name, created_at')
                 .eq('station_id', stationId).order('created_at', { ascending: false }).limit(1),
         ])
+        if (!isOpen()) return
         if (itemsRes.error || countRes.error) {
             console.error('Failed to load prep station:', itemsRes.error ?? countRes.error)
             setLoadError('Could not load this station. Refresh to try again.')

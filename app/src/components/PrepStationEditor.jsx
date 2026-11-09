@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { groupBySection } from '../lib/prepSheets.js'
 import { moveItem, moveSection, insertItem, orderUpdates, parPatch } from '../lib/prepEdit.js'
@@ -17,13 +17,18 @@ export default function PrepStationEditor({ stations, onStationsChanged }) {
     const [failures, setFailures] = useState(0) // bumped on a failed save so the boxes go back to the saved text
 
     const station = stations.find(s => s.id === stationId) ?? null
+    const openId = useRef(null) // the station on screen; a late answer for another one is dropped
 
     // Reload the open station's lines whenever it changes or the station list does (an upload, a rename).
-    useEffect(() => { if (station) loadItems(station.id); else setItems(null) }, [station?.id, stations])
+    useEffect(() => {
+        openId.current = station?.id ?? null
+        if (station) loadItems(station.id); else setItems(null)
+    }, [station?.id, stations])
 
     async function loadItems(id) {
         const { data, error: err } = await supabase.from('prep_items').select(ITEM_COLUMNS)
             .eq('station_id', id).eq('active', true).order('sort_order')
+        if (id !== openId.current) return
         if (err) return fail('load the items', err)
         setItems(data)
     }
@@ -57,13 +62,15 @@ export default function PrepStationEditor({ stations, onStationsChanged }) {
         supabase.from('prep_items').update({ section: name || null, updated_at: new Date().toISOString() })
             .in('id', group.items.map(i => i.id)))
 
-    // A new item: saved at the bottom, then numbered into place at the end of its section.
+    // A new item: saved at the bottom (so a failed renumber never leaves it on top), then numbered into place at the
+    // end of its section.
     async function addItem(section, name, parText) {
         const { patch } = parPatch({}, parText)
         delete patch.have
         await save('add the item', async () => {
             const res = await supabase.from('prep_items')
-                .insert({ station_id: station.id, section: section || null, name, ...patch }).select(ITEM_COLUMNS).single()
+                .insert({ station_id: station.id, section: section || null, name, ...patch, sort_order: Math.max(-1, ...items.map(i => i.sort_order)) + 1 })
+                .select(ITEM_COLUMNS).single()
             if (res.error) return res
             return supabase.from('prep_items').upsert(orderUpdates(insertItem(items, res.data)))
         })
