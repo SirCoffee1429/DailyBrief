@@ -94,7 +94,7 @@
 .prep-finish-station { font-weight: 700; color: var(--text-bright); font-size: var(--font-size-lg); }
 .prep-finish-pick { margin-top: 0.75rem; }
 .prep-finish-options { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
-/* ─── Office overview: one card per station, most prep left first ─── */
+/* ─── Office overview: one card per station, furthest behind first ─── */
 .prep-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
 .prep-overview-card { display: block; color: inherit; text-decoration: none; min-width: 0; }
 .prep-overview-card:hover { border-color: var(--accent); }
@@ -102,6 +102,11 @@
 .prep-overview-name { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-bright); overflow-wrap: anywhere; }
 .prep-overview-score { flex-shrink: 0; font-weight: 700; color: var(--accent); }
 .prep-overview-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+/* The whole card colored by how far behind the station is (owner, 11-09): a tint and a thick left edge, like the sheet's
+   lines. Three classes deep, because index.css loads after this file and its `.card:hover` would grey the edge. */
+.prep-overview .prep-overview-card.prep-overview-red { background: var(--prep-red-tint); border-left: 10px solid var(--prep-red-solid); }
+.prep-overview .prep-overview-card.prep-overview-yellow { background: var(--warning-bg); border-left: 8px solid var(--warning); }
+.prep-overview .prep-overview-card.prep-overview-green { background: var(--success-bg); border-left: 8px solid var(--success); }
 
 /* ─── Kitchen dashboard tile ─── */
 .prep-tile { margin-top: var(--space-5); }

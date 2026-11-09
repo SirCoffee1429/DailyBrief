@@ -194,11 +194,44 @@ describe('stationScore', () => {
             { have: null, parQty: 8 }, // not counted yet
             { have: 2, parQty: null }, // no par: left out entirely
         ]
-        expect(stationScore(items)).toEqual({ red: 2, yellow: 1, green: 1, uncounted: 1, score: 5 })
+        // need = 5 of a possible 8 (4 counted lines x 2) = 0.625 -> red
+        expect(stationScore(items)).toEqual({ red: 2, yellow: 1, green: 1, uncounted: 1, score: 5, need: 0.625, color: 'red' })
     })
 
-    it('is all zero for an empty station', () => {
-        expect(stationScore([])).toEqual({ red: 0, yellow: 0, green: 0, uncounted: 0, score: 0 })
+    it('is all zero for an empty station, with no need % and no color (grey)', () => {
+        expect(stationScore([])).toEqual({ red: 0, yellow: 0, green: 0, uncounted: 0, score: 0, need: null, color: null })
+    })
+})
+
+describe('stationScore: station color from its share of the most it could score', () => {
+    // r red, y yellow, g green and u not-counted lines, all par 20.
+    const lines = (r, y, g, u = 0) => [
+        ...Array(r).fill({ have: 0, parQty: 20 }), ...Array(y).fill({ have: 12, parQty: 20 }),
+        ...Array(g).fill({ have: 20, parQty: 20 }), ...Array(u).fill({ have: null, parQty: 20 }),
+    ]
+    const at = (r, y, g, u) => { const { need, color } = stationScore(lines(r, y, g, u)); return { need, color } }
+
+    it('scales with station size: all red is 1 and red, whether 19 lines or 63', () => {
+        expect(at(19, 0, 0)).toEqual({ need: 1, color: 'red' })
+        expect(at(63, 0, 0)).toEqual({ need: 1, color: 'red' })
+    })
+
+    it('live 11-09 numbers: Salad 49 of 98 = red (on the line), Fry 15 of 54 = yellow, Grill 0 = green', () => {
+        expect(at(16, 17, 16)).toEqual({ need: 0.5, color: 'red' })
+        expect(at(5, 5, 17).color).toBe('yellow')
+        expect(at(0, 0, 11)).toEqual({ need: 0, color: 'green' })
+    })
+
+    it('cutoffs: red from 50%, yellow from 25%, green below', () => {
+        expect(at(1, 0, 1).color).toBe('red')       // 2 of 4 = 0.5
+        expect(at(1, 1, 2).color).toBe('yellow')    // 3 of 8 = 0.375
+        expect(at(0, 1, 1).color).toBe('yellow')    // 1 of 4 = 0.25
+        expect(at(0, 1, 2).color).toBe('green')     // 1 of 6 = 0.17
+    })
+
+    it('not-counted lines stay out of the maximum; nothing counted = no color', () => {
+        expect(at(1, 0, 0, 5)).toEqual({ need: 1, color: 'red' })
+        expect(at(0, 0, 0, 5)).toEqual({ need: null, color: null })
     })
 })
 
@@ -416,18 +449,19 @@ describe('rankStations (office overview)', () => {
     const counts = { g: { label: 'end_of_night', employee_name: 'Jake', created_at: '2026-11-06T04:00:00Z' } }
     const ranked = rankStations(stations, items, counts)
 
-    it('most work first (2 x red + yellow), ties by name', () => {
-        expect(ranked.map(r => `${r.name} ${r.score}`)).toEqual(['Grill 3', 'Fry 2', 'Salad 2', 'Lunch 0'])
+    it('furthest behind first (need %, not raw score), ties by name, nothing counted last', () => {
+        // Fry 2/2 = 1, Grill 3/6 = 0.5, Salad 2/4 = 0.5, Lunch nothing counted
+        expect(ranked.map(r => `${r.name} ${r.score}`)).toEqual(['Fry 2', 'Grill 3', 'Salad 2', 'Lunch 0'])
     })
 
     it('counts each color and the not-counted lines; no-par lines are left out', () => {
-        expect(ranked[0]).toMatchObject({ red: 1, yellow: 1, green: 1, uncounted: 1 })
+        expect(ranked[1]).toMatchObject({ red: 1, yellow: 1, green: 1, uncounted: 1 })
         expect(ranked[3]).toMatchObject({ red: 0, yellow: 0, green: 0, uncounted: 1 })
     })
 
     it('carries the last Finish count and the latest change on any line (no-par lines too)', () => {
-        expect(ranked[0].lastCount).toBe(counts.g)
-        expect(ranked[0].lastUpdate).toBe('2026-11-06T17:00:00Z')
+        expect(ranked[1].lastCount).toBe(counts.g)
+        expect(ranked[1].lastUpdate).toBe('2026-11-06T17:00:00Z')
         expect(ranked[3]).toMatchObject({ lastCount: null, lastUpdate: null })
     })
 

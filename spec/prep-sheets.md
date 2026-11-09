@@ -50,9 +50,12 @@ Completely separate from the BEO order list and everything else in the app. **It
 
 1. **Kitchen → Prep Sheets** (`/kitchen/prep`): pick a station, then work its sheet as above. A new Kitchen nav entry.
 2. **Kitchen dashboard tile**: each station's red and yellow counts. Tap a station to open its sheet.
-3. **Office → Prep Overview** (`/office/prep`): every station ranked by **score = 2 × Red + 1 × Yellow** (Green 0),
-   most work first. Shows the Red / Yellow / Green counts, the last Finish count (label, name, time) and the last
-   update time. Tap a station to see its sheet.
+3. **Office → Prep Overview** (`/office/prep`): every station's **score = 2 × Red + 1 × Yellow** (Green 0) is taken as
+   a share of the most it could score (2 × its counted items), so stations of any size compare fairly and the maximum
+   follows items added or retired. Stations rank furthest behind first (ties by name, nothing counted last), and the
+   whole card is **Red ≥ 50 %, Yellow ≥ 25 %, Green below** (grey when nothing is counted) (owner, 11-09). Shows the
+   % behind, the Red / Yellow / Green counts, the last Finish count (label, name, time) and the last update time. Tap
+   a station to see its sheet.
 4. **Office → Prep Setup** (`/office/prep/setup`): add, rename, reorder and remove stations, sections and items, and
    change pars. **Upload a spreadsheet** for a station (same layout as the files in `prepsheets/`): a preview shows
    every parsed item and par, and par text the parser can't read is flagged. A named row with a blank par could be a section header or an item (Garnish vs Peppernata), so each one gets a Section/Item toggle. Nothing saves until the office confirms,
@@ -154,7 +157,8 @@ export function colorFor(have, parQty) {
 - [x] The name dropdown lists active `employees` (on the office sheet: managers only, owner 11-08) and remembers the
       last pick on that device.
 - [x] Finish count stamps the station with label, name and time, and the overview shows it.
-- [x] The overview ranks stations by 2 × Red + Yellow, and the kitchen tile shows red/yellow counts per station.
+- [x] The overview ranks and colors stations by 2 × Red + Yellow as a share of their maximum (11-09), and the kitchen
+      tile shows red/yellow counts per station.
 - [x] Office can edit an item's par and see it on the kitchen sheet. An upload previews first and only replaces the list
       on confirm. An item kept by name keeps its count.
 - [ ] Tests pass, `npm run build` passes, the phone-width browser check passes, and only this feature reaches production.

@@ -8,6 +8,11 @@ const YELLOW_BELOW = 0.75
 // Score weights for the manager's ranking: red counts double, green counts nothing.
 const SCORE_WEIGHT = { red: 2, yellow: 1, green: 0 }
 
+// A station's color on the overview, by how far behind it is (owner, 11-09): red from half its maximum score, yellow
+// from a quarter, green below. Mirrors the per-item cutoffs (red under half of par, yellow under three quarters).
+const STATION_RED_FROM = 0.5
+const STATION_YELLOW_FROM = 0.25
+
 // Unit words as the kitchen writes them → one name per unit, used in "prep 16 ea".
 const UNIT_ALIASES = {
     ea: 'ea', each: 'ea',
@@ -108,7 +113,20 @@ export function stationScore(items) {
         counts[color ?? 'uncounted'] += 1
     }
     const score = counts.red * SCORE_WEIGHT.red + counts.yellow * SCORE_WEIGHT.yellow + counts.green * SCORE_WEIGHT.green
-    return { ...counts, score }
+    // How far behind, 0 (all green) to 1 (all red): the score over the most it could be (every counted line red). So a
+    // 19-line station compares fairly with a 63-line one, and the maximum moves as items are added or retired.
+    // Not-counted lines stay out; nothing counted → null (grey card).
+    const counted = counts.red + counts.yellow + counts.green
+    const need = counted > 0 ? score / (counted * SCORE_WEIGHT.red) : null
+    return { ...counts, score, need, color: stationColor(need) }
+}
+
+// The overview card's color from `need`; null when nothing has been counted.
+function stationColor(need) {
+    if (need == null) return null
+    if (need >= STATION_RED_FROM) return 'red'
+    if (need >= STATION_YELLOW_FROM) return 'yellow'
+    return 'green'
 }
 
 // A pan par's unit, e.g. "1/3 pan". Pans read differently: "0.5 of a 1/3 pan", "2 × 1/3 pan".
@@ -228,10 +246,11 @@ export function stationCounts(stations, items, latestCounts) {
     })
 }
 
-// The office overview: the same, most work first (score = 2 x red + yellow), ties by name.
+// The office overview: the same, furthest behind first (`need`, so station size doesn't decide), ties by name,
+// stations with nothing counted last.
 export function rankStations(stations, items, latestCounts) {
     return stationCounts(stations, items, latestCounts)
-        .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+        .sort((a, b) => (b.need ?? -1) - (a.need ?? -1) || a.name.localeCompare(b.name))
 }
 
 // The office sheet's name dropdown: the roster's managers (station "Manager") plus the extra names the owner listed.

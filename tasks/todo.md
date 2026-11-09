@@ -348,6 +348,13 @@ updates are fine here)
   as stored). T 184 · B · C: Fry list slowed 2.5s then Grill tapped → Grill's 12 items shown; socket dropped → sheet
   refetched stations/items/count, tile refetched; 0 errors. Not browser-checked: the editor guard and new-item position
   (office gate / needs a DB write).
+- [x] Overview cards colored whole (Ryan, 11-09): a station's score is taken as a share of the most it could score
+  (`need` = (2 × red + yellow) ÷ (2 × counted items)), so a 19-item station compares fairly with a 63-item one. Card Red
+  ≥ 50 %, Yellow ≥ 25 %, Green below, grey when nothing is counted; tint + thick left edge; "N% behind" (rounded down)
+  replaces "Score N"; ranking by `need`, ties by name, nothing counted last. Tile unchanged. T 188 (RED: 9 failed) · B
+  · C (office unlocked by Ryan): Lunch 100 / Sautee 100 / Salad 50 red, Fry 27 yellow, Grill 0 green = SQL; hover kept
+  the edge only after scoping the rules under `.prep-overview` (index.css's `.card:hover` greyed it); 375px no sideways
+  scroll; 0 console errors.
 
 ## Phase 5: Ship
 

@@ -4,8 +4,9 @@ import { rankStations, lastCountText, formatStamp } from '../lib/prepSheets.js'
 import { usePrepBoard } from '../lib/usePrepBoard.js'
 import '../prepSheets.css'
 
-// Office → Prep Overview: every station ranked by how much prep it has left (2 × red + yellow), so the office knows
-// where to send help. Tap a station to open its sheet. Live: any count, Finish count or station change shows at once.
+// Office → Prep Overview: every station ranked and colored by how far behind it is (its 2 × red + yellow score over the
+// most it could score), so the office knows where to send help. Tap a station to open its sheet. Live: any count,
+// Finish count or station change shows at once.
 export default function PrepOverview() {
     const { stations, items, latestCounts, loadError } = usePrepBoard('prep_overview')
     const ranked = useMemo(
@@ -21,7 +22,7 @@ export default function PrepOverview() {
                         <i className="fa-solid fa-clipboard-check" style={{ marginRight: '0.5rem' }} />
                         Prep Overview
                     </h1>
-                    <p className="page-subtitle">Stations with the most prep left come first (red counts double).</p>
+                    <p className="page-subtitle">Stations furthest behind their pars come first (red counts double).</p>
                 </div>
                 <Link to="/office/prep/setup" className="btn btn-secondary">
                     <i className="fa-solid fa-gear" /> Setup
@@ -41,13 +42,17 @@ export default function PrepOverview() {
     )
 }
 
-// One station: its score and color counts, the last Finish count and the latest change. Opens the station's sheet.
+// One station, the whole card red/yellow/green by how far behind it is: the % behind, its color counts, the last Finish
+// count and the latest change. Opens the station's sheet. The % rounds down so it never reads past its color's cutoff.
 function StationCard({ station }) {
+    const colorClass = station.color ? ` prep-overview-${station.color}` : ''
     return (
-        <Link to={`/office/prep/sheet?station=${station.id}`} className="card prep-overview-card">
+        <Link to={`/office/prep/sheet?station=${station.id}`} className={`card prep-overview-card${colorClass}`}>
             <div className="prep-overview-head">
                 <span className="prep-overview-name">{station.name}</span>
-                <span className="prep-overview-score" title="2 × red + yellow">Score {station.score}</span>
+                <span className="prep-overview-score" title={`Score ${station.score}: 2 × red + yellow, out of 2 per counted item`}>
+                    {station.need == null ? 'Not counted' : `${Math.floor(station.need * 100)}% behind`}
+                </span>
             </div>
             <div className="prep-overview-counts">
                 <span className={`prep-chip prep-chip-red${station.red > 0 ? ' prep-chip-red-solid' : ''}`}>{station.red} red</span>
