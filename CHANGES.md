@@ -194,37 +194,11 @@
 - 10-09 — Drafter: Dijon Kept Separate, Batches of 4, Repeatable Check in the Repo — `draft-dish-specs` v12: Dijon is never grain mustard (owner). The rule alone failed inside a batch; **batch size is the lever** (12 → swaps, 8 → 2 runs with swaps, 4 → 0 in 12 runs), so `DRAFT_BATCH` 8 → 4. `drafter_check.ts` scores the deployed function N times and exits 1 on any swap. → [full](docs/changelog/2026-10.md#2026-10-09--drafter-dijon-kept-separate-batches-of-4-repeatable-check-in-the-repo)
 - 10-10 — Drafter Retries Malformed JSON Once; Beef Tenderloin Respecced — v13: a non-JSON reply is retried ONCE inside the same 130s budget (API errors/timeouts are not); `retry_test.ts` 4/4, mutation-checked. Owner: "tenderloin should be tenderloin" — Action Stations moved off `shoulder tender`. → [full](docs/changelog/2026-10.md#2026-10-10--drafter-retries-malformed-json-once-beef-tenderloin-respecced)
 - 10-10 — Time Off Calendar: Days Line Up Under Their Weekday Again (shipped on its own, `21cee39`) — not a date bug: the weekday header and day grid are separate `repeat(7, 1fr)` grids and long names widened their column; both now `minmax(0, 1fr)`, checked 7/7 header-cell alignment on the live page. → [full](docs/changelog/2026-10.md#2026-10-10--time-off-calendar-days-line-up-under-their-weekday-again)
+- 10-13 — Office Tasks Tab: Add Kitchen Tasks Without a Briefing (shipped on its own, `7ac0e01`) — `briefing_tasks.briefing_id` nullable + a `date`; the office Tasks tab adds a kitchen task for a day, shown on the kitchen dashboard; BOH only. Merged back as `b378678`. → [full](docs/changelog/2026-10.md#2026-10-13--office-tasks-tab-add-kitchen-tasks-without-a-briefing-shipped-on-its-own)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-13 — Office Tasks Tab: Add Kitchen Tasks Without a Briefing (shipped on its own)
-
-**File(s) Changed:** `app/src/pages/History.jsx`, `app/src/pages/Dashboard.jsx`,
-`supabase/migrations/20261013000000_standalone_briefing_tasks.sql` **Type:** `feature` + `migration` — shipped
-ALONE as `7ac0e01` (pushed `feat/standalone-tasks:main` from `origin/main`), merged back into local main as `b378678`.
-**Summary:** A task no longer needs a briefing. The office **Tasks** tab (`/office/history`) gets an "Add a kitchen
-task" box; the task shows on the kitchen dashboard on its date. Kitchen (BOH) only — FOH unchanged (owner).
-
-**Details:**
-
-- **Schema (prod, via MCP):** `briefing_tasks.briefing_id` nullable; new `date` + `created_at`; check
-  `briefing_tasks_briefing_or_date` (a task has a briefing OR a date); partial index on `date` where no briefing.
-  Additive — the old deployed app kept working. A standalone task = `briefing_id IS NULL`.
-- **Tasks tab:** text + date (defaults via `defaultBriefingDate()`: today before 5pm, tomorrow after). Each day card
-  lists them under "Kitchen Tasks" with a ✕ delete (confirm prompt). Briefing tasks still edit through their briefing.
-  Standalone tasks use the same window as the 30 loaded briefings.
-- **Kitchen dashboard:** today's briefing tasks, then today's standalone tasks (oldest first); same checkbox. The
-  task load now runs even with no briefing, with a cancel guard so the pre-briefing run can't overwrite the full list.
-- **Not touched:** `FOHDashboard.jsx` (still briefing-only), `BriefingEditor.jsx`, Office dashboard task count (now
-  includes standalone tasks — it counts all rows).
-- **Verified (local dev on prod DB):** add (today + tomorrow) → right day card; kitchen dashboard showed it beside a
-  task-less briefing (0/1), checkbox saved `is_completed`; delete removed row + empty group. Test rows deleted (0
-  standalone rows left). `npm run build` passes; Vercel prod deploy READY and the live bundle serves the new form.
-  Mobile width not checked separately.
-
----
 
 ### 2026-10-14 — Seasonal Recipe Books Drive the Dish Drafter; Fall Drafted From the Book
 
@@ -497,4 +471,12 @@ overview ranked by 2 × red + yellow, a Kitchen dashboard tile, setup editing an
   B and C passed (Ryan). **T8 `859c3cf`:** `/office/prep` overview, ranked, live. **T9 `181507c`:** dashboard tile (11-07).
 - **T10 `835d3d0`:** Setup "Edit a station" (stations, sections, items: rename/move/re-par/retire/add). **11-08 Checkpoint D
   fixes (Ryan):** office name list = managers + Ryan, larger notes, Finish count Morning→Night Start→End of Night, solid red
-  (sheet, overview, tile), tile under Features (`afa0c49`…`6dc5928`). 181 tests. **Next:** finish D, retire ZZ Test, T11.
+  (sheet, overview, tile), tile under Features (`afa0c49`…`6dc5928`). Checkpoint D passed (Ryan).
+- **11-09 T11 review + `/ship`:** ZZ Test retired (SQL, Ryan's OK). Self-review fixed a crash when a save lands after a station
+  switch (`00e51ab`) and made station tabs follow Setup live (`d8bd43b`). `/ship` (code, security, tests): no Critical/High;
+  Ryan picked 4 fixes: screens reload on every live (re)join (a slept tablet catches up), a late answer for a station already
+  left is dropped, new Setup items saved at the bottom (`da76e75`), fraction pars "1/2 gal" = 0.5 read as amounts, ranges
+  flagged (`d8f8992`; all 55 live pars read as stored). 184 tests. Deferred: DB text/number caps + add-only history (need a
+  migration), stale-row ordering, order-save rename race. Main's `prepsheets/` = the committed blobs byte-for-byte (worktree
+  copies differ only in .xls timestamps). **Next:** Ryan says "push" → `prep-sheets:main`, live check, back up + move aside
+  `prepsheets/`, merge back (xlsx → main's CDN 0.20.3), remove worktree. Nothing pushed yet.
