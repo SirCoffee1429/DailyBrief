@@ -92,6 +92,24 @@ describe('parsePar', () => {
     it('rejects a zero par', () => {
         expect(parsePar('0 ea')).toBeNull()
     })
+
+    it('reads fractions and mixed numbers as amounts (owner, 11-08)', () => {
+        expect(parsePar('1/2 gal')).toEqual({ qty: 0.5, unit: 'gal' })
+        expect(parsePar('1 1/2 qts')).toEqual({ qty: 1.5, unit: 'qt' })
+        expect(parsePar('3/4 cup')).toEqual({ qty: 0.75, unit: 'cup' })
+    })
+
+    it('still reads a pan par as pans, not as a fraction', () => {
+        expect(parsePar('2 1/3 pans')).toEqual({ qty: 2, unit: '1/3 pan' })
+        expect(parsePar('1/6 pan')).toEqual({ qty: 1, unit: '1/6 pan' })
+    })
+
+    it('flags a range, a thousands comma or a zero fraction as not understood', () => {
+        expect(parsePar('2-3 bags')).toBeNull()
+        expect(parsePar('1,000')).toBeNull()
+        expect(parsePar('1/0 gal')).toBeNull()
+        expect(parsePar('0/2 gal')).toBeNull()
+    })
 })
 
 describe('colorFor', () => {

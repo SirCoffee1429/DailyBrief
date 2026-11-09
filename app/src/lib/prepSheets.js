@@ -29,12 +29,21 @@ const UNIT_ALIASES = {
 // Pan pars: "1/3 pan", "(2) 1/3 pans" and "2 1/3 pans" (= two 1/3 pans, owner 2026-11-04).
 const PAN_PAR = /^(?:\((\d+)\)\s*|(\d+)\s+)?(\d+\/\d+)\s*pans?$/i
 
-// Every other par: an amount, then an optional unit word ("20 ea", "4bags", "8 #", "40").
-const AMOUNT_PAR = /^(\d+(?:\.\d+)?)\s*(.*)$/
+// Every other par: an amount, then an optional unit word ("20 ea", "4bags", "8 #", "40"). The amount can be a
+// mixed number "1 1/2", a fraction "1/2" or a decimal "2.5" (owner, 11-08: "1/2 gal" is half a gallon).
+const AMOUNT_PAR = /^(?:(\d+)\s+(\d+)\/(\d+)|(\d+)\/(\d+)|(\d+(?:\.\d+)?))\s*(.*)$/
+
+// A "unit" that starts like more of a number ("2-3 bags", "1,000") means the amount wasn't understood.
+const NOT_A_UNIT = /^[-,/.\d]/
 
 // Rounds to 2 decimals so subtraction never shows float noise like 7.699999.
 function round2(n) {
     return Math.round(n * 100) / 100
+}
+
+// "1" over "2" → 0.5; a zero bottom gives NaN, so the par is refused.
+function fraction(num, den) {
+    return Number(den) > 0 ? Number(num) / Number(den) : NaN
 }
 
 // Par text → { qty, unit }, or null when there is no usable par (blank, no amount, or zero).
@@ -50,12 +59,15 @@ export function parsePar(text) {
     }
 
     const m = s.match(AMOUNT_PAR)
-    if (!m) return null
-    const qty = Number(m[1])
+    if (!m || NOT_A_UNIT.test(m[7])) return null
+    const [, whole, num, den, fracNum, fracDen, plain] = m
+    const qty = plain != null ? Number(plain)
+        : whole != null ? Number(whole) + fraction(num, den)
+        : fraction(fracNum, fracDen)
     if (!(qty > 0)) return null
 
     // "2 qts/ea." (one per fruit) is still 2 qt on one line (owner, 2026-11-04).
-    const word = m[2].replace(/\/\s*ea\.?$/i, '').trim().toLowerCase()
+    const word = m[7].replace(/\/\s*ea\.?$/i, '').trim().toLowerCase()
     return { qty, unit: word ? (UNIT_ALIASES[word] ?? word) : 'ea' }
 }
 
