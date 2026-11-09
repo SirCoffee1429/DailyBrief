@@ -338,6 +338,9 @@ updates are fine here)
   shows all six solid (every station has red now); a test "0 red" chip computed calm. Overview not opened (office gate).
 - [x] Kitchen dashboard tile moved up: directly under Lunch & Dinner Features, above the briefing/tasks row. B · C:
   44px gap above and below, screenshot.
+- [x] Review fixes (11-08): a save landing after a station switch no longer blanks the page (`00e51ab`); the sheet's
+  station tabs follow Setup live (channel `prep_sheet_stations` → reload; a retired open station closes). B · C: channel
+  joined, ZZ Test gone from the tabs, 0 errors (live event not fired: needs a DB write).
 
 ## Phase 5: Ship
 

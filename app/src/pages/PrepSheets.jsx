@@ -53,6 +53,16 @@ export default function PrepSheets({ office = false }) {
         return () => { supabase.removeChannel(channel) }
     }, [station?.id])
 
+    // Live station list: a station added, renamed or retired in Setup shows here without a reload (a tablet stays open
+    // all day). If the open station is retired, its sheet closes.
+    useEffect(() => {
+        const channel = supabase
+            .channel('prep_sheet_stations')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_stations' }, () => reloadStations())
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
+    }, [])
+
     // Active stations and the active crew roster (managers only on the office sheet), both for pickers.
     async function loadStationsAndCrew() {
         const [stationsRes, crewRes] = await Promise.all([
@@ -69,6 +79,13 @@ export default function PrepSheets({ office = false }) {
         setEmployees(names)
         // A remembered name that has since left the list is forgotten.
         if (!names.some(e => e.id === localStorage.getItem(employeeKey))) pickEmployee('')
+    }
+
+    // The station list again, after a change in Setup. On a failed reload the current tabs stay.
+    async function reloadStations() {
+        const { data, error } = await supabase.from('prep_stations').select('id, name').eq('active', true).order('sort_order')
+        if (error) return console.error('Failed to reload prep stations:', error)
+        setStations(data)
     }
 
     // One station's items in sheet order, and its last Finish count.
