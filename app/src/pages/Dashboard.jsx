@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 
 import WeatherWidget from '../components/WeatherWidget.jsx'
 import WeeklyFeatures from '../components/WeeklyFeatures.jsx'
+import PrepStationTile from '../components/PrepStationTile.jsx'
 import { localDateString, formatBriefingByline } from '../lib/dates.js'
 
 
@@ -130,6 +131,8 @@ export default function Dashboard() {
 
             <WeeklyFeatures readOnly />
 
+            <PrepStationTile />
+
             <div className="kitchen-brief-grid">
                 <div className="dash-card morning-notes-card">
                     {todaysBriefings.length > 0 ? (
@@ -198,7 +201,6 @@ export default function Dashboard() {
                     {todaysBriefings.length > 0 && <div className="updated-text">Updated 5m ago</div>}
                 </div>
             </div>
-
         </div>
     )
 }

@@ -14,6 +14,9 @@ import History from './pages/History.jsx'
 import KitchenLayout from './components/KitchenLayout.jsx'
 import FOHLayout from './components/FOHLayout.jsx'
 import OfficeLayout from './components/OfficeLayout.jsx'
+import PrepOverview from './pages/PrepOverview.jsx'
+import PrepSetup from './pages/PrepSetup.jsx'
+import PrepSheets from './pages/PrepSheets.jsx'
 import OfficeGate from './components/OfficeGate.jsx'
 import SalesReports from './pages/SalesReports.jsx'
 import SalesReportDetail from './pages/SalesReportDetail.jsx'
@@ -46,6 +49,7 @@ export default function App() {
             <Route path="/kitchen/time-off" element={<KitchenLayout><TimeOff /></KitchenLayout>} />
             <Route path="/kitchen/schedule" element={<KitchenLayout><SchedulePage /></KitchenLayout>} />
             <Route path="/kitchen/availability" element={<KitchenLayout><AvailabilityPage /></KitchenLayout>} />
+            <Route path="/kitchen/prep" element={<KitchenLayout><PrepSheets /></KitchenLayout>} />
 
             {/* Front of House routes */}
             <Route path="/foh" element={<FOHLayout><FOHDashboard /></FOHLayout>} />
@@ -74,6 +78,9 @@ export default function App() {
             <Route path="/office/time-off" element={<OfficeGate><OfficeLayout><TimeOff officeMode /></OfficeLayout></OfficeGate>} />
             <Route path="/office/schedule" element={<OfficeGate><OfficeLayout><SchedulePage officeMode /></OfficeLayout></OfficeGate>} />
             <Route path="/office/roster-coverage" element={<OfficeGate><OfficeLayout><RosterCoveragePage /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/prep" element={<OfficeGate><OfficeLayout><PrepOverview /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/prep/sheet" element={<OfficeGate><OfficeLayout><PrepSheets office /></OfficeLayout></OfficeGate>} />
+            <Route path="/office/prep/setup" element={<OfficeGate><OfficeLayout><PrepSetup /></OfficeLayout></OfficeGate>} />
             {/* Legacy path → new bundled hub (keeps old links/bookmarks working) */}
             <Route path="/office/roster" element={<Navigate to="/office/roster-coverage" replace />} />
         </Routes>
