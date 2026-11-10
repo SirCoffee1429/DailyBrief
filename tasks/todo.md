@@ -370,10 +370,17 @@ step right before the push.
 confirm Vercel deployed it and the live site works. Then in local `main`: `git merge prep-sheets` (not rebase), resolve
 `App.jsx`/`OfficeLayout.jsx` by hand if needed, and `npm test` + B there. Log CHANGES.md on `main`, remove the worktree.
 
-**Acceptance criteria:**
-- [ ] `origin/main` = old `origin/main` + only the prep-sheets commits (`git log origin/main@{1}..origin/main`).
-- [ ] The live site shows Prep Sheets (kitchen, office, tile) and not FOH, with no console errors.
-- [ ] Local `main` contains both histories and builds; the 74 commits are still unpushed.
+**Acceptance criteria:** (SHIPPED 11-10)
+- [x] `origin/main` = old `origin/main` + only the prep-sheets commits: `7ac0e01..4fb529b`, fast-forward, 28 commits;
+      Vercel production READY on `4fb529b`. Before it: `have_before` migration `20261110163331` applied (Ryan's OK,
+      rolled-back save check as anon passed) and the test data wiped (172 items / 5 stations, 0 counts / 0 Finish counts
+      / 0 history).
+- [x] Live: kitchen sheet all grey (Lunch 63 "Not counted", "Last count: No count finished yet"), dashboard tile 0/0 on
+      all five; only console error is a Chrome ad-blocker extension's. Office overview not opened (office gate).
+- [x] Local `main` merged (`7c2f0f0`, `--no-ff`): lockfile = main's (vitest 5.1.0 + xlsx 0.20.3 CDN), `package.json`
+      identical, route/nav lines auto-merged (15 lines). T 197 · B. `prepsheets/` backed up to
+      `../DailyBrief-prepsheets-backup-2026-11-10` (identical to the committed files by hash). Main's own work still
+      unpushed (79). Worktree KEPT: the Completed tab ships from it next (spec Addition 11-10).
 
 **Verification:** `git log` checks · live browser check · B on `main`
 
