@@ -360,6 +360,12 @@ updates are fine here)
 
 ## Task 11: Review, push alone, merge back
 
+**Step 0 (Ryan, 11-09): right before the push, clear the test counts so the crew starts grey.** One transaction:
+blank `have`/`note`/`changed_at`/`changed_by` on `prep_items` (175 rows on 11-09; items, pars, sections, stations
+untouched), `delete from prep_counts` (23), and `delete from prep_entries` (409, all test saves; Ryan agreed 11-09).
+Then a `SELECT`: 172 active items / 5 stations, 0 counted, 0 counts, 0 history. Approved by Ryan; run it as the
+step right before the push.
+
 **Description:** `/review-change`, then `/ship` (agents run there). On Ryan's OK: `git push origin prep-sheets:main`, then
 confirm Vercel deployed it and the live site works. Then in local `main`: `git merge prep-sheets` (not rebase), resolve
 `App.jsx`/`OfficeLayout.jsx` by hand if needed, and `npm test` + B there. Log CHANGES.md on `main`, remove the worktree.

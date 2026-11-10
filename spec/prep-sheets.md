@@ -177,3 +177,30 @@ export function colorFor(have, parQty) {
    v1 stays the running list, and the owner will judge it once it's built. Every entry is stored with its time, so a week view
    (e.g. each day's End of Night count per item, in day columns) can be built later from the same data, with no
    migration.
+
+## Addition (owner, 2026-11-10): Completed tab + 3-day prep log — approved 11-10
+
+**Ships second (owner, 11-10):** prep sheets push first; this tab follows as its own push. The `have_before` migration
+goes on BEFORE the first push, so every real save from day one carries its "before" count.
+
+**Why:** Night Start needs to see what Morning got done, and the office wants a short look back, without reading every
+line's "name, time" stamp.
+
+- **Prep day = 5:00am to 4:59am** Central (owner: the kitchen closes at 10pm, End of Night is in by midnight, the new day
+  starts at 5am). A save at 12:30am belongs to the day before.
+- **"Prepped" means:** Done, Partial, or a typed count that went **up** from a counted value (4 → 20 = made 16). The amount
+  made = count after − count before. Not prepped: a count that went down or stayed the same, the **first** count of an
+  item that had no count (that's counting, not prep), notes, and a Done on an item already at par (made 0).
+- **A "Completed" tab** sits after the station tabs on the prep sheet (kitchen and office, same component). It lists
+  today's prepped items for **all stations**, grouped by station: one line per item with the total made today and who/when
+  (e.g. "Salmon — made 16 ea · Maria 9:15am"; several saves list each name and time). Stations with nothing prepped
+  today say so. Live: it refreshes when any item changes.
+- **"Last 3 days" log** under it (today + the two days before, newest first): per day, per station, each prep entry
+  (item, amount made, who, time), with that station's Finish count stamps as dividers ("End of Night, Jake, 10:42pm").
+- **Data:** `prep_entries` gets one new column, `have_before` (numeric, null allowed), filled by `prep_record` from the
+  item's count before the change. Additive migration: new nullable column + `create or replace` of `prep_record` with
+  the same signature, applied with Ryan's OK. Entries from before the migration have no `have_before`, and the test
+  history is deleted before the push anyway, so no backfill.
+- **Logic** (prep day window, "prepped" rule, amount made, grouping) is pure and tested in `lib/prepSheets.js`; the
+  page only fetches entries from the window start and renders.
+- **Not in this addition:** a history page beyond 3 days, filters, editing or deleting entries, or counts and notes in the log.
