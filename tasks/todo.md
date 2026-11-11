@@ -392,19 +392,23 @@ confirm Vercel deployed it and the live site works. Then in local `main`: `git m
 
 The Completed tab + 3-day log Addition is PARKED (owner, 11-11); no tasks for it.
 
-## Task 12: `toPrepList` in `lib/prepSheets.js` (test first)
+## Task 12: `toPrepList` in `lib/prepSheets.js` (test first) ✅ DONE
 
 **Description:** A pure helper: a station's items (sheet order, numerics as strings from the database) → the Red and
 Yellow ones, lowest have ÷ par first, equal shares in sheet order. Each entry carries the item and its `lineStatus`
 (color, "prep N unit"). Never mutates the input.
 
 **Acceptance criteria:**
-- [ ] Only Red and Yellow come back; Green, not counted (`have` null) and no-par items are left out.
-- [ ] Order by have ÷ par ascending: 0 of 4 before 10 of 30 before 12 of 20; ties keep the input (sheet) order.
-- [ ] String numerics from the database ("4", "20") sort as numbers; Red/Yellow edges match `colorFor` (49.9 / 50 / 74.9 / 75 %).
-- [ ] The input array is unchanged; an empty or all-Green station gives `[]`.
+- [x] Only Red and Yellow come back; Green, not counted (`have` null) and no-par items are left out.
+- [x] Order by have ÷ par ascending: 0 of 4 before 10 of 30 before 12 of 20; ties keep the input (sheet) order.
+- [x] String numerics from the database ("4", "20") sort as numbers; Red/Yellow edges match `colorFor` (49.9 / 50 / 74.9 / 75 %).
+- [x] The input array is unchanged; an empty or all-Green station gives `[]`.
 
-**Verification:** T (RED first, then green) · B
+**As built:** `toPrepList(items)` → `[{ item, status }]`, `status` straight from `lineStatus` (so the box's color and
+"prep N unit" read exactly like the line's), filtered to red/yellow, sorted by `have ÷ par` (stable sort keeps sheet
+order on ties). New array; input untouched.
+
+**Verification:** T 195 (7 new: RED first, all 7 failed on the missing export, then green) · B
 
 **Dependencies:** none
 

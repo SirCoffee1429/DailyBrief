@@ -161,6 +161,17 @@ export function lineStatus({ have, par_qty, par_unit }) {
     }
 }
 
+// The "To prep" box: a station's Red and Yellow items, most needed first (lowest have ÷ par, so units don't matter).
+// Equal shares keep sheet order (sort is stable). Each entry is { item, status } with status from lineStatus, so the
+// box reads exactly like the line. A new array; the items passed in are not changed.
+export function toPrepList(items) {
+    return items
+        .map(item => ({ item, status: lineStatus(item), share: Number(item.have) / Number(item.par_qty) }))
+        .filter(e => e.status.color === 'red' || e.status.color === 'yellow')
+        .sort((a, b) => a.share - b.share)
+        .map(({ item, status }) => ({ item, status }))
+}
+
 // Items (already in sheet order) → [{ section, items }], one group per run of the same section.
 export function groupBySection(items) {
     const groups = []
