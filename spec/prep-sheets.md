@@ -178,10 +178,11 @@ export function colorFor(have, parQty) {
    (e.g. each day's End of Night count per item, in day columns) can be built later from the same data, with no
    migration.
 
-## Addition (owner, 2026-11-10): Completed tab + 3-day prep log — approved 11-10
+## Addition (owner, 2026-11-10): Completed tab + 3-day prep log — PARKED 11-11
 
-**Ships second (owner, 11-10):** prep sheets push first; this tab follows as its own push. The `have_before` migration
-goes on BEFORE the first push, so every real save from day one carries its "before" count.
+**PARKED (owner, 11-11):** the "To prep" box (next Addition) comes first; this tab is not being built for now. Only its
+`have_before` column shipped (11-10), so every real save since then carries its "before" count for whenever it's
+picked back up.
 
 **Why:** Night Start needs to see what Morning got done, and the office wants a short look back, without reading every
 line's "name, time" stamp.
@@ -204,3 +205,25 @@ line's "name, time" stamp.
 - **Logic** (prep day window, "prepped" rule, amount made, grouping) is pure and tested in `lib/prepSheets.js`; the
   page only fetches entries from the window start and renders.
 - **Not in this addition:** a history page beyond 3 days, filters, editing or deleting entries, or counts and notes in the log.
+
+## Addition (owner, 2026-11-11): "To prep" box — most needed first
+
+**Why:** finding the red lines meant scrolling a 63-line sheet. A crew member wants to see exactly what needs prepping
+and how much, most needed to least, and work through it without scrolling away and back.
+
+- **A "To prep" box at the top of each station's sheet** (kitchen and office, same component), above the full sheet.
+  It lists only the station's **Red and Yellow** items (owner, 11-11). Green, not-counted and no-par items stay out.
+- **Order: most needed first** = lowest have ÷ par first (0 of 4 qt, 0 %, comes before 10 of 30 ea, 33 %). Not by the
+  amount to prep: units differ, so "prep 20 ea" is not more work than "prep 2 × 1/3 pan". Equal shares keep sheet order.
+- **Each row:** item name, "prep N unit" (the same wording as the line), and **Done** and **Partial** buttons right on
+  the row, so the crew works from the box and never scrolls away. Done turns the item Green and it leaves the box;
+  Partial updates it and it moves to its new place (or leaves, once it reaches Green). Same saves, name check and error
+  messages as the line below (one `record()`).
+- The heading counts what's left ("To prep: 12"). Empty: "Nothing to prep." when every counted item is Green, and
+  "Nothing counted yet." when nothing has been counted.
+- **Live**, like the rest of the sheet: a count or Done from another device re-sorts the box at once.
+- **The full sheet below is unchanged:** same order and sections, still where counting, quick buttons and notes happen,
+  and the order the End of Night count follows.
+- **Logic** (which items, the order) is pure and tested in `lib/prepSheets.js`. **No database change.**
+- **Not in this addition:** counting or notes inside the box, a separate prep-only page, hiding or reordering the full
+  sheet, changes to the overview or the kitchen tile.

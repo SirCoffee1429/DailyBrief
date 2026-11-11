@@ -387,3 +387,63 @@ confirm Vercel deployed it and the live site works. Then in local `main`: `git m
 **Dependencies:** Checkpoint D
 
 **Estimated scope:** S
+
+## Phase 6: "To prep" box (spec Addition 11-11; ships alone, like Task 11)
+
+The Completed tab + 3-day log Addition is PARKED (owner, 11-11); no tasks for it.
+
+## Task 12: `toPrepList` in `lib/prepSheets.js` (test first)
+
+**Description:** A pure helper: a station's items (sheet order, numerics as strings from the database) → the Red and
+Yellow ones, lowest have ÷ par first, equal shares in sheet order. Each entry carries the item and its `lineStatus`
+(color, "prep N unit"). Never mutates the input.
+
+**Acceptance criteria:**
+- [ ] Only Red and Yellow come back; Green, not counted (`have` null) and no-par items are left out.
+- [ ] Order by have ÷ par ascending: 0 of 4 before 10 of 30 before 12 of 20; ties keep the input (sheet) order.
+- [ ] String numerics from the database ("4", "20") sort as numbers; Red/Yellow edges match `colorFor` (49.9 / 50 / 74.9 / 75 %).
+- [ ] The input array is unchanged; an empty or all-Green station gives `[]`.
+
+**Verification:** T (RED first, then green) · B
+
+**Dependencies:** none
+
+**Files likely touched:** `app/src/lib/prepSheets.js`, `app/src/lib/prepSheets.test.js`
+
+**Estimated scope:** XS
+
+## Task 13: The "To prep" box on the station sheet
+
+**Description:** `components/PrepToDo.jsx` above the full sheet in `PrepSheets.jsx`: heading "To prep: N", one row per
+`toPrepList` entry with name, "prep N unit", **Done** and **Partial** ("Made N" box). Saves go through the page's
+existing `record()` (name check, per-item saving/error state shared with the line). Empty states "Nothing to prep." /
+"Nothing counted yet.". Styles in `prepSheets.css`, red/yellow edges like the lines. If the Partial "Made" form would
+be copied, move it into one small shared component used by both the line and the box.
+
+**Acceptance criteria:**
+- [ ] The box lists exactly the station's Red + Yellow items, most needed first (matches a `SELECT` of have/par).
+- [ ] Done in the box: the item turns Green on the full sheet and leaves the box; one `prep_entries` row with the name.
+- [ ] Partial in the box: have goes up by the amount; the row re-sorts or leaves; one `prep_entries` row.
+- [ ] No name picked: nothing saves, the name box is highlighted (same as the line).
+- [ ] A change on another tab re-sorts the box live. The full sheet's order and sections are unchanged.
+- [ ] 375px: no sideways scroll, buttons thumb-sized; 0 console errors.
+
+**Verification:** T · B · C. The local app writes to the LIVE database and the crew is now using it: test on a
+throwaway `ZZ Test` station (re-activate, then retire again, Ryan's OK), never on a real station.
+
+**Dependencies:** T12
+
+**Files likely touched:** `app/src/components/PrepToDo.jsx` (new), `app/src/pages/PrepSheets.jsx`,
+`app/src/prepSheets.css`, possibly `app/src/components/PrepLine.jsx` (shared Partial form)
+
+**Estimated scope:** S
+
+## Task 14: Review, push alone, merge back
+
+**Description:** `/review-change`, `/ship`. On Ryan's OK: `git push origin prep-sheets:main`, confirm Vercel, live check
+(read-only: the crew's real counts are live now, so no test saves on real stations). Merge `prep-sheets` into local
+`main`, T + B there, log CHANGES.md.
+
+**Dependencies:** T13
+
+**Estimated scope:** S
