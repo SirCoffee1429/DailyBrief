@@ -525,3 +525,34 @@ Ryan chose to ship it now and add a "Completed" tab + 3-day prep log as a second
 - **Decided for the Completed tab:** prep day 5:00am–4:59am (kitchen closes 10pm, End of Night in by midnight); prepped
   = Done, Partial, or a typed count that rose from a counted value; one tab after the station tabs for all stations;
   3-day log = prep entries only, Finish counts as dividers.
+
+---
+
+### 2026-11-11 — "To prep" Box SHIPPED: Red + Yellow Items, Most Needed First; Completed Tab Parked
+
+**File(s) Changed:** on branch `prep-sheets`: `app/src/lib/prepSheets.js` + test, `app/src/components/PrepToDo.jsx` (new),
+`app/src/components/PrepPartialForm.jsx` (new), `app/src/components/PrepLine.jsx`, `app/src/pages/PrepSheets.jsx`,
+`app/src/prepSheets.css`, `spec/prep-sheets.md`, `tasks/todo.md`; merges `3265fd5`, `1d6d405` on main
+**Type:** `feature` **Summary:** Ryan: scrolling a 63-line sheet to find the red lines was a pain. He wanted to see
+exactly what to prep and how much, most needed first, and to work through it without scrolling away and back. So each
+station's sheet now opens with a "To prep: N" box. Live as `ccb0bb1` (`origin/main` `4fb529b..ccb0bb1`, 5 commits,
+fast-forward; Vercel production READY).
+
+- **The box:** only Red and Yellow items (Ryan, 11-11), ordered by have ÷ par, lowest first. Units differ, so the amount
+  to prep can't rank them. Equal shares keep sheet order. Each row shows the name, "prep N unit", and Done / Partial right
+  on it. Done drops the row, Partial re-sorts it. It saves through the page's `record()`, so the name check and errors
+  are the same as the line's. The full sheet below is unchanged (End of Night still counts in sheet order).
+- **Code:** `toPrepList` is pure, with 7 tests written first. The "Made N" form moved into `PrepPartialForm.jsx`, which
+  the line and the box share. No database change.
+- **Parked (Ryan, 11-11):** the Completed tab + 3-day log (spec Addition 11-10). Only its `have_before` column had
+  shipped.
+- **Seen, left as is (Ryan):** after Done, the next row slides up under the finger, so a quick double-tap could mark it
+  Done too.
+- **Checked:**
+  - T 195 · B.
+  - Browser on `ZZ Test`, re-activated with Ryan's OK and retired again: order, Done, Partial, the no-name refusal, a live
+    re-sort from a second tab, one `prep_entries` row per save, 375px.
+  - `/review-change` approve; `/ship` GO (code, security 0 findings, tests). Not browser-tested, accepted by Ryan: a
+    Partial box open while its row re-sorts or leaves; a refused or failed Partial in the box.
+  - Live (read-only): all five stations show the box with real counts. Grill's order matches SQL.
+  - Main after merge: T 204 · B.
