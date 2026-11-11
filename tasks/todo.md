@@ -370,13 +370,101 @@ step right before the push.
 confirm Vercel deployed it and the live site works. Then in local `main`: `git merge prep-sheets` (not rebase), resolve
 `App.jsx`/`OfficeLayout.jsx` by hand if needed, and `npm test` + B there. Log CHANGES.md on `main`, remove the worktree.
 
-**Acceptance criteria:**
-- [ ] `origin/main` = old `origin/main` + only the prep-sheets commits (`git log origin/main@{1}..origin/main`).
-- [ ] The live site shows Prep Sheets (kitchen, office, tile) and not FOH, with no console errors.
-- [ ] Local `main` contains both histories and builds; the 74 commits are still unpushed.
+**Acceptance criteria:** (SHIPPED 11-10)
+- [x] `origin/main` = old `origin/main` + only the prep-sheets commits: `7ac0e01..4fb529b`, fast-forward, 28 commits;
+      Vercel production READY on `4fb529b`. Before it: `have_before` migration `20261110163331` applied (Ryan's OK,
+      rolled-back save check as anon passed) and the test data wiped (172 items / 5 stations, 0 counts / 0 Finish counts
+      / 0 history).
+- [x] Live: kitchen sheet all grey (Lunch 63 "Not counted", "Last count: No count finished yet"), dashboard tile 0/0 on
+      all five; only console error is a Chrome ad-blocker extension's. Office overview not opened (office gate).
+- [x] Local `main` merged (`7c2f0f0`, `--no-ff`): lockfile = main's (vitest 5.1.0 + xlsx 0.20.3 CDN), `package.json`
+      identical, route/nav lines auto-merged (15 lines). T 197 · B. `prepsheets/` backed up to
+      `../DailyBrief-prepsheets-backup-2026-11-10` (identical to the committed files by hash). Main's own work still
+      unpushed (79). Worktree KEPT: the Completed tab ships from it next (spec Addition 11-10).
 
 **Verification:** `git log` checks · live browser check · B on `main`
 
 **Dependencies:** Checkpoint D
+
+**Estimated scope:** S
+
+## Phase 6: "To prep" box (spec Addition 11-11; ships alone, like Task 11)
+
+The Completed tab + 3-day log Addition is PARKED (owner, 11-11); no tasks for it.
+
+## Task 12: `toPrepList` in `lib/prepSheets.js` (test first) ✅ DONE
+
+**Description:** A pure helper: a station's items (sheet order, numerics as strings from the database) → the Red and
+Yellow ones, lowest have ÷ par first, equal shares in sheet order. Each entry carries the item and its `lineStatus`
+(color, "prep N unit"). Never mutates the input.
+
+**Acceptance criteria:**
+- [x] Only Red and Yellow come back; Green, not counted (`have` null) and no-par items are left out.
+- [x] Order by have ÷ par ascending: 0 of 4 before 10 of 30 before 12 of 20; ties keep the input (sheet) order.
+- [x] String numerics from the database ("4", "20") sort as numbers; Red/Yellow edges match `colorFor` (49.9 / 50 / 74.9 / 75 %).
+- [x] The input array is unchanged; an empty or all-Green station gives `[]`.
+
+**As built:** `toPrepList(items)` → `[{ item, status }]`, `status` straight from `lineStatus` (so the box's color and
+"prep N unit" read exactly like the line's), filtered to red/yellow, sorted by `have ÷ par` (stable sort keeps sheet
+order on ties). New array; input untouched.
+
+**Verification:** T 195 (7 new: RED first, all 7 failed on the missing export, then green) · B
+
+**Dependencies:** none
+
+**Files likely touched:** `app/src/lib/prepSheets.js`, `app/src/lib/prepSheets.test.js`
+
+**Estimated scope:** XS
+
+## Task 13: The "To prep" box on the station sheet ✅ DONE
+
+**Description:** `components/PrepToDo.jsx` above the full sheet in `PrepSheets.jsx`: heading "To prep: N", one row per
+`toPrepList` entry with name, "prep N unit", **Done** and **Partial** ("Made N" box). Saves go through the page's
+existing `record()` (name check, per-item saving/error state shared with the line). Empty states "Nothing to prep." /
+"Nothing counted yet.". Styles in `prepSheets.css`, red/yellow edges like the lines. If the Partial "Made" form would
+be copied, move it into one small shared component used by both the line and the box.
+
+**Acceptance criteria:**
+- [x] The box lists exactly the station's Red + Yellow items, most needed first (matches a `SELECT` of have/par).
+- [x] Done in the box: the item turns Green on the full sheet and leaves the box; one `prep_entries` row with the name.
+- [x] Partial in the box: have goes up by the amount; the row re-sorts or leaves; one `prep_entries` row.
+- [x] No name picked: nothing saves, the name box is highlighted (same as the line).
+- [x] A change on another tab re-sorts the box live. The full sheet's order and sections are unchanged.
+- [x] 375px: no sideways scroll, buttons thumb-sized; 0 console errors.
+
+**As built:** `components/PrepToDo.jsx` (box + rows), rendered under the Finish count header when the station has
+items; saves through the page's `record()` / `setLineError`, so name check, "Saving…" and errors are shared with the
+line. The "Made N" form moved to `components/PrepPartialForm.jsx`, now used by both the line and the box (the line's
+`submitPartial` and its `parseMadeInput` import went with it). Styles `.prep-todo*` in `prepSheets.css`: red rows tinted
+with the 10px red edge and larger red "prep N", yellow rows an 8px yellow edge.
+
+**Verification:** T 195 · B · C on `ZZ Test` (re-activated 11-11 with Ryan's OK, retired again after; its rows kept),
+as Ryan Coffee: empty state "Nothing counted yet."; counts Marinara 1/2, Spicy Mayo 0/1, Salmon 4/24, Broccoli 1/2,
+ZZ Section Item 3/4 → box "To prep: 4" = Spicy Mayo, Salmon, Marinara, Broccoli (Marinara/Broccoli tie at 50 % in sheet
+order; the Green item left out). Done Spicy Mayo (real click) → left the box, "To prep: 3". Partial +10 Salmon (typed,
+Enter) → 14/24 Yellow "prep 10 ea", moved last, box closed. Name cleared → Done on Marinara saved nothing, row says "Not
+saved: pick your name first.", name box highlighted + focused. Second tab: ZZ Section Item → Out; the first tab's box
+showed it on top live. Done Marinara, Partial +1 Broccoli (→ par) → both left. `SELECT`: 10 `prep_entries` rows, one
+per save, all Ryan Coffee, `have_before`/`have_after` right, none for the no-name try. 375px (iframe): scrollWidth =
+clientWidth, all box buttons 44px, the full sheet's order unchanged; 0 console errors after a reload.
+
+**Seen, not changed:** (1) after Done, the next row slides up under the finger, so a quick double-tap could mark the
+next item Done too. **Ryan 11-11: leave it**, watch it in use and fix only if it happens. (2) A "Not saved: pick your name first." message stays on its row after a name is
+picked, until that item's next save; the sheet's lines did this already.
+
+**Dependencies:** T12
+
+**Files likely touched:** `app/src/components/PrepToDo.jsx` (new), `app/src/pages/PrepSheets.jsx`,
+`app/src/prepSheets.css`, possibly `app/src/components/PrepLine.jsx` (shared Partial form)
+
+**Estimated scope:** S
+
+## Task 14: Review, push alone, merge back
+
+**Description:** `/review-change`, `/ship`. On Ryan's OK: `git push origin prep-sheets:main`, confirm Vercel, live check
+(read-only: the crew's real counts are live now, so no test saves on real stations). Merge `prep-sheets` into local
+`main`, T + B there, log CHANGES.md.
+
+**Dependencies:** T13
 
 **Estimated scope:** S

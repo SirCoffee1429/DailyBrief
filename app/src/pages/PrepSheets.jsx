@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { groupBySection, COUNT_LABELS, lastCountText, applyItemChange, newerCount, officeNames } from '../lib/prepSheets.js'
 import PrepLine from '../components/PrepLine.jsx'
+import PrepToDo from '../components/PrepToDo.jsx'
 import '../prepSheets.css'
 
 // The cook's name is remembered on this device, so they pick it once (spec: no typing). The office sheet remembers its
@@ -220,6 +221,11 @@ export default function PrepSheets({ office = false }) {
                     onToggle={() => setFinish(f => ({ ...f, open: !f.open, error: '' }))}
                     onPick={finishCount}
                 />
+            )}
+
+            {/* What to prep, most needed first, above the full sheet (which keeps its order for counting). */}
+            {station && items?.length > 0 && (
+                <PrepToDo items={items} lineState={lineState} onRecord={record} onRefuse={setLineError} />
             )}
 
             {station && items && groupBySection(items).map((group, i) => (

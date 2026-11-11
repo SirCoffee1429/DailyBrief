@@ -3,6 +3,7 @@ import {
     parsePar, colorFor, toPrep, quickValues, stationScore,
     unitSuffix, formatAmount, lineStatus, groupBySection, parseHaveInput,
     parseMadeInput, COUNT_LABELS, formatStamp, lastCountText, applyItemChange, newerCount, rankStations, stationCounts, officeNames,
+    toPrepList,
 } from './prepSheets.js'
 
 // Every distinct par string in the five Fall 26 sheets (prepsheets/), exactly as typed,
@@ -296,6 +297,53 @@ describe('lineStatus', () => {
 
     it('reads numeric strings from the database as numbers', () => {
         expect(lineStatus({ have: '4', par_qty: '20', par_unit: 'ea' }).prep).toBe('prep 16 ea')
+    })
+})
+
+describe('toPrepList ("To prep" box)', () => {
+    const item = (name, have, par_qty, par_unit = 'ea') => ({ name, have, par_qty, par_unit })
+    const names = list => list.map(e => e.item.name)
+
+    it('keeps only Red and Yellow items: Green, not counted and no-par stay out', () => {
+        const items = [
+            item('Red', 4, 20), item('Green', 15, 20), item('Not counted', null, 20),
+            item('Yellow', 12, 20), item('No par', 3, null, null), item('Over par', 25, 20),
+        ]
+        expect(names(toPrepList(items))).toEqual(['Red', 'Yellow'])
+    })
+
+    it('most needed first: lowest have ÷ par, whatever the units', () => {
+        const items = [item('10 of 30', 10, 30), item('0 of 4', 0, 4, 'qt'), item('12 of 20', 12, 20)]
+        expect(names(toPrepList(items))).toEqual(['0 of 4', '10 of 30', '12 of 20'])
+    })
+
+    it('equal shares keep sheet order', () => {
+        const items = [item('First', 1, 4), item('Second', 5, 20), item('Third', 0, 10)]
+        expect(names(toPrepList(items))).toEqual(['Third', 'First', 'Second'])
+    })
+
+    it('reads database strings as numbers', () => {
+        const items = [item('9 of 20', '9', '20'), item('10 of 100', '10', '100')]
+        expect(names(toPrepList(items))).toEqual(['10 of 100', '9 of 20'])
+    })
+
+    it('edges match colorFor: 49.9 % Red, 50 % and 74.9 % Yellow, 75 % left out', () => {
+        const list = toPrepList([item('74.9', 14.98, 20), item('75', 15, 20), item('50', 10, 20), item('49.9', 9.98, 20)])
+        expect(list.map(e => [e.item.name, e.status.color])).toEqual([['49.9', 'red'], ['50', 'yellow'], ['74.9', 'yellow']])
+    })
+
+    it("each entry carries the line's status (color, label, prep wording)", () => {
+        const salmon = { name: 'Salmon', have: 4, par_qty: 20, par_unit: 'ea' }
+        expect(toPrepList([salmon])).toEqual([{ item: salmon, status: { color: 'red', label: 'Red', prep: 'prep 16 ea' } }])
+    })
+
+    it('leaves the input unchanged; empty and all-Green stations give []', () => {
+        const items = [item('B', 12, 20), item('A', 4, 20)]
+        const copy = items.map(i => ({ ...i }))
+        toPrepList(items)
+        expect(items).toEqual(copy)
+        expect(toPrepList([])).toEqual([])
+        expect(toPrepList([item('Green', 20, 20), item('Also green', 15, 20)])).toEqual([])
     })
 })
 
