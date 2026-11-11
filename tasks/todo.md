@@ -416,7 +416,7 @@ order on ties). New array; input untouched.
 
 **Estimated scope:** XS
 
-## Task 13: The "To prep" box on the station sheet
+## Task 13: The "To prep" box on the station sheet ✅ DONE
 
 **Description:** `components/PrepToDo.jsx` above the full sheet in `PrepSheets.jsx`: heading "To prep: N", one row per
 `toPrepList` entry with name, "prep N unit", **Done** and **Partial** ("Made N" box). Saves go through the page's
@@ -425,15 +425,32 @@ existing `record()` (name check, per-item saving/error state shared with the lin
 be copied, move it into one small shared component used by both the line and the box.
 
 **Acceptance criteria:**
-- [ ] The box lists exactly the station's Red + Yellow items, most needed first (matches a `SELECT` of have/par).
-- [ ] Done in the box: the item turns Green on the full sheet and leaves the box; one `prep_entries` row with the name.
-- [ ] Partial in the box: have goes up by the amount; the row re-sorts or leaves; one `prep_entries` row.
-- [ ] No name picked: nothing saves, the name box is highlighted (same as the line).
-- [ ] A change on another tab re-sorts the box live. The full sheet's order and sections are unchanged.
-- [ ] 375px: no sideways scroll, buttons thumb-sized; 0 console errors.
+- [x] The box lists exactly the station's Red + Yellow items, most needed first (matches a `SELECT` of have/par).
+- [x] Done in the box: the item turns Green on the full sheet and leaves the box; one `prep_entries` row with the name.
+- [x] Partial in the box: have goes up by the amount; the row re-sorts or leaves; one `prep_entries` row.
+- [x] No name picked: nothing saves, the name box is highlighted (same as the line).
+- [x] A change on another tab re-sorts the box live. The full sheet's order and sections are unchanged.
+- [x] 375px: no sideways scroll, buttons thumb-sized; 0 console errors.
 
-**Verification:** T · B · C. The local app writes to the LIVE database and the crew is now using it: test on a
-throwaway `ZZ Test` station (re-activate, then retire again, Ryan's OK), never on a real station.
+**As built:** `components/PrepToDo.jsx` (box + rows), rendered under the Finish count header when the station has
+items; saves through the page's `record()` / `setLineError`, so name check, "Saving…" and errors are shared with the
+line. The "Made N" form moved to `components/PrepPartialForm.jsx`, now used by both the line and the box (the line's
+`submitPartial` and its `parseMadeInput` import went with it). Styles `.prep-todo*` in `prepSheets.css`: red rows tinted
+with the 10px red edge and larger red "prep N", yellow rows an 8px yellow edge.
+
+**Verification:** T 195 · B · C on `ZZ Test` (re-activated 11-11 with Ryan's OK, retired again after; its rows kept),
+as Ryan Coffee: empty state "Nothing counted yet."; counts Marinara 1/2, Spicy Mayo 0/1, Salmon 4/24, Broccoli 1/2,
+ZZ Section Item 3/4 → box "To prep: 4" = Spicy Mayo, Salmon, Marinara, Broccoli (Marinara/Broccoli tie at 50 % in sheet
+order; the Green item left out). Done Spicy Mayo (real click) → left the box, "To prep: 3". Partial +10 Salmon (typed,
+Enter) → 14/24 Yellow "prep 10 ea", moved last, box closed. Name cleared → Done on Marinara saved nothing, row says "Not
+saved: pick your name first.", name box highlighted + focused. Second tab: ZZ Section Item → Out; the first tab's box
+showed it on top live. Done Marinara, Partial +1 Broccoli (→ par) → both left. `SELECT`: 10 `prep_entries` rows, one
+per save, all Ryan Coffee, `have_before`/`have_after` right, none for the no-name try. 375px (iframe): scrollWidth =
+clientWidth, all box buttons 44px, the full sheet's order unchanged; 0 console errors after a reload.
+
+**Seen, not changed:** (1) after Done, the next row slides up under the finger, so a quick double-tap could mark the
+next item Done too (raised with Ryan). (2) A "Not saved: pick your name first." message stays on its row after a name is
+picked, until that item's next save; the sheet's lines did this already.
 
 **Dependencies:** T12
 

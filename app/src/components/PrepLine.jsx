@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import {
-    lineStatus, quickValues, unitSuffix, parseHaveInput, parseMadeInput, formatStamp,
+    lineStatus, quickValues, unitSuffix, parseHaveInput, formatStamp,
 } from '../lib/prepSheets.js'
+import PrepPartialForm from './PrepPartialForm.jsx'
 
 // One item on a station's prep sheet: name and color chip, par and how much to prep, the Have box and quick buttons,
 // then Done / Partial / Note, and who changed it last. `onRecord(kind, { amount, note })` saves and resolves true/false.
@@ -26,14 +27,6 @@ export default function PrepLine({ item, state, onRecord, onRefuse }) {
     // Done, Partial and Note close their box only once the save went through.
     async function recordAndClose(kind, fields) {
         if (await onRecord(kind, fields)) setOpen(null)
-    }
-
-    // Partial: "made N" adds N to what's on hand.
-    function submitPartial(e) {
-        e.preventDefault()
-        const { value, error } = parseMadeInput(e.currentTarget.elements.made.value)
-        if (error) return onRefuse(error)
-        recordAndClose('partial', { amount: value })
     }
 
     // Note: saving a blank note clears it (the database trims it).
@@ -101,15 +94,12 @@ export default function PrepLine({ item, state, onRecord, onRefuse }) {
                 </button>
             </div>
 
+            {/* Partial: "made N" adds N to what's on hand. */}
             {open === 'partial' && (
-                <form className="prep-inline-form" onSubmit={submitPartial}>
-                    <label className="prep-have">
-                        <span className="prep-have-label">Made</span>
-                        <input name="made" type="number" inputMode="decimal" min="0" step="any" autoFocus aria-label={`How much ${item.name} you made`} />
-                        <span className="prep-have-unit">{unitSuffix(null, item.par_unit)}</span>
-                    </label>
-                    <button type="submit" className="prep-act prep-act-done" disabled={state.saving}>Add</button>
-                </form>
+                <PrepPartialForm
+                    item={item} saving={state.saving} onRefuse={onRefuse}
+                    onMade={value => recordAndClose('partial', { amount: value })}
+                />
             )}
 
             {open === 'note' && (

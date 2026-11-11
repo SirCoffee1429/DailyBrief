@@ -94,6 +94,15 @@
 .prep-finish-station { font-weight: 700; color: var(--text-bright); font-size: var(--font-size-lg); }
 .prep-finish-pick { margin-top: 0.75rem; }
 .prep-finish-options { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+/* ─── "To prep" box (owner, 11-11): Red and Yellow items, most needed first, edges like the lines ─── */
+.prep-todo { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1.25rem; }
+.prep-todo-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-bright); margin: 0; }
+.prep-todo-row { border: 1px solid var(--border-color); border-left: 8px solid var(--warning); border-radius: var(--radius-sm); padding: 0.6rem; margin-top: 0.5rem; min-width: 0; }
+.prep-todo-red { border-color: var(--danger); border-left: 10px solid var(--prep-red-solid); background: var(--prep-red-tint); }
+.prep-todo-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+.prep-todo-need { color: var(--text-bright); }
+.prep-todo-red .prep-todo-need { color: var(--danger); font-size: var(--font-size-lg); }
+
 /* ─── Office overview: one card per station, furthest behind first ─── */
 .prep-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
 .prep-overview-card { display: block; color: inherit; text-decoration: none; min-width: 0; }
