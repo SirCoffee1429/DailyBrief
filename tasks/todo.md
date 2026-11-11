@@ -449,7 +449,7 @@ per save, all Ryan Coffee, `have_before`/`have_after` right, none for the no-nam
 clientWidth, all box buttons 44px, the full sheet's order unchanged; 0 console errors after a reload.
 
 **Seen, not changed:** (1) after Done, the next row slides up under the finger, so a quick double-tap could mark the
-next item Done too (raised with Ryan). (2) A "Not saved: pick your name first." message stays on its row after a name is
+next item Done too. **Ryan 11-11: leave it**, watch it in use and fix only if it happens. (2) A "Not saved: pick your name first." message stays on its row after a name is
 picked, until that item's next save; the sheet's lines did this already.
 
 **Dependencies:** T12
