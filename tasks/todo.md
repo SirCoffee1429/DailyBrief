@@ -459,7 +459,15 @@ picked, until that item's next save; the sheet's lines did this already.
 
 **Estimated scope:** S
 
-## Task 14: Review, push alone, merge back
+## Task 14: Review, push alone, merge back ✅ SHIPPED 11-11
+
+**As shipped:** `/review-change` approve; `/ship` GO (code-reviewer approve, security-auditor 0 findings, test-engineer
+ready; untested edge cases accepted by Ryan: Partial box open while its row re-sorts or leaves, a refused/failed
+Partial in the box). Ryan picked "push now". `git push origin prep-sheets:main`: `4fb529b..ccb0bb1`, fast-forward,
+5 commits; Vercel production READY on `ccb0bb1`. Live check (read-only): all five stations show the box with real
+counts (Fry 12, Grill 4, Lunch 10, Salad 14, Sautee 7); Grill's order = `SELECT` (Garlic 25 %, Salmon 50 %, Lemon
+50 % in sheet order, Steak 62.5 %); only console error is a Chrome ad-blocker extension's. Local `main` merged
+(`3265fd5`, `--no-ff`, no conflicts): T 204 · B.
 
 **Description:** `/review-change`, `/ship`. On Ryan's OK: `git push origin prep-sheets:main`, confirm Vercel, live check
 (read-only: the crew's real counts are live now, so no test saves on real stations). Merge `prep-sheets` into local
