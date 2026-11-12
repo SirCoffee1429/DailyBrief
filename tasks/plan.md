@@ -1,93 +1,86 @@
-# Implementation Plan: Station Prep Sheets
+# Implementation Plan: BEO Order List From Confirmed Dishes (order guide step B)
 
-Spec: `spec/prep-sheets.md` (approved 2026-11-04). Task list: `tasks/todo.md`.
+Spec: `spec/beo-order-from-specs.md` (approved 2026-11-12). Task list: `tasks/todo.md`.
+The prep sheets plan that lived here is complete and moved to `tasks/archive/prep-sheets-plan.md` / `-todo.md`.
 
 ## Overview
 
-Five station prep sheets become one running list per station: on-hand vs par, an automatic Red/Yellow/Green, a to-prep
-amount, Done/Partial, notes and Finish count, all updating live. The office gets a ranked overview, setup editing and a
-spreadsheet upload, and the Kitchen dashboard gets a tile. Built on its own branch off `origin/main` and shipped alone.
+"Generate from BEO" stops asking Gemini to invent the whole list. Each BEO line is matched once to a confirmed menu
+dish, or marked not food, not on a menu, or describing the line above. The answer is remembered. Matched dishes
+build from their confirmed ingredient lines and confirmed products. Only lines that are not on a menu still go to
+the AI, labeled "AI guess". Products only, no case counts. Built on local `main` beside step A; ships with main's
+backlog (Ryan, 11-12).
 
 ## Architecture Decisions
 
-- **Ship branch + worktree.** Branch `prep-sheets` off `origin/main`, checked out in a separate worktree
-  (`../DailyBrief-prep-sheets`), so local `main`, its 74 unpushed commits and `prepsheets/` are never touched. The worktree
-  gets its own `node_modules` via `npm ci` from the LIVE lockfile, so the build and browser check run on exactly what
-  Vercel will build.
-- **Every write goes through a Postgres function (RPC), one transaction each:**
-  - `prep_record(item, kind, amount, note, employee)` handles `count` (set have), `done` (have = par), `partial`
-    (have += amount) and `note`. It updates `prep_item_state` and appends to `prep_entries` together, so a partial adds
-    to the CURRENT value even if two cooks tap at once.
-  - `prep_finish_count(station, label, employee)`.
-  - `prep_replace_station(station, items jsonb)` does the upload. It matches items by name so their state survives, and
-    retires items that are gone, which keeps their history.
-  - Reads are plain selects. This is the existing anon-access pattern (event tasks), RLS on, anon policies created in the
-    same migration.
-- **Retire, don't delete.** Removed items and stations get `active = false`, so history never points at nothing.
-- **Pure logic in `lib/prepSheets.js`, tested:** `parsePar`, `colorFor`, `toPrep`, `quickValues`, `stationScore`,
-  `parsePrepRows`, plus the typo map. Components only call it, so the math on screen is the math the tests checked.
-- **Par storage:** `par_qty numeric` + `par_unit text` + `par_text text` (original, for display). `par_qty` is null when
-  there's no par, which means no color and no score.
-- **Live updates:** `prep_item_state` and `prep_counts` are added to the `supabase_realtime` publication. The sheet,
-  overview and tile subscribe and reload on change (same pattern as `event_tasks_changes`).
-- **Who:** the dropdown reads `employees` (active, by name). The last pick is kept in `localStorage` under
-  `prepSheets.employeeId`. It's a name id, not a token, so rule 12 (no JWT stored) isn't touched.
-- **Merge-friendly edits:** styles live in `app/src/prepSheets.css`, imported by the prep pages. `App.jsx`,
-  `KitchenLayout.jsx`, `OfficeLayout.jsx` and `Dashboard.jsx` each get a few added lines only. Local `main` changes
-  `App.jsx` (+8), `OfficeLayout.jsx` (+16) and `index.css` (+381), so a small conflict on the merge back is possible and
-  gets resolved by hand.
+- **Logic in pure `lib/` modules, tested first; the page only wires them.** `beoLines.js` decides what each line
+  is. `beoOrderList.js` turns decided lines + specs + products into rows. `EventsBanquetsPage.jsx` is already 2,115
+  lines, so the matcher UI is its own component.
+- **DB reads stay small and filtered.** `dish_ingredients` has ~2,700 rows (over the 1,000-row PostgREST cap), so
+  ingredients are fetched with `.in('dish_id', matchedIds)` for one BEO, never all at once. Matches are fetched by
+  `.in('source_text', lines)`. The 364 orderable dishes (for exact names and suggestions) fit in one read, and the
+  read checks its count (`reference-supabase-silent-wrong-data`).
+- **Products reuse step A's `productsForItemNames`.** Spec names are `ingredient_products` keys, so its exact form
+  hits first.
+- **The AI part needs no Edge Function change.** `generate-order-items` takes `sections`, so B sends synthetic
+  sections holding only the not-on-a-menu lines (plus their "describes the line above" lines). No lines, no call.
+- **`ai_guess` defaults to TRUE** (spec Data). The migration goes live before main is pushed, and the live site's
+  Generate keeps writing AI rows in between. Default true labels them correctly with no backfill. B's spec rows
+  set false.
+- **Vertical order:** the build path works end to end (Task 4) before the matcher exists. Lines without an answer
+  already fall back to "AI guess this time" (spec rule 3), so each later task adds a way to answer them.
 
 ## Dependency Graph
 
 ```
-lib/prepSheets.js (+ tests)
-        │
-migration: tables, RLS, realtime, RPCs ──(Ryan's OK to apply to prod)
-        │
-Office Prep Setup: upload + preview + confirm ──→ load the five Fall 26 sheets (Ryan's OK, prod data)
-        │
-Kitchen station sheet: count / quick buttons / color / to-prep / name
-        ├── Done, Partial, note, Finish count
-        ├── live updates
-        │
-        ├── Office Prep Overview (ranked, live)
-        ├── Kitchen dashboard tile (live)
-        └── Office Setup item editing
-        │
-Review → push prep-sheets:main (Ryan's OK) → merge back into main → CHANGES.md
+T1 beoLines.js (classify) ──┐
+T2 suggestDishes ───────────┤
+                            ├─→ T4 Generate builds from specs (page + grey lines + AI label)
+T3 beoOrderList.js ─────────┤        │
+M  migration (Task 0) ──────┘        ├─→ T5 matcher box ─→ T6 Part of / Its own dish
+                                     │                  └─→ T7 Change match
+                                     └────────────────────→ T8 review
 ```
 
 ## Task List
 
-See `tasks/todo.md` for full acceptance criteria. Phases:
+### Phase 1: Foundation (pure logic + table)
+- [x] Task 1: `beoLines.js`: split, normalise, classify (test first)
+- [ ] Task 2: `suggestDishes` + dish search filter (test first)
+- [ ] Task 3: `beoOrderList.js`: decided lines → rows (test first)
+- [ ] Task 0 (any time before Task 4): migration, reviewed with Ryan, applied with his OK
 
-1. **Foundation:** T1 logic, T2 sheet parser, T3 migration. *Checkpoint A.*
-2. **Data in:** T4 upload page + load the five sheets. *Checkpoint B.*
-3. **Crew flow:** T5 station sheet, T6 Done/Partial/note/Finish count, T7 live. *Checkpoint C (phone-width cook flow).*
-4. **Manager + polish:** T8 overview, T9 dashboard tile, T10 setup editing. *Checkpoint D (all success criteria).*
-5. **Ship:** T11.
+### Checkpoint A
+- [ ] T green · B green · migration live and checked by SELECT · live site unaffected
+
+### Phase 2: The path end to end
+- [ ] Task 4: Generate builds from confirmed specs; grey BEO lines; "AI guess" label
+
+### Checkpoint B (Ryan)
+- [ ] On real BEOs: exact-name dishes from their specs, the rest AI-labeled, regenerate identical
+
+### Phase 3: Answering lines
+- [ ] Task 5: The "lines to match" box (5 answers, saved, Build list)
+- [ ] Task 6: Part of / Its own dish for a dish name under a dish
+- [ ] Task 7: Change match on a spec-built group
+
+### Checkpoint C (Ryan)
+- [ ] Spec success criteria 1–7 walked through on real BEOs
+
+### Phase 4: Finish
+- [ ] Task 8: `/review-change`, docs, CHANGES.md. No push (ships with main)
 
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
-|------|--------|------------|
-| Local dev writes to the LIVE DB | High | Tests use a throwaway station named `ZZ Test`, retired after; the five real stations are only loaded once in T4 on Ryan's OK |
-| A blank-par row is a section OR an item, with no signal in the file | Med | Section only if the next line has a par (Fall 26: 1 flip left, Citrus Vinaigrette); every blank-par row has a Section/Item toggle in the preview |
-| Par text the parser misreads (e.g. `2 1/3 pans`) | Med | Tests cover every par in the five real files; the upload preview flags anything unparsed; nothing saves without confirm |
-| Merge back into `main` conflicts | Low | Own CSS file, a few added lines in shared files, merge (not rebase) |
-| Vitest isn't on the live branch | Med | See Open Question 1 |
-| Old SheetJS 0.18.5 on the ship branch | Low | Office-only upload of its own files; the next full `main` push brings 0.20.3 |
-| Realtime events fire per row on an upload | Low | Subscribers reload the whole station once per event, and a replace is one RPC on a ~60-row list |
+|---|---|---|
+| A rule hides a real dish (first-line rule mid-item, too-wide plain-note pattern) | High: nothing ordered for it | Fixtures from the real BEOs, incl. Club Car Wash; mutation-check the first-line rule; grey lines keep hidden text visible |
+| 1,000-row cap silently truncates ingredients or dishes | High: missing lines, no error | Filtered reads; the dish read asserts its count; check every `error` |
+| Answers made while testing are REAL data (the table is the live cache) | Med | Ryan gives the real answers in the browser checks (that's the real use). Any made-up test answer only with his OK, deleted after |
+| AI given only the custom lines loses context it had before | Low | Send each line with its "describes the line above" lines and its category name; compare against today's output on Walton Heath |
+| `EventsBanquetsPage.jsx` grows further | Low | Logic in `lib/`, UI in `BeoLineMatcher.jsx`; page changes limited to wiring + rendering |
+| Live site writes rows between migration and push | Low | `ai_guess default true`; B's new columns are nullable/defaulted, live code ignores them |
 
-## Open Questions (need Ryan before T1)
+## Open Questions
 
-1. **Tests on the ship branch.** Vitest was added in an unpushed commit. Options:
-   - **(Recommended)** Add the same `vitest` devDependency and `"test"` script to the ship branch. That's an install, so
-     it needs your OK. It never reaches the browser bundle, and on the merge back local `main`'s `package.json`/lockfile
-     win, since they already have it.
-   - Or don't: run the tests from local `main`'s checkout against a copy of the branch's file. No install, but the test
-     isn't run where the code ships.
-2. **Commit the five `prepsheets/` files?** The parser test needs them. I'd commit them as `prepsheets/` (136 KB, no
-   personal data, just items and pars) on the ship branch. Otherwise the test reads a committed JSON copy of their rows.
-3. **`npm ci` in the worktree** installs the LIVE lockfile's packages into the new folder. No package versions change.
-   OK?
+None. The spec's are answered (Decisions, 11-12).
