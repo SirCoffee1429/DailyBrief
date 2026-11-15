@@ -57,7 +57,7 @@ M  migration (Task 0) ──────┘        ├─→ T5 matcher box ─�
 - [x] Task 4: Generate builds from confirmed specs; grey BEO lines; "AI guess" label
 
 ### Checkpoint B (Ryan)
-- [ ] On real BEOs: exact-name dishes from their specs, the rest AI-labeled, regenerate identical
+- [x] On real BEOs: exact-name dishes from their specs, the rest AI-labeled, regenerate identical (Ryan OK 11-15)
 
 ### Phase 3: Answering lines
 - [ ] Task 5: The "lines to match" box (5 answers, saved, Build list)

@@ -150,7 +150,8 @@ New pure helpers, test first: `beoLineKeys` (beoLines.js), `generatedRows` (beoO
 - Noticed, not touched: one long PFG word (`..._VACUUM_PACKED`) overflows into the note column at 375px (step A row).
 
 ### Checkpoint B (Ryan)
-- [ ] Ryan sees the spec-built groups and AI labels on real BEOs and OKs the layout before matching is added
+- [x] Ryan sees the spec-built groups and AI labels on real BEOs and OKs the layout before matching is added
+      *(11-15: Ryan checked Club Car Wash on the dev server: "everything looks good")*
 
 ## Phase 3: Answering lines
 
