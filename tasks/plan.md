@@ -46,7 +46,7 @@ M  migration (Task 0) ──────┘        ├─→ T5 matcher box ─�
 
 ### Phase 1: Foundation (pure logic + table)
 - [x] Task 1: `beoLines.js`: split, normalise, classify (test first)
-- [ ] Task 2: `suggestDishes` + dish search filter (test first)
+- [x] Task 2: `suggestDishes` + dish search filter (test first)
 - [ ] Task 3: `beoOrderList.js`: decided lines → rows (test first)
 - [ ] Task 0 (any time before Task 4): migration, reviewed with Ryan, applied with his OK
 

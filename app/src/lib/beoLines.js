@@ -145,3 +145,70 @@ export function classifyBeoLines(sections, dishes, decisions) {
         return { category, label, lines }
     })
 }
+
+// Words that never make two names alike ("&" is dropped as punctuation).
+const STOP_WORDS = new Set(['and', 'with', 'of', 'the', 'a', 'on', 'in', 'or'])
+
+// A word without its plain plural: "tacos" -> "taco", "tomatoes" -> "tomato". Light on
+// purpose: only to catch the near misses typed on BEOs.
+function singular(word) {
+    let w = word
+    if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) w = w.slice(0, -1)
+    if (w.endsWith('oe')) w = w.slice(0, -1)
+    return w
+}
+
+// A name's words: lowercase, accents and apostrophes dropped, split on anything that is
+// not a letter or digit.
+function words(text) {
+    return normaliseLine(text)
+        .normalize('NFD').replace(/\p{M}/gu, '')
+        .replace(/['’]/g, '')
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter(Boolean)
+}
+
+// The comparable words of a name, stop words left out, plurals made singular.
+function wordSet(text) {
+    return new Set(words(text).filter(w => !STOP_WORDS.has(w)).map(singular))
+}
+
+// How many words two word sets share.
+function overlap(a, b) {
+    let shared = 0
+    for (const w of a) if (b.has(w)) shared++
+    return shared
+}
+
+// Dish order for lists: by name, then menu, then section (the same name sits on two menus).
+function byNameThenMenu(a, b) {
+    return a.name.localeCompare(b.name)
+        || (a.menu_source ?? '').localeCompare(b.menu_source ?? '')
+        || (a.menu_section ?? '').localeCompare(b.menu_section ?? '')
+}
+
+// The dishes a BEO line could be, best first: most shared words, ties by name.
+// Plain code, not AI: the near misses on real BEOs are all word overlaps
+// ("tiny tinga taco" vs "tiny tinga tacos").
+export function suggestDishes(line, dishes, limit = 3) {
+    const lineWords = wordSet(line)
+    return (dishes || [])
+        .map(dish => ({ dish, shared: overlap(lineWords, wordSet(dish.name)) }))
+        .filter(s => s.shared > 0)
+        .sort((a, b) => b.shared - a.shared || byNameThenMenu(a.dish, b.dish))
+        .slice(0, limit)
+        .map(s => s.dish)
+}
+
+// "Pick another dish": every dish whose name has a word starting with each typed word,
+// in name then menu order. Nothing typed, nothing shown.
+export function searchDishes(query, dishes) {
+    const typed = words(query)
+    if (typed.length === 0) return []
+    return (dishes || [])
+        .filter(dish => {
+            const nameWords = words(dish.name)
+            return typed.every(t => nameWords.some(w => w.startsWith(t)))
+        })
+        .sort(byNameThenMenu)
+}

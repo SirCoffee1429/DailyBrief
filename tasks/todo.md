@@ -62,10 +62,16 @@ beverage match → 3 fail. Details the spec left open, decided in code (comments
 normalising) and `searchDishes(query, dishes)` for "Pick another dish".
 
 **Acceptance criteria:**
-- [ ] Top suggestion is right for: Tiny Tinga Taco → Tiny Tinga Tacos; Raspberry Baked Brie Bites → Raspberry &
+- [x] Top suggestion is right for: Tiny Tinga Taco → Tiny Tinga Tacos; Raspberry Baked Brie Bites → Raspberry &
       Baked Brie Bites; Watermelon, Feta & Grape Tomato Skewer → Watermelon, Feta, & Tomato; Seasonal Chopped
       Fruit Platter → Seasonal Chopped Fruit (Platters) in the top 3.
-- [ ] A line sharing no word gets no suggestions; "&", "with", "and" don't count as shared words.
+- [x] A line sharing no word gets no suggestions; "&", "with", "and" don't count as shared words.
+
+**Done (11-14):** 14 tests, run against all 364 real dish names (`beoLines.dishNames.fixture.js`); all four near
+misses come out FIRST, not just top 3. Accents fold ("Creme Brulee" finds Crème Brûlée), apostrophes drop
+("Crostini's"). Stop words: and, with, of, the, a, on, in, or. Search = every typed word starts a word of the dish
+name (names only, not menus). Mutation check: no accent fold / no stop words / no plurals / no ranking → 1 / 1 / 1 /
+5 tests fail.
 
 **Verification:** T · B · **Dependencies:** Task 1 (same file) · **Files:** `beoLines.js` + test · **Scope:** S
 

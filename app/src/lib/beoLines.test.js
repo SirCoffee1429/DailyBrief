@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines } from './beoLines.js'
+import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes } from './beoLines.js'
+import { ORDERABLE_DISH_NAMES } from './beoLines.dishNames.fixture.js'
 
 // Orderable dishes, names exactly as in orderable_menu_dishes (11-12). Ids are readable
 // stand-ins. Yogurt Parfait Bar is on two menus, so its name matches no single dish.
@@ -334,5 +335,95 @@ describe('classifyBeoLines: other rules', () => {
         const before = JSON.stringify(sections)
         classifyBeoLines(sections, DISHES, [saved('caesar salad', 'part_of_dish', null, 'pasta')])
         expect(JSON.stringify(sections)).toBe(before)
+    })
+})
+
+// The real 364 orderable dishes, as { id, name } with the index as id.
+const REAL_DISHES = ORDERABLE_DISH_NAMES.map((name, i) => ({ id: i, name }))
+
+// Names of the suggestions for a line, best first.
+function suggested(line, dishes = REAL_DISHES) {
+    return suggestDishes(line, dishes).map(d => d.name)
+}
+
+describe('suggestDishes: the near misses on real BEOs, against all 364 dishes', () => {
+    it.each([
+        ['Tiny Tinga Taco', 'Tiny Tinga Tacos'],
+        ['Raspberry Baked Brie Bites', 'Raspberry & Baked Brie Bites'],
+        ['Watermelon, Feta & Grape Tomato Skewer', 'Watermelon, Feta, & Tomato'],
+        ['Seasonal Chopped Fruit Platter', 'Seasonal Chopped Fruit'],
+    ])('%s -> %s first', (line, best) => {
+        expect(suggested(line)[0]).toBe(best)
+    })
+
+    it('gives at most 3', () => {
+        expect(suggested('Classic Caesar Salad with Croutons')).toHaveLength(3)
+    })
+})
+
+describe('suggestDishes: word rules', () => {
+    const dishes = [
+        { id: 1, name: 'Salmon with Dill' },
+        { id: 2, name: 'Pasta Salad' },
+        { id: 3, name: 'Tomato Bisque Soup' },
+        { id: 4, name: 'Burrata Crostini' },
+        { id: 5, name: 'Pot de Crème' },
+        { id: 6, name: 'Shrimp and Grits' },
+    ]
+
+    it('a line sharing no word gets no suggestions', () => {
+        expect(suggested('Course One', dishes)).toEqual([])
+    })
+
+    it('"&", "with" and "and" are not shared words', () => {
+        expect(suggested('Pasta with Sauce & Bread and Butter', dishes)).toEqual(['Pasta Salad'])
+    })
+
+    it("plural and singular match: tomatoes / tomato, crostini's / crostini", () => {
+        expect(suggested('Roasted Tomatoes', dishes)).toEqual(['Tomato Bisque Soup'])
+        expect(suggested("Cherry Tomato Italian Blend, Pesto, Fresh Mozzarella, & Crostini's", dishes))
+            .toEqual(['Burrata Crostini', 'Tomato Bisque Soup'])
+    })
+
+    it('accents do not matter: Creme Brulee finds Crème Brûlée', () => {
+        expect(suggested('Creme Brulee')).toEqual(['Gingerbread Crème Brûlée', 'Pot de Crème', 'Pot de Crème'])
+    })
+
+    it('more shared words first, then by name, then by menu', () => {
+        const twins = [
+            { id: 'b', name: 'Yogurt Parfait Bar', menu_source: 'Breakfast', menu_section: 'Fruit & Yogurt' },
+            { id: 'a', name: 'Yogurt Parfait Bar', menu_source: 'Breakfast', menu_section: 'Custom Breakfast Buffet' },
+            { id: 'c', name: 'Granola Bar' },
+            { id: 'd', name: 'Berry Yogurt' },
+        ]
+        expect(suggestDishes('Yogurt Parfait Bar', twins).map(d => d.id)).toEqual(['a', 'b', 'd'])
+    })
+})
+
+describe('searchDishes ("Pick another dish")', () => {
+    const dishes = [
+        { id: 1, name: 'House Caesar Salad', menu_source: 'Plated Dinners' },
+        { id: 2, name: 'Caesar Salad', menu_source: 'Custom Buffets' },
+        { id: 3, name: 'Classic Caesar Salad', menu_source: 'Seasonal', menu_section: 'Starter Course' },
+        { id: 4, name: 'Classic Caesar Salad', menu_source: 'Seasonal', menu_section: 'Buffet Salad' },
+        { id: 5, name: 'Tiramisu', menu_source: 'Plated Dinners' },
+    ]
+
+    it('finds every dish holding all the typed words, in name then menu order', () => {
+        expect(searchDishes('caesar', dishes).map(d => d.id)).toEqual([2, 4, 3, 1])
+        expect(searchDishes('  CLASSIC   caes ', dishes).map(d => d.id)).toEqual([4, 3])
+    })
+
+    it('matches the start of a word as you type', () => {
+        expect(searchDishes('tira', dishes).map(d => d.id)).toEqual([5])
+    })
+
+    it('an empty search shows nothing', () => {
+        expect(searchDishes('', dishes)).toEqual([])
+        expect(searchDishes('   ', dishes)).toEqual([])
+    })
+
+    it('a search with no hits shows nothing', () => {
+        expect(searchDishes('lobster', dishes)).toEqual([])
     })
 })
