@@ -3,6 +3,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { localDateString, formatDateOnly } from '../lib/dates.js'
 import { productsForItemNames } from '../lib/orderProducts.js'
+import { beoLineKeys, classifyBeoLines } from '../lib/beoLines.js'
+import { matchedDishIds, buildOrderList, generatedRows } from '../lib/beoOrderList.js'
+import { fetchOrderableDishes, fetchSavedMatches, fetchSpecLines, replaceGeneratedRows } from '../lib/beoOrderData.js'
 import PendingBeoPanel from '../components/PendingBeoPanel.jsx'
 import ProductPicker from '../components/ProductPicker.jsx'
 
@@ -320,7 +323,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         setOrderItemsByBeo(grouped)
     }
 
-    // Call Gemini to break BEO food items into purchasable ingredients, then persist them
+    // Build the order list: BEO lines on a confirmed menu dish come from that dish's spec,
+    // the rest go to the AI (spec/beo-order-from-specs.md). Generated rows are replaced; hand-added rows stay.
     async function generateOrderItems(beo) {
         if (!beo.sections || beo.sections.length === 0) {
             alert('This BEO has no menu sections to generate from.')
@@ -328,47 +332,37 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         }
         setGeneratingOrderFor(beo.id)
         try {
-            const { data, error } = await supabase.functions.invoke('generate-order-items', {
-                body: { sections: beo.sections },
-            })
-            if (error) throw error
+            // Each line: a dish (saved answer or exact name), a note, or not on a menu this time
+            const [dishes, savedMatches] = await Promise.all([
+                fetchOrderableDishes(),
+                fetchSavedMatches(beoLineKeys(beo.sections)),
+            ])
+            const lines = classifyBeoLines(beo.sections, dishes, savedMatches)
 
-            const dishes = data?.items || []
-            if (dishes.length === 0) {
+            // Matched dishes build from their confirmed spec lines and those lines' products
+            const specLines = await fetchSpecLines(matchedDishIds(lines))
+            const specProducts = await productsForItemNames([...new Set(specLines.map(l => l.ingredient_name))])
+            const { specRows, aiSections } = buildOrderList(lines, dishes, specLines, specProducts)
+
+            // Only the lines no spec covers go to the AI; none left means no AI call
+            let aiDishes = []
+            if (aiSections) {
+                const { data, error } = await supabase.functions.invoke('generate-order-items', {
+                    body: { sections: aiSections },
+                })
+                if (error) throw error
+                aiDishes = data?.items || []
+            }
+
+            // Looked up before anything is cleared, so a failed lookup leaves the old list as it was
+            const aiProducts = await productsForItemNames(aiDishes.flatMap(dish => dish.ingredients || []))
+            const rows = generatedRows(beo.id, specRows, aiDishes, aiProducts)
+            if (rows.length === 0) {
                 alert('No food items found in this BEO to generate from.')
                 return
             }
 
-            // Looked up before anything is cleared, so a failed lookup leaves the old list as it was
-            const products = await productsForItemNames(dishes.flatMap(dish => dish.ingredients || []))
-
-            // Clear old AI-generated items, leave manual ones untouched
-            await supabase
-                .from('event_order_items')
-                .delete()
-                .eq('beo_id', beo.id)
-                .eq('is_manual', false)
-
-            // Flatten dish → ingredients into insert rows, preserving dish grouping via sort_order
-            const rows = []
-            dishes.forEach((dish, dishIdx) => {
-                ;(dish.ingredients || []).forEach((ingredient, ingIdx) => {
-                    rows.push({
-                        beo_id: beo.id,
-                        item_name: ingredient,
-                        source_dish: dish.source_dish,
-                        product_id: products.get(ingredient) ?? null,
-                        is_ordered: false,
-                        is_manual: false,
-                        sort_order: dishIdx * 100 + ingIdx,
-                    })
-                })
-            })
-
-            if (rows.length > 0) {
-                await supabase.from('event_order_items').insert(rows)
-            }
-
+            await replaceGeneratedRows(beo.id, rows)
             await loadOrderItems()
         } catch (err) {
             console.error('Error generating order items:', err)
@@ -1799,6 +1793,9 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                         {dishes.map(dish => {
                             const dishItems = autoItems.filter(i => i.source_dish === dish)
                             const areAllOrdered = dishItems.length > 0 && dishItems.every(i => i.is_ordered)
+                            // Spec-built groups carry the BEO's own lines; AI-built groups are labeled
+                            const beoText = dishItems.find(i => i.beo_text)?.beo_text
+                            const isAiGuess = dishItems.some(i => i.ai_guess)
 
                             return (
                                 <div key={dish} style={{ marginBottom: '6px' }}>
@@ -1811,7 +1808,37 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                             style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer', flexShrink: 0 }}
                                         />
                                         <span style={{ ...dishLabelStyle, marginBottom: 0 }}>{dish}</span>
+                                        {isAiGuess && (
+                                            <span
+                                                title="Broken down by the AI: no confirmed menu dish covers this line"
+                                                style={{
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    color: '#fbbf24',
+                                                    border: '1px solid rgba(251, 191, 36, 0.4)',
+                                                    borderRadius: '4px',
+                                                    padding: '0 5px',
+                                                    whiteSpace: 'nowrap',
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                AI guess
+                                            </span>
+                                        )}
                                     </div>
+                                    {beoText && (
+                                        <div style={{
+                                            fontSize: '0.75rem',
+                                            color: 'var(--text-muted)',
+                                            whiteSpace: 'pre-line',
+                                            overflowWrap: 'anywhere',
+                                            paddingLeft: '26px',
+                                            marginBottom: '4px',
+                                            lineHeight: 1.35,
+                                        }}>
+                                            {beoText}
+                                        </div>
+                                    )}
                                     {dishItems.map(item => renderOrderItemRow(item))}
                                 </div>
                             )

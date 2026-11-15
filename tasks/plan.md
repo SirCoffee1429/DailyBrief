@@ -51,10 +51,10 @@ M  migration (Task 0) ──────┘        ├─→ T5 matcher box ─�
 - [x] Task 0 (any time before Task 4): migration, reviewed with Ryan, applied with his OK
 
 ### Checkpoint A
-- [ ] T green · B green · migration live and checked by SELECT · live site unaffected
+- [x] T green · B green · migration live and checked by SELECT · live site unaffected
 
 ### Phase 2: The path end to end
-- [ ] Task 4: Generate builds from confirmed specs; grey BEO lines; "AI guess" label
+- [x] Task 4: Generate builds from confirmed specs; grey BEO lines; "AI guess" label
 
 ### Checkpoint B (Ryan)
 - [ ] On real BEOs: exact-name dishes from their specs, the rest AI-labeled, regenerate identical

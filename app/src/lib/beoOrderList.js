@@ -97,3 +97,23 @@ export function buildOrderList(items, dishes, specLines, products) {
     )
     return { specRows, aiSections: aiSectionsFor(aiItems) }
 }
+
+// Every row Generate saves for one BEO: the spec rows, then the AI's dishes
+// ({ source_dish, ingredients } from generate-order-items) numbered after the spec groups
+// and labeled ai_guess. `aiProducts` maps an AI ingredient name to its product id.
+export function generatedRows(beoId, specRows, aiDishes, aiProducts) {
+    const saved = { beo_id: beoId, is_ordered: false, is_manual: false }
+    const specGroups = specRows.length ? Math.floor(specRows[specRows.length - 1].sort_order / GROUP_STEP) + 1 : 0
+    const aiRows = aiDishes.flatMap((dish, dishIdx) =>
+        (dish.ingredients || []).map((ingredient, lineIdx) => ({
+            ...saved,
+            item_name: ingredient,
+            source_dish: dish.source_dish,
+            product_id: aiProducts.get(ingredient) ?? null,
+            beo_text: null,
+            ai_guess: true,
+            sort_order: (specGroups + dishIdx) * GROUP_STEP + lineIdx,
+        })),
+    )
+    return [...specRows.map(row => ({ ...saved, ...row })), ...aiRows]
+}

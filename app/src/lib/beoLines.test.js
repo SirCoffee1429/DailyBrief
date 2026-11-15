@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes } from './beoLines.js'
+import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes, beoLineKeys } from './beoLines.js'
 import { ORDERABLE_DISH_NAMES } from './beoLines.dishNames.fixture.js'
 
 // Orderable dishes, names exactly as in orderable_menu_dishes (11-12). Ids are readable
@@ -425,5 +425,25 @@ describe('searchDishes ("Pick another dish")', () => {
 
     it('a search with no hits shows nothing', () => {
         expect(searchDishes('lobster', dishes)).toEqual([])
+    })
+})
+
+describe('beoLineKeys (the wordings whose saved answers Generate fetches)', () => {
+    it('every food line once, normalised, beverage categories left out', () => {
+        const sections = [{
+            categories: [
+                { name: "Hors d'Oeuvres", items: [
+                    { label: 'Passed', description: 'Tiny Tinga Taco\n20 pieces' },
+                    { label: 'Passed', description: '  TINY   tinga taco ' },
+                ] },
+                { name: 'Beverages', items: [{ label: 'Bar', description: 'Iced Tea' }] },
+                { name: 'Buffet', items: [{ label: 'Buffet', description: '' }, { label: 'Buffet', description: 'Caesar Salad' }] },
+            ],
+        }]
+        expect(beoLineKeys(sections)).toEqual(['tiny tinga taco', '20 pieces', 'caesar salad'])
+    })
+
+    it('a BEO with no sections has no lines', () => {
+        expect(beoLineKeys(null)).toEqual([])
     })
 })

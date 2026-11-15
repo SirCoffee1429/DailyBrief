@@ -109,7 +109,7 @@ Task 4 must fetch specs for. Mutation check: 6 rules broken one at a time, each 
 **Files:** `app/src/lib/beoOrderList.js`, `app/src/lib/beoOrderList.test.js` · **Scope:** S
 
 ### Checkpoint A
-- [ ] T and B green · Task 0 live and checked · live site unaffected
+- [x] T and B green · Task 0 live and checked · live site unaffected
 
 ## Phase 2: The path end to end
 
@@ -123,14 +123,31 @@ Order list: grey `beo_text` under each spec-built heading; an "AI guess" tag on 
 DB reads go in a small `lib/beoOrderData.js`.
 
 **Acceptance criteria:**
-- [ ] Celebration of Life: exact-name dishes (Bacon-Wrapped Scallops, Caprese Skewer…) built from specs, with grey
-      lines; the three near misses AI-labeled.
-- [ ] Mid Mo Mahjong: Pasta Bar from its spec (Caesar Salad unanswered = part of it this time, as today).
-- [ ] Regenerate twice → identical spec rows (SQL); hand-added rows survive; a fully-matched BEO makes no AI call
-      (network tab).
+- [x] Celebration of Life: exact-name dishes (Bacon-Wrapped Scallops, Caprese Skewer…) built from specs, with grey
+      lines; the three near misses AI-labeled. *(BEO deleted 11-15: checked on American Outdoor Brands instead)*
+- [x] Mid Mo Mahjong: Pasta Bar from its spec (Caesar Salad unanswered = part of it this time, as today).
+      *(BEO deleted 11-15: covered by the Pasta Bar unit test only)*
+- [x] Regenerate twice → identical spec rows (SQL); hand-added rows survive; ~~a fully-matched BEO makes no AI call
+      (network tab)~~ → moved to Task 5 (no live BEO is fully matched until lines can be answered).
 
 **Verification:** T · B · C (Celebration of Life, Mid Mo Mahjong, Walton Heath, 375px, 0 console errors)
 **Dependencies:** T0–T3 · **Files:** `EventsBanquetsPage.jsx`, `app/src/lib/beoOrderData.js` · **Scope:** M
+
+**Done (11-15):** Generate now: dishes (count-checked) + saved matches → classify → spec lines (count-checked) →
+products → `buildOrderList` → AI only for `aiSections` → `generatedRows` (spec groups first, AI groups numbered after,
+`ai_guess` true) → `replaceGeneratedRows` (delete + insert, both errors checked; today's code checked neither).
+New pure helpers, test first: `beoLineKeys` (beoLines.js), `generatedRows` (beoOrderList.js); 288 tests. Mutation:
+5 breaks, each caught. Browser (dev, live DB), Celebration of Life + Mid Mo Mahjong deleted by Ryan 11-15, so:
+- **American Outdoor Brands:** Garden Salad, Prosciutto-Wrapped Chicken, Braised Short Ribs, Mousse Shooters from
+  specs (30 lines, 28 with a product), grey lines incl. "with white wine truffle velouté"; 4 AI groups after, tagged.
+- **Club Car Wash:** Garlic Mashed Potatoes from spec (6/6 products) mid-item; the other lines AI-tagged. Hand row
+  added → Regenerate → spec rows md5 identical, rows re-created (17:36:57 > hand row 17:36:40), hand row kept, then
+  removed (0 left). AI groups DID change between runs (Oreo Cheesecake 5 lines → 2): the reason for B.
+- 375px (iframe; window resize had no effect): grey text and tag wrap, no sideways scroll; 0 console errors.
+- Read-only preview of all 35 BEOs with the shipped modules: none fully matched without answers (all need Task 5).
+- Yogurt Parfait same-name merge: only reachable if two DIFFERENT wordings in one BEO are each matched to one of
+  the two same-name dishes (one wording = one answer). Left as is.
+- Noticed, not touched: one long PFG word (`..._VACUUM_PACKED`) overflows into the note column at 375px (step A row).
 
 ### Checkpoint B (Ryan)
 - [ ] Ryan sees the spec-built groups and AI labels on real BEOs and OKs the layout before matching is added
@@ -150,6 +167,7 @@ section), Pick another dish (search), Not food, Not on a menu, Describes the lin
 - [ ] Walton Heath: Not on a menu + Describes the line above → AI-labeled groups; the description line reaches the
       AI with its salad (request body).
 - [ ] A failed save shows an error and leaves the line unanswered.
+- [ ] (from T4) A BEO whose lines are all answered and on a menu makes no AI call (network tab).
 
 **Verification:** T (any new pure helper) · B · C (answers are Ryan's real answers) · **Dependencies:** T4
 **Files:** `BeoLineMatcher.jsx` (new), `EventsBanquetsPage.jsx`, `beoOrderData.js` · **Scope:** M

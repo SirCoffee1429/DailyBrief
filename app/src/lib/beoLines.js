@@ -146,6 +146,12 @@ export function classifyBeoLines(sections, dishes, decisions) {
     })
 }
 
+// Every food line of a BEO once, normalised: the wordings whose saved answers apply.
+export function beoLineKeys(sections) {
+    const keys = foodItems(sections).flatMap(item => item.texts.map(normaliseLine))
+    return [...new Set(keys)]
+}
+
 // Words that never make two names alike ("&" is dropped as punctuation).
 const STOP_WORDS = new Set(['and', 'with', 'of', 'the', 'a', 'on', 'in', 'or'])
 

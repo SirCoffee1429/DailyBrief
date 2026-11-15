@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { classifyBeoLines } from './beoLines.js'
-import { matchedDishIds, buildOrderList } from './beoOrderList.js'
+import { matchedDishIds, buildOrderList, generatedRows } from './beoOrderList.js'
 
 // Orderable dishes (ids are readable stand-ins). "Old Spec Dish" has a spec that is not confirmed.
 const DISHES = [
@@ -204,5 +204,43 @@ describe('matchedDishIds', () => {
             'Garlic Mashed Potatoes',
         ]]), DISHES, [{ source_text: 'caesar salad', kind: 'dish', dish_id: 'caesar', under_dish_id: 'pasta' }])
         expect(matchedDishIds(items)).toEqual(['pasta', 'caesar', 'mashed'])
+    })
+})
+
+describe('generatedRows (what Generate saves)', () => {
+    const AI_DISHES = [
+        { source_dish: 'Oreo Cheesecake', ingredients: ['cream cheese', 'oreo cookies'] },
+        { source_dish: 'Nothing To Buy', ingredients: [] },
+        { source_dish: 'Vodka Rigatoni', ingredients: ['rigatoni'] },
+    ]
+    const AI_PRODUCTS = new Map([['cream cheese', 'product:cream cheese']])
+
+    it('spec groups first, then the AI groups numbered after them, AI rows labeled', () => {
+        const { specRows } = build(beo(['Buffet', ['Bacon-Wrapped Scallops', 'Garlic Mashed Potatoes']]))
+        const rows = generatedRows('beo-1', specRows, AI_DISHES, AI_PRODUCTS)
+        expect(rows[0]).toEqual({
+            beo_id: 'beo-1', item_name: 'bacon-wrapped scallops', source_dish: 'Bacon-Wrapped Scallops',
+            product_id: 'product:bacon-wrapped scallops', beo_text: 'Bacon-Wrapped Scallops',
+            ai_guess: false, is_ordered: false, is_manual: false, sort_order: 0,
+        })
+        expect(rows.slice(specRows.length)).toEqual([
+            { beo_id: 'beo-1', item_name: 'cream cheese', source_dish: 'Oreo Cheesecake', product_id: 'product:cream cheese',
+                beo_text: null, ai_guess: true, is_ordered: false, is_manual: false, sort_order: 200 },
+            { beo_id: 'beo-1', item_name: 'oreo cookies', source_dish: 'Oreo Cheesecake', product_id: null,
+                beo_text: null, ai_guess: true, is_ordered: false, is_manual: false, sort_order: 201 },
+            // A dish with no ingredients keeps its number, as the page always did (dish * 100 + line).
+            { beo_id: 'beo-1', item_name: 'rigatoni', source_dish: 'Vodka Rigatoni', product_id: null,
+                beo_text: null, ai_guess: true, is_ordered: false, is_manual: false, sort_order: 400 },
+        ])
+    })
+
+    it('with no spec rows the AI groups start at 0, as before', () => {
+        const rows = generatedRows('beo-1', [], AI_DISHES, AI_PRODUCTS)
+        expect(rows.map(r => r.sort_order)).toEqual([0, 1, 200])
+    })
+
+    it('no AI call means spec rows only', () => {
+        const { specRows } = build(beo(['Buffet', ['Bacon-Wrapped Scallops']]))
+        expect(generatedRows('beo-1', specRows, [], new Map())).toHaveLength(1)
     })
 })
