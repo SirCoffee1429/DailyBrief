@@ -84,10 +84,18 @@ payload: synthetic `sections` holding only not-on-a-menu / unanswered lines, eac
 and category name, or `null` when there are none.
 
 **Acceptance criteria:**
-- [ ] Pasta Bar fixture → its 15 ingredients in spec order, `beo_text` = the item's lines, products from the map.
-- [ ] Same input twice → deep-equal output (determinism; calls the shipped module).
-- [ ] Walton Heath fixture → AI payload holds the salad with its description line, nothing spec-built; a BEO
+- [x] Pasta Bar fixture → its 15 ingredients in spec order, `beo_text` = the item's lines, products from the map.
+- [x] Same input twice → deep-equal output (determinism; calls the shipped module).
+- [x] Walton Heath fixture → AI payload holds the salad with its description line, nothing spec-built; a BEO
       fully on menus → payload `null`.
+
+**Done (11-15):** 14 tests; the BEO text goes through the shipped `classifyBeoLines` first, and the Pasta Bar spec
+is the live one (15 lines; caesar dressing + croutons have no product). Also `matchedDishIds(items)` = the dish ids
+Task 4 must fetch specs for. Mutation check: 6 rules broken one at a time, each fails 1-2 tests. Decided in code:
+- A dish with a confirmed spec but NO ingredient lines goes to the AI too (a group with no rows would vanish).
+- A dish on the BEO twice: one group, grey lines from both places, exact repeats dropped.
+- **For Task 4:** two different dishes with the same name (Yogurt Parfait Bar ×2) in one BEO would get the same
+  `source_dish`, and the page groups by `source_dish`, so they'd show as one group. Rare; check it there.
 
 **Verification:** T (new `beoOrderList.test.js`) · B · **Dependencies:** Task 1
 **Files:** `app/src/lib/beoOrderList.js`, `app/src/lib/beoOrderList.test.js` · **Scope:** S
