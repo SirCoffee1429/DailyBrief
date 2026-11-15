@@ -146,7 +146,7 @@ app/src/pages/EventsBanquetsPage.jsx  → generateOrderItems() calls the above; 
 ```sql
 beo_dish_matches (
   id            uuid primary key default gen_random_uuid(),
-  source_text   text not null,                    -- the normalised line
+  source_text   text not null check (btrim(source_text) <> ''),  -- the normalised line
   under_dish_id uuid references menu_dishes (id) on delete cascade,
                                                   -- set only for a dish-name line found under another dish (2a)
   kind          text not null check (kind in
@@ -155,8 +155,10 @@ beo_dish_matches (
   confirmed_at  timestamptz not null default now(),
   unique nulls not distinct (source_text, under_dish_id),
   check ((kind = 'dish') = (dish_id is not null)),
-  check (kind <> 'part_of_dish' or under_dish_id is not null)
+  check (kind <> 'part_of_dish' or under_dish_id is not null),
+  check (under_dish_id is null or kind in ('dish', 'part_of_dish'))  -- under a dish: only the two answers 2a offers
 )
+-- applied 2026-11-15: supabase/migrations/20261115162620_beo_dish_matches.sql
 -- anon + authenticated policies in the SAME migration (ensure_rls switches RLS on)
 
 event_order_items.ai_guess boolean not null default true

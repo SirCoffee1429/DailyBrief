@@ -16,10 +16,18 @@ cascade` to `menu_dishes`; anon + authenticated policies in the SAME migration; 
 true` and `beo_text text` on `event_order_items`. Additive only.
 
 **Acceptance criteria:**
-- [ ] SQL reviewed with Ryan, then **applied to prod only with his OK**.
-- [ ] Checked by `SELECT`: table, constraints and policies exist; `event_order_items` rows all read `ai_guess = true`.
-- [ ] As anon, inside a rolled-back transaction: insert one row per kind, and the two checks and the unique key
+- [x] SQL reviewed with Ryan, then **applied to prod only with his OK**.
+- [x] Checked by `SELECT`: table, constraints and policies exist; `event_order_items` rows all read `ai_guess = true`.
+- [x] As anon, inside a rolled-back transaction: insert one row per kind, and the two checks and the unique key
       refuse bad rows. 0 rows kept.
+
+**Done 2026-11-15**: `supabase/migrations/20261115162620_beo_dish_matches.sql`, applied 16:26 UTC with Ryan's OK.
+Two checks beyond the spec, both now in it: `source_text` not blank; under a dish only `dish`/`part_of_dish`. SELECT:
+RLS on, 9 constraints, 2 policies, 29/29 order rows `ai_guess = true`. Anon rolled-back test: 7 good rows (each kind,
+pair + standalone side by side), 10 bad refused (2 unique, 7 check, 1 foreign key), update/delete work, 0 kept.
+Live order list: 8 loads after the migration, all 200.
+NB: the 29 order rows were gone by 17:20. Logs: 4 BEOs deleted from the office page (Delete button, 17:18 UTC) right
+after a packet was approved; order rows cascade with their BEO. The migration only adds, so not it.
 
 **Verification:** SQL checks above · the live order list still loads and generates (read-only look)
 

@@ -48,7 +48,7 @@ M  migration (Task 0) ──────┘        ├─→ T5 matcher box ─�
 - [x] Task 1: `beoLines.js`: split, normalise, classify (test first)
 - [x] Task 2: `suggestDishes` + dish search filter (test first)
 - [x] Task 3: `beoOrderList.js`: decided lines → rows (test first)
-- [ ] Task 0 (any time before Task 4): migration, reviewed with Ryan, applied with his OK
+- [x] Task 0 (any time before Task 4): migration, reviewed with Ryan, applied with his OK
 
 ### Checkpoint A
 - [ ] T green · B green · migration live and checked by SELECT · live site unaffected
