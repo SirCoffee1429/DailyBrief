@@ -195,134 +195,14 @@
 - 10-10 — Drafter Retries Malformed JSON Once; Beef Tenderloin Respecced — v13: a non-JSON reply is retried ONCE inside the same 130s budget (API errors/timeouts are not); `retry_test.ts` 4/4, mutation-checked. Owner: "tenderloin should be tenderloin" — Action Stations moved off `shoulder tender`. → [full](docs/changelog/2026-10.md#2026-10-10--drafter-retries-malformed-json-once-beef-tenderloin-respecced)
 - 10-10 — Time Off Calendar: Days Line Up Under Their Weekday Again (shipped on its own, `21cee39`) — not a date bug: the weekday header and day grid are separate `repeat(7, 1fr)` grids and long names widened their column; both now `minmax(0, 1fr)`, checked 7/7 header-cell alignment on the live page. → [full](docs/changelog/2026-10.md#2026-10-10--time-off-calendar-days-line-up-under-their-weekday-again)
 - 10-13 — Office Tasks Tab: Add Kitchen Tasks Without a Briefing (shipped on its own, `7ac0e01`) — `briefing_tasks.briefing_id` nullable + a `date`; the office Tasks tab adds a kitchen task for a day, shown on the kitchen dashboard; BOH only. Merged back as `b378678`. → [full](docs/changelog/2026-10.md#2026-10-13--office-tasks-tab-add-kitchen-tasks-without-a-briefing-shipped-on-its-own)
+- 10-14 — Seasonal Recipe Books Drive the Dish Drafter; Fall Drafted From the Book — `house_recipes` (30 fall recipes, title → ingredients only; methods unchecked) + `dish_house_recipes()`; drafter v13 → v21: the model COPIES whole batches, code computes every share off the book (model sums −34%, shares 25x off); buffet entrées × 0.65. 18 fall dishes drafted, 37 shares hand-checked; `house_recipe_test.ts` 12 cases, 13 mutations caught. → [full](docs/changelog/2026-10.md#2026-10-14--seasonal-recipe-books-drive-the-dish-drafter-fall-drafted-from-the-book)
+- 10-15 → 10-16 — Ingredient Products: Search, and Split Dishes Off to Another Name; Eggs Fixed — one NAME = one product for every dish, so a wrong match is fixed by SPLITTING dishes to another name, never re-picking. Split refuses clashes by name, checks moved = ticked, and no match outlives its last dish. Data: `egg patty` (4 sandwiches) vs `egg` (77 dishes → shell eggs); orphan peanut/raisin matches deleted. `626f9ee`. → [full](docs/changelog/2026-10.md#2026-10-15--10-16--ingredient-products-search-and-split-dishes-off-to-another-name-eggs-fixed)
+- 10-17 — Owner Finished the Spec and Ingredient Review; Spring–Winter to Be Redrafted From Their Books — ALL 364 orderable dishes confirmed, 373 ingredient names (325 to a product), 0 orphans: P3 data complete. Spring/summer/winter (83 dishes) were specced WITHOUT books → redraft each season from its book when it arrives (owner). → [full](docs/changelog/2026-10.md#2026-10-17--owner-finished-the-spec-and-ingredient-review-springwinter-to-be-redrafted-from-their-books)
+- 10-17 → 10-19 — P3 Completion Check: the Costing Arithmetic Hand-Checked; Wrong Cheese, Apple, Lamb and Hot Dog Matches Fixed — shipped `specCost` matched hand math on 3 dishes to 4 places; checking their lines found cubed-cheese packs on shredded/sliced names, Fuji on gala, a lamb leg on rack of lamb — all split/re-picked (owner). 364/364 confirmed, 0 orphans. P4 faces it: only 78 of 364 dishes cost fully (unit conversion per mapping). → [full](docs/changelog/2026-10.md#2026-10-17--10-19--p3-completion-check-the-costing-arithmetic-hand-checked-wrong-cheese-apple-lamb-and-hot-dog-matches-fixed)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-14 — Seasonal Recipe Books Drive the Dish Drafter; Fall Drafted From the Book
-
-**Session name:** `house-recipe-books` — Serena memory `session-2026-10-14-house-recipe-books`.
-
-**File(s) Changed:** `supabase/migrations/20261014000000_house_recipes.sql` (new), `app/scripts/recipe-book-sql.mjs`
-(new), `supabase/functions/draft-dish-specs/index.ts`, `supabase/functions/draft-dish-specs/house_recipe_test.ts` (new),
-`app/src/pages/DishSpecs.jsx`, `app/src/index.css`, data (`house_recipes`, fall `dish_ingredients`) **Type:** `feature` +
-`migration` + `test` — `draft-dish-specs` v13 → **v21** (deployed), page change NOT pushed. Committed 10-16 as
-`f93b9d4`; the book PDF is gitignored (stays on disk as the loader's source).
-**Summary:** The owner's seasonal recipe books (`seasonal-recipes/fall_recipe_book/Fall Banquet Recipe Book.pdf`, 25-portion
-yields, "On the Plate", sub-recipes) are now the drafter's source for the dishes they cover, and the Dish Ingredients page
-shows the book recipe beside each spec. Owner: the books' ingredients and portions are right, the methods are not
-checked — so only title → ingredients is stored.
-
-**Details:**
-
-- **`house_recipes`** (prod, via MCP): season, title, `recipe_text` (title through ingredients, method cut). Open policy
-  like `menu_dishes`. `dish_house_recipes(uuid[])` = the dish's recipe (same season, name compared without case/accents)
-  + every recipe it names under ON THE PLATE / INGREDIENTS, followed down. Searching the description too pulled the pork
-  entrée into the buffet bread pudding ("Side for the Herb-Crusted Pork Tenderloin") — fixed before load.
-- **Loader** `app/scripts/recipe-book-sql.mjs <pdf> <season>` prints the insert. Fall: 30 recipes; the 9 Contents entries
-  not loaded are all section headings. Cross-checked line-for-line against an independent pypdf extraction (30/30) and
-  by md5 after load.
-- **Drafter (rule 13):** for a house-recipe dish the model copies each recipe's WHOLE batch (unit conversion only); code
-  does every division. Shares are read off the BOOK: the dish's own recipe = 1 of its portions; a plate side = its plate
-  amount ÷ (portions × portion size); a sub-recipe = the amount on its parent's line ÷ its YIELD × the parent's share.
-  The model's numbers are only a fallback, named in the note. Each step was forced by a measured failure: model-summed
-  amounts (crouton bread −34%, a butter dropped), a model-computed share (pecans 2.7% vs 1.7%), model-copied numbers
-  (Short Rib sides 0.2% vs 4%, horseradish 0.5% vs 3.7%).
-- Also in code: a sub-recipe's own line is dropped (it was ordered twice); lb → oz so recipes sum; a title with its
-  subtitle is that recipe (the Short Rib had lost its beef); a recipe's own section sent back separately (salmon glaze,
-  pork loin jus) is counted with its recipe; an amount that rounds to 0 is named, not saved (a 0 failed a whole batch).
-- **Buffet entrées × 0.65** of the book's single-entrée portion (owner); buffet sides stay as written.
-- **Tests:** `house_recipe_test.ts` 12 cases sliced from the real code, real book text for the share cases; with
-  match/retry 21/21. Mutation-checked: 13 single changes each fail a test, file restored byte-identical.
-- **Data:** all 18 fall dishes the book covers drafted (all 37 shares from the book, each hand-checked). NOT covered by the
-  book, left unspecced: both Caesars, House Garden Salad, 3 plated + 4 buffet desserts. Spring/summer/winter wait for
-  their books (owner).
-- **Known model slips still in the fall drafts (named in notes, for review):** chicken's heirloom carrots merged into
-  `carrot`; one garlic amount dropped on Short Rib, Pork Loin and Chicken (heads vs oz); greens specced as lacinato kale.
-- **Page:** collapsible "fall recipe book: … + N recipes it uses" under each spec and in the edit form. `npm run build`
-  passes; browser check pending (office gate).
-
----
-
-### 2026-10-15 → 10-16 — Ingredient Products: Search, and Split Dishes Off to Another Name; Eggs Fixed
-
-**File(s) Changed:** `app/src/pages/IngredientProducts.jsx`, `app/src/index.css`, `.gitignore`; data (`dish_ingredients`,
-`ingredient_products`) **Type:** `feature` + `fix` — committed `626f9ee`, NOT pushed (local `main` is 58 ahead of GitHub).
-**Summary:** Owner request: a confirmed ingredient match could not be searched for or corrected. The case: confirmed
-"egg" → EGG PATTY was right for the 4 breakfast sandwiches but wrong for 65+ other dishes. Re-picking the product can't
-fix that — one ingredient NAME maps to ONE product for every dish (owner: "that would put me in the same situation") —
-so the fix moves some dishes to another name.
-
-**Details:**
-
-- **Search** (ingredient, product, or dish name; every status, so the status filter is disabled while searching). Ranked:
-  exact name, then names holding every word, then dish-only matches — "eggs" was buried under mayonnaise (Deviled Eggs).
-- **Split** on every row, confirmed ones too (key `s`): tick dishes, type a name, a live line says where they land
-  ("12 dishes will join "egg" (confirmed: …)"). At save: the target is looked up again; a ticked dish already listing it
-  is refused BY NAME (unique `(dish_id, ingredient_name)`), nothing written; the moved count must equal the ticked count.
-- **No match outlives its last dish:** when a fresh count finds no dish left on the old name, its match is renamed onto a
-  brand-new name, or deleted when joining an existing one — else the drafter could write the name again and its dish
-  would inherit the product unreviewed. The count is taken after the move, not from the form's list (a dish drafted while
-  the form sat open still needs the match) — fixed in a `/sc:analyze` pass, along with two missing comments.
-- **Data fixed through the page:** `egg patty` 4 sandwiches → #955042 EGG PATTY; `egg` 77 dishes (65 + the 12 from
-  `eggs`) → #518048 EGG WHITE LARGE GRADE A LOOSE (= white shell eggs, owner); `eggs` gone. Orphan confirmed matches
-  `peanuts` (PEANUT SALTED SHELF-STABLE) and `raisins` (trail-mix dried fruit) deleted (owner); 0 orphans remain.
-- **Verified:** `npm run build`; in the browser on prod data — the egg split, the clash refusal (Sausage Bagel, nothing
-  written), and a whole-name round trip `baked beans` → `baked beans split test` → back (match carried both ways, only
-  `updated_at` changed, no leftover row). Each step checked by SQL. Not checked: phone width; a dish drafted onto the
-  old name while the form is open (code-read only).
-- Also: the 10-14 recipe-book work committed separately (`f93b9d4`), its PDF gitignored. Left uncommitted on purpose:
-  `supabase/.temp/cli-latest`, the Vendor Data worksheet, `.serena/memories/session-2026-09-27-schedule-week-redate.md`.
-
----
-
-### 2026-10-17 — Owner Finished the Spec and Ingredient Review; Spring–Winter to Be Redrafted From Their Books
-
-**File(s) Changed:** data only (owner, through the Dish Ingredients and Ingredient Products pages); `CLAUDE.md`
-**Type:** `docs` — status check by SQL, no code change.
-**Summary:** The owner reviewed and confirmed the 18 fall book drafts and finished mapping every ingredient. Checked on
-prod: **345/364 orderable dishes confirmed, 19 drafts, 0 unspecced**; all 373 ingredient names confirmed (325 to a product,
-48 not from the catalog); 0 matches with no dish.
-
-- **Later 10-17: the 19 drafts (all From the Bakery plated desserts) confirmed too → ALL 364 confirmed**, every dish has
-  lines, 0 orphan matches. P3's data is complete; next is P4 (order quantities on a BEO).
-- **Spring/summer/winter (83 dishes) were specced and confirmed WITHOUT recipe books** (only fall's is loaded). Owner
-  decision: **when each season's book arrives, load it and redraft that season's dishes from it.** CLAUDE.md updated.
-- Fall garlic spot-check against the book: Short Rib, Airline Chicken, Chicken Marsala and Pork Loin's head of garlic all
-  divide correctly (incl. buffet ×0.65); Pork Loin's second line (1 Tbsp minced, ~0.4 oz per event) is still missing — left as is.
-- Open: `.gitignore` covers only the fall PDF; the other seasons' books will show as untracked unless widened to
-  `seasonal-recipes/*/*.pdf` (asked, not answered).
-
----
-
-### 2026-10-17 → 10-19 — P3 Completion Check: the Costing Arithmetic Hand-Checked; Wrong Cheese, Apple, Lamb and Hot Dog Matches Fixed
-
-**File(s) Changed:** data only (owner through Ingredient Products; four name fixes by SQL on the owner's instruction)
-**Type:** `fix` — `/sc:reflect P3 --type completion --validate`, no code change.
-**Summary:** P3's exit gate in the design doc ("three dishes hand-checked against the arithmetic") had never been
-recorded. Ran the SHIPPED `specCost` against hand math: Bearnaise $0.9559/guest, House Cookies $4.1133/dozen, Cubed Cheese
-& Crackers $17.6807/tray — identical to 4 places. Checking those lines found real mapping errors, all now fixed.
-
-- **Cheese:** `cheddar cheese` (12 dishes: mac & cheese, soups, sandwiches) and `pepper jack cheese` were on a CUBED variety
-  pack, `swiss cheese` on a cubed pack with no swiss. Owner split the trays onto `cubed cheddar/pepper jack/swiss cheese`, then
-  re-picked `cheddar cheese` → shredded #158814 and merged `cheddar cheese slices` into `cheddar cheese slice`.
-  Then `pepper jack cheese` (bagel) → sliced #469349 and a new `shredded pepper jack` (Tinga Tacos) → #270917; the cubed
-  variety pack #1006778 is no longer matched to anything.
-- **Apples (owner):** `gala apple` was on FUJI; both apple names now → GALA #950172 (the only apple the kitchen uses).
-- **By SQL (owner's call, one guarded transaction):** `hot dogs` → `hot dog` on #970396 4/1 beef franks (the only 4/1 in the
-  catalog — description doesn't say Nathan's); `rack of lamb` → not bought from this catalog (it was a boneless LEG);
-  `monteray jack`, `monteray jack cheese`, `monetary jack blend` → `monterey …` (the last merged into `monterey jack blend`).
-- **State 10-19:** 364/364 confirmed, 373 names all confirmed (49 not from catalog), 0 unmatched, 0 orphan matches.
-- `.gitignore` widened from the fall PDF to `seasonal-recipes/*/*.pdf` (owner), so the other seasons' books stay out too.
-- **What P4 faces:** of 2,693 lines only 2,022 cost exactly; 446 cross-class gaps, 45 on the pack-count guess, 36 with no
-  pack total — **78 of 364 dishes cost fully today.** The per-mapping conversion is most of P4.
-- A word check (ingredient word missing from the product description) surfaced ~55 names; most are kitchen choices
-  (grapeseed for vegetable oil, paste bases for stock, rigatoni for ziti). Read the list, don't treat it as errors.
-- The Supabase MCP returned "Invalid or expired requestState" on a write TWICE; neither ran (checked by SQL each time).
-  The same statement without a trailing SELECT went through.
-
----
 
 ### 2026-10-19 → 10-25 — P4 Slice 1 (Case Yield): Requirements, Owner Data Fixes, Design — then PARKED
 
@@ -556,3 +436,49 @@ fast-forward; Vercel production READY).
     Partial box open while its row re-sorts or leaves; a refused or failed Partial in the box.
   - Live (read-only): all five stations show the box with real counts. Grill's order matches SQL.
   - Main after merge: T 204 · B.
+
+---
+
+### 2026-11-12 → 11-15 — Order Guide Step B: Generate Builds the BEO Order List From Confirmed Dish Specs (Tasks 0–4; NOT pushed)
+
+**File(s) Changed:** `spec/beo-order-from-specs.md` (new), `tasks/plan.md`, `tasks/todo.md` (prep-sheets plan archived to
+`tasks/archive/`), `app/src/lib/beoLines.js` + test + `beoLines.dishNames.fixture.js`, `app/src/lib/beoOrderList.js` + test,
+`app/src/lib/beoOrderData.js`, `app/src/pages/EventsBanquetsPage.jsx`, `supabase/migrations/20261115162620_beo_dish_matches.sql`
+(all new except the page). Commits `72a132d`, `84eb733`, `147f4d8`, `4540f04`, `bab888a`, `b5d50b6`, `008d5c6`.
+**Type:** `feature` + `migration` **Summary:** Before, "Generate from BEO" sent the whole BEO to Gemini, which invented
+its own dishes and ingredient names each run. Now every BEO line that is a confirmed menu dish is built from that dish's
+confirmed spec and products. Only the lines no spec covers go to the AI, and its groups are tagged "AI guess".
+
+- **Spec approved by Ryan 11-12:**
+  - A line equal to exactly ONE orderable dish name auto-matches.
+  - The beverage keywords are copied into the app as WHOLE words (the function's substring check drops "Steak Dinner").
+  - B ships with main's backlog.
+  - Grey BEO lines go under each spec-built dish.
+  - A dish name typed under another dish is asked "Part of / Its own dish". Plan: Tasks 0–8, 3 checkpoints.
+- **Task 1, `classifyBeoLines`:** an item's first-line dish makes its other lines description (rule 2a); otherwise
+  each line on its own: saved answer → plain note → exact unique name → to match (2b). 65 tests on real BEO lines.
+- **Task 2, `suggestDishes` / `searchDishes`:** word overlap with accent folding and singulars. All four real near
+  misses rank FIRST against the 364 real names (fixture).
+- **Task 3, `buildOrderList`:** one group per dish, in spec order, with grey `beo_text`. A dish whose spec isn't
+  confirmed or has no lines goes to the AI. 14 tests (live Pasta Bar spec, 15 lines).
+- **Task 0, migration (applied 16:26 UTC with Ryan's OK):**
+  - `beo_dish_matches`: 5 kinds, pair answers keyed by `under_dish_id`, `nulls not distinct`, cascade on
+    `menu_dishes`, plus 2 checks beyond the spec (now in it).
+  - `event_order_items.ai_guess` (DEFAULT TRUE, so rows from the live old code count as AI) and `beo_text`.
+  - Checked: SELECT, plus a rolled-back anon test (7 good rows, 10 bad refused, 0 kept).
+  - Minutes later all 29 order rows were gone. The logs show 4 old BEOs deleted from the office page, and order rows
+    cascade with their BEO. Ryan confirmed it was his cleanup.
+- **Task 4, Generate:**
+  - Steps: dishes (count-checked) → saved matches → classify → spec lines (count-checked) → products →
+    `generatedRows` (AI groups numbered after the spec groups) → `replaceGeneratedRows` (delete and insert errors are
+    now checked; the old code checked neither).
+  - No AI call when nothing is left for it. 288 tests; 5 mutations, each caught.
+  - Browser, live DB: American Outdoor Brands built 4 dishes from specs (30 lines, 28 with a product); Club Car Wash
+    built Garlic Mashed Potatoes from mid-item.
+  - Regenerate: spec rows md5-identical and the hand-added row kept. The AI groups changed between the same two runs
+    (Oreo Cheesecake 5 lines → 2), which is the reason for B.
+  - 375px and 0 console errors.
+- **Checkpoint B:** Ryan checked Club Car Wash: "everything looks good".
+- **Left on live:** the generated order lists on American Outdoor Brands and Club Car Wash.
+- **Moved to Task 5:** the live "no AI call" check. No current BEO is fully matched until its lines can be answered.
+- **Next:** T5 the matching box, T6 Part of / Its own dish, T7 Change match, Checkpoint C, T8 review.

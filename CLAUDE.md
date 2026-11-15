@@ -58,10 +58,9 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Menus (`menu_dishes`, P2): hand-designed marketing layouts, so a MODEL reads them, not
   coordinates. `.docx` converts to HTML **in the browser** (Gemini can't read .docx;
   `npm:mammoth` in the edge fn blew the 130s cold start). Safe only behind the confirm gate
-- **`base_price` buys `price_qty` x `price_unit`.** "$85 for 20 pieces" stored as 85/piece
-  is 20x too dear and looks normal — it shipped that way on 27 rows. A quantity basis on a
-  SECTION HEADING carries down onto each dish; "Starting at" is a group FLOOR, never a
-  dish price
+- **`base_price` buys `price_qty` x `price_unit`.** "$85 for 20 pieces" stored as 85/piece is 20x too dear and looks
+  normal — it shipped that way on 27 rows. A quantity basis on a SECTION HEADING carries down onto each dish;
+  "Starting at" is a group FLOOR, never a dish price
 - A priced package ("Southern BBQ $41") is ONE dish or its price is lost; a minimum counts
   in the PRICE's unit ("2 dozen" beside $/doz = 2, not 24). v8 invented prices and v9 still
   ignored a rule — check the CONFIRMED rows, never just the confirm count
@@ -113,14 +112,15 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 
 ## Future Plans
 
-- Universal DailyBrief (separate repo/org) for any restaurant or club — universal
-  ingestion: PDF, DOCX, CSV, plain text alongside XLSX
+- Universal DailyBrief (separate repo/org) for any restaurant or club — ingests PDF, DOCX, CSV, text alongside XLSX
 - KitchSync (scheduling) + PrepMaster (inventory) once DailyBrief has paying customers
 - Real auth to replace the hardcoded office password
 - Supplier order guide in BEO order lists (`claudedocs/design_beo_order_guide_2026-09-15.md`) — P1 SHIPPED, P2/P3 DONE (364
   dishes confirmed, 373 ingredients matched; spring–winter specced WITHOUT books — REDRAFT each from its book; drafter v21).
-  **10-25 owner: the order list showing PRODUCTS comes first** — A built (`event_order_items.product_id`), next B = BEO line →
-  confirmed dish spec; case yields PARKED (`design_p4_case_yield_2026-10-25.md`). Inference stays OUT of the per-BEO path
+  **10-25 owner: the order list showing PRODUCTS comes first** — A built (`event_order_items.product_id`); B (`spec/beo-order-
+  from-specs.md`) T0–T4 built 11-15: Generate builds confirmed dishes from their specs, AI only for the rest (`ai_guess`
+  DEFAULT TRUE, so old-code rows count as AI); `beo_dish_matches` live; T5 matcher next. Case yields PARKED
+  (`design_p4_case_yield_2026-10-25.md`). Inference stays OUT of the per-BEO path
 
 ---
 
