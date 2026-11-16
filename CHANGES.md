@@ -16,6 +16,38 @@
 > **Consolidated 2026-06-12.** Entries before the auto-scheduler work (2026-06-10)
 > were condensed to one line each. A duplicated block of April 2026 entries was
 > removed during that pass.
+>
+> **Open Threads (added 2026-11-16)** is the one list of everything unfinished, across features. Rewrite it at every
+> `/sc:save`: closed items come OFF (their story stays in the entries below), new ones go on, figures are re-checked.
+
+---
+
+## Open Threads (last checked 2026-11-16)
+
+- **Not pushed:** local `main` is **93 commits** ahead of `origin/main` (production;
+  `git rev-list --count origin/main..main`). Not live yet:
+  - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
+  - the product on each order row (step A), order guide B Tasks 0–4;
+  - changing a saved schedule's week;
+  - the npm audit fixes and SheetJS 0.20.3.
+
+  Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
+- **Order guide B:** Task 5 (the lines-to-match box) is next, then T6, T7, Checkpoint C, T8. Status in `tasks/todo.md`.
+- **Prep Sheets cleanup (Ryan's call):** back up and move aside `prepsheets/` (still in the repo root); remove the
+  worktree `../DailyBrief-prep-sheets`. The branch is fully merged.
+- **Parked by Ryan:**
+  - case yields / order quantities (`claudedocs/design_p4_case_yield_2026-10-25.md`);
+  - the Prep Sheets Completed tab + 3-day log;
+  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 178 behind main. Production
+    stays `generate-schedule` v17; the newer solver and pins/quotas are not deployed.
+- **Waiting on input:** the spring, summer and winter recipe books. Redraft each season's dishes from its book when it
+  arrives.
+- **Known, not fixed:**
+  - step A picks `diced tomatoes` → fresh (likely canned) and `shredded mozzarella` → pearls;
+  - 12 `toISOString()` dates in `app/src` (UTC, flips at 7pm Central);
+  - recipe editor gaps (deferred 10-19);
+  - one long PFG word overflows the order row's note column at 375px;
+  - recovering the pre-09-08 changelog entries (see above).
 
 ---
 
