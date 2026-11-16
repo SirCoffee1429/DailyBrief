@@ -22,23 +22,26 @@
 
 ---
 
-## Open Threads (last checked 2026-11-16)
+## Open Threads (last checked 2026-11-16, after Task 5)
 
-- **Not pushed:** local `main` is **93 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **96 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
-  - the product on each order row (step A), order guide B Tasks 0–4;
+  - the product on each order row (step A), order guide B Tasks 0–5;
   - changing a saved schedule's week;
   - the npm audit fixes and SheetJS 0.20.3.
 
   Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
-- **Order guide B:** Task 5 (the lines-to-match box) is next, then T6, T7, Checkpoint C, T8. Status in `tasks/todo.md`.
+- **Order guide B:** Task 5 (the lines-to-match box) is BUILT; its last 3 checks wait for Ryan's real answers
+  (near misses → Build list; Walton Heath Not on a menu + Describes; a BEO with no AI call: Edwards or Rusty Drewing).
+  Ryan to choose: answer on the dev server himself, or give the answers in chat. Then T6, T7, Checkpoint C, T8.
+  Status in `tasks/todo.md`.
 - **Prep Sheets cleanup (Ryan's call):** back up and move aside `prepsheets/` (still in the repo root); remove the
   worktree `../DailyBrief-prep-sheets`. The branch is fully merged.
 - **Parked by Ryan:**
   - case yields / order quantities (`claudedocs/design_p4_case_yield_2026-10-25.md`);
   - the Prep Sheets Completed tab + 3-day log;
-  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 178 behind main. Production
+  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 181 behind main. Production
     stays `generate-schedule` v17; the newer solver and pins/quotas are not deployed.
 - **Waiting on input:** the spring, summer and winter recipe books. Redraft each season's dishes from its book when it
   arrives.
@@ -47,6 +50,7 @@
   - 12 `toISOString()` dates in `app/src` (UTC, flips at 7pm Central);
   - recipe editor gaps (deferred 10-19);
   - one long PFG word overflows the order row's note column at 375px;
+  - the lines-to-match box repeats each line's whole BEO item (long at phone width); offered to show only the line above;
   - recovering the pre-09-08 changelog entries (see above).
 
 ---
@@ -232,37 +236,11 @@
 - 10-17 — Owner Finished the Spec and Ingredient Review; Spring–Winter to Be Redrafted From Their Books — ALL 364 orderable dishes confirmed, 373 ingredient names (325 to a product), 0 orphans: P3 data complete. Spring/summer/winter (83 dishes) were specced WITHOUT books → redraft each season from its book when it arrives (owner). → [full](docs/changelog/2026-10.md#2026-10-17--owner-finished-the-spec-and-ingredient-review-springwinter-to-be-redrafted-from-their-books)
 - 10-17 → 10-19 — P3 Completion Check: the Costing Arithmetic Hand-Checked; Wrong Cheese, Apple, Lamb and Hot Dog Matches Fixed — shipped `specCost` matched hand math on 3 dishes to 4 places; checking their lines found cubed-cheese packs on shredded/sliced names, Fuji on gala, a lamb leg on rack of lamb — all split/re-picked (owner). 364/364 confirmed, 0 orphans. P4 faces it: only 78 of 364 dishes cost fully (unit conversion per mapping). → [full](docs/changelog/2026-10.md#2026-10-17--10-19--p3-completion-check-the-costing-arithmetic-hand-checked-wrong-cheese-apple-lamb-and-hot-dog-matches-fixed)
 - 10-19 → 10-25 — P4 Slice 1 (Case Yield): Requirements, Owner Data Fixes, Design — then PARKED — per-ingredient CASE YIELD (usable, typed by the owner, no drafts: rules would have drafted 9 of 30 wrong), `unitFit`'s pack-count guess to go, re-pick clears it. 517 lines / 101 names need a yield; 88 dishes cost fully. Owner fixed celery, cayenne, breadsticks, corn syrup, Bourbon Pecan Pie. Parked 10-25 for products-first. → [full](docs/changelog/2026-10.md#2026-10-19--10-25--p4-slice-1-case-yield-requirements-owner-data-fixes-design--then-parked)
+- 10-25 → 10-26 — "Generate from BEO" Shows the Catalog Product Behind Each Item (step A) — owner re-sequenced: products on the order list first. `event_order_items.product_id` (ON DELETE SET NULL); `productsForItemNames` reads CONFIRMED matches only: exact → singular/plural → leading prep words dropped (fixed list, "fresh"/"whole" out). A hand pick is that BEO row only. Homecoming Dinner 26/28. Known wrong: diced tomatoes → fresh, shredded mozzarella → pearls. → [full](docs/changelog/2026-10.md#2026-10-25--10-26--generate-from-beo-shows-the-catalog-product-behind-each-item)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-25 → 10-26 — "Generate from BEO" Shows the Catalog Product Behind Each Item
-
-**File(s) Changed:** `supabase/migrations/20261025000000_event_order_items_product.sql` (new, applied to prod),
-`app/src/lib/orderProducts.js` (new), `app/src/components/ProductPicker.jsx` (new — moved out of `IngredientProducts.jsx`),
-`app/src/pages/EventsBanquetsPage.jsx`, `app/src/pages/IngredientProducts.jsx` **Type:** `feat`
-**Summary:** Owner: the reason for the whole mapping effort was for the BEO order list to show **the actual product** —
-number, pack, price — not pricing or yields. Re-sequenced: **A** (now) looks up products for the existing AI order list;
-**B** (next) builds the list from BEO lines → confirmed dishes → confirmed specs. Yields wait.
-
-- **`event_order_items.product_id`** → `supplier_products`, `ON DELETE SET NULL` (the catalog is rebuilt from PFG exports).
-  Additive; the live site ignores it.
-- **Lookup (`productsForItemNames`)** reads only CONFIRMED `ingredient_products` rows with a product: exact name, then plain
-  singular/plural, then — only if the whole name misses — leading prep words dropped from a fixed list (shredded, unsalted,
-  granulated, semi-sweet, chopped, diced, sliced, minced, grated; "fresh"/"whole" deliberately out). Nothing fuzzier:
-  `onions` stays a miss because the kitchen buys yellow, red and green. Looked up BEFORE the old list is cleared.
-- **Order list:** each item shows `#number · description · brand · pack · $/case (varies) · last bought`, or "No catalog
-  product", with **change / pick product** opening the shared catalog picker. **A pick belongs to that BEO's row only** —
-  it never changes the ingredient's match for every dish.
-- **Verified:** Homecoming Dinner regenerated by the owner → 22/28 with a product (the AI wrote "unsalted butter" this run,
-  "butter" the last); the prep-word rule then took it to **26/28**, run through the SHIPPED module in the browser.
-  Misses by design: white wine (not from catalog), fresh herbs, onions. Picker opened, searched, cancelled (no write).
-  `npm run build` passes. **Not checked: phone width** (the window would not resize).
-- **Known wrong under the prep-word rule:** `diced tomatoes` → fresh vine-ripe (likely meant canned) and `shredded
-  mozzarella` → the fresh pearls (`mozzarella` is the pearls' name). Owner told; "diced" can be dropped from the list.
-
----
 
 ### 2026-10-31 → 11-01 — Old Skill Bundle Removed; Five Vendored Skills and Live-Safety Permissions Added
 
@@ -496,3 +474,30 @@ confirmed spec and products. Only the lines no spec covers go to the AI, and its
 - **Left on live:** the generated order lists on American Outdoor Brands and Club Car Wash.
 - **Moved to Task 5:** the live "no AI call" check. No current BEO is fully matched until its lines can be answered.
 - **Next:** T5 the matching box, T6 Part of / Its own dish, T7 Change match, Checkpoint C, T8 review.
+
+---
+
+### 2026-11-16 — Open Threads List Added; Order Guide B Task 5 (the Lines-to-Match Box) Built
+
+**File(s) Changed:** `CHANGES.md` (Open Threads at the top), `app/src/components/BeoLineMatcher.jsx` (new),
+`app/src/lib/beoLines.js` + test, `app/src/lib/beoOrderData.js`, `app/src/pages/EventsBanquetsPage.jsx`, `tasks/todo.md`;
+4 October entries + step A's entry moved to `docs/changelog/2026-10.md`. Commits `bc96b82`, `5020df5`, `c2acd29`.
+**Type:** `docs` + `feature` — NOT pushed.
+
+- **No HANDOFF.md (Ryan asked):** `tasks/todo.md`, this file and the Serena session note already cover the next step,
+  history and restart. The missing piece was one list of everything open across features, so **Open Threads** now
+  heads this file, rewritten at every `/sc:save`. Building it found the Prep Sheets memory still saying "waiting on
+  push" a week after it shipped (fixed), and a Vite server left running after `TaskStop` (stopped; memory notes it).
+- **Task 5, built:** Generate now opens a box on that BEO's order list when lines are not yet known, BEFORE building:
+  - each line with its BEO item, 3 suggested dishes (menu · section · season), Pick another dish (search), Not food,
+    Not on a menu, and Describes the line above (only where a line sits above);
+  - each answer saves at once (`saveMatch`: upsert on `source_text,under_dish_id`; a rolled-back anon SQL test showed
+    the null-`under_dish_id` row is UPDATED, not duplicated); a failed save shows "Not saved: …" and the line stays
+    unanswered;
+  - Build list builds with what is answered; unanswered lines go to the AI this time and are asked again next time.
+- **Fix found on the way:** the Seasonal menu repeats a dish name in all four seasons (Classic Caesar Salad ×4), so
+  suggestion and search order came from the database. Dish order now breaks ties by season; labels show the season.
+- **Checks:** 296 tests (new `linesToMatch`, `matchRow`, season order; test first), 6 mutations each caught, build.
+  Browser with every `beo_dish_matches` write blocked in the page: Walton Heath → 8 lines, no AI call; forced failed
+  save; search; Cancel; 375px; 0 console errors; 0 saved answers after.
+- **Open:** criteria 1, 2 and 4 need Ryan's real answers (they are saved for good). See Open Threads.
