@@ -3,11 +3,12 @@ import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { localDateString, formatDateOnly } from '../lib/dates.js'
 import { productsForItemNames } from '../lib/orderProducts.js'
-import { beoLineKeys, classifyBeoLines } from '../lib/beoLines.js'
+import { beoLineKeys, classifyBeoLines, linesToMatch } from '../lib/beoLines.js'
 import { matchedDishIds, buildOrderList, generatedRows } from '../lib/beoOrderList.js'
 import { fetchOrderableDishes, fetchSavedMatches, fetchSpecLines, replaceGeneratedRows } from '../lib/beoOrderData.js'
 import PendingBeoPanel from '../components/PendingBeoPanel.jsx'
 import ProductPicker from '../components/ProductPicker.jsx'
+import BeoLineMatcher from '../components/BeoLineMatcher.jsx'
 
 export default function EventsBanquetsPage({ readOnly = false }) {
     const location = useLocation()
@@ -48,6 +49,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
     const [activeNoteId, setActiveNoteId] = useState(null)      // itemId currently in note-edit mode
     const [orderNoteDrafts, setOrderNoteDrafts] = useState({})  // { [itemId]: string }
     const [pickingProductFor, setPickingProductFor] = useState(null) // itemId with the catalog picker open
+    const [matchingFor, setMatchingFor] = useState(null)        // { beoId, dishes, lines } while the lines-to-match box is open
 
     // Per-event prep list + subtask state
     const [generatingPrepFor, setGeneratingPrepFor] = useState(null)       // UUID | null — which BEO is generating prep
@@ -325,7 +327,8 @@ export default function EventsBanquetsPage({ readOnly = false }) {
 
     // Build the order list: BEO lines on a confirmed menu dish come from that dish's spec,
     // the rest go to the AI (spec/beo-order-from-specs.md). Generated rows are replaced; hand-added rows stay.
-    async function generateOrderItems(beo) {
+    // Lines not yet known are asked first in the lines-to-match box; its Build list comes back with askFirst false.
+    async function generateOrderItems(beo, { askFirst = true } = {}) {
         if (!beo.sections || beo.sections.length === 0) {
             alert('This BEO has no menu sections to generate from.')
             return
@@ -338,6 +341,13 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                 fetchSavedMatches(beoLineKeys(beo.sections)),
             ])
             const lines = classifyBeoLines(beo.sections, dishes, savedMatches)
+
+            // Unknown lines are asked before anything is built
+            const toMatch = askFirst ? linesToMatch(lines) : []
+            if (toMatch.length > 0) {
+                setMatchingFor({ beoId: beo.id, dishes, lines: toMatch })
+                return
+            }
 
             // Matched dishes build from their confirmed spec lines and those lines' products
             const specLines = await fetchSpecLines(matchedDishIds(lines))
@@ -370,6 +380,12 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         } finally {
             setGeneratingOrderFor(null)
         }
+    }
+
+    // Build list from the lines-to-match box: answered lines build from their specs, the rest go to the AI this time
+    async function buildFromMatcher(beo) {
+        await generateOrderItems(beo, { askFirst: false })
+        setMatchingFor(null)
     }
 
     // Call Gemini to generate kitchen prep tasks from BEO food items, insert into event_tasks
@@ -1724,6 +1740,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         const items = orderItemsByBeo[beo.id] || []
         const orderedCount = items.filter(i => i.is_ordered).length
         const isGenerating = generatingOrderFor === beo.id
+        const isMatching = matchingFor?.beoId === beo.id
         const orderAccent = '#34d399'
         const borderColor = 'rgba(52, 211, 153, 0.25)'
         const dividerColor = 'rgba(52, 211, 153, 0.18)'
@@ -1785,6 +1802,17 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                         )}
                     </button>
                 </div>
+
+                {/* Lines to match, asked before the list is built */}
+                {isMatching && (
+                    <BeoLineMatcher
+                        lines={matchingFor.lines}
+                        dishes={matchingFor.dishes}
+                        building={isGenerating}
+                        onBuild={() => buildFromMatcher(beo)}
+                        onCancel={() => setMatchingFor(null)}
+                    />
+                )}
 
                 {/* Item list */}
                 {items.length > 0 && (
@@ -1863,7 +1891,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                     </div>
                 )}
 
-                {items.length === 0 && !isGenerating && (
+                {items.length === 0 && !isGenerating && !isMatching && (
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '10px 12px' }}>
                         No order items yet. Click "Generate from BEO" or add items manually below.
                     </div>

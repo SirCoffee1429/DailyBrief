@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes, beoLineKeys } from './beoLines.js'
+import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes, beoLineKeys, linesToMatch, matchRow } from './beoLines.js'
 import { ORDERABLE_DISH_NAMES } from './beoLines.dishNames.fixture.js'
 
 // Orderable dishes, names exactly as in orderable_menu_dishes (11-12). Ids are readable
@@ -445,5 +445,89 @@ describe('beoLineKeys (the wordings whose saved answers Generate fetches)', () =
 
     it('a BEO with no sections has no lines', () => {
         expect(beoLineKeys(null)).toEqual([])
+    })
+})
+
+describe('linesToMatch (what the box asks)', () => {
+    const WALTON = beo(['Street Dinner', [[
+        'Autumn Bitter Greens Salad',
+        'Radicchio & Endive, Warm Bacon Vinaigrette, Candied Pecans, Shaved Pecorino',
+        'Roasted Airline Chicken',
+    ].join('\n')]])
+
+    it('each unanswered line with its BEO item, in BEO order', () => {
+        const asked = linesToMatch(classifyBeoLines(WALTON, DISHES, []))
+        expect(asked.map(l => l.key)).toEqual([
+            'autumn bitter greens salad',
+            'radicchio & endive, warm bacon vinaigrette, candied pecans, shaved pecorino',
+            'roasted airline chicken',
+        ])
+        expect(asked[1]).toEqual({
+            key: 'radicchio & endive, warm bacon vinaigrette, candied pecans, shaved pecorino',
+            text: 'Radicchio & Endive, Warm Bacon Vinaigrette, Candied Pecans, Shaved Pecorino',
+            category: 'Street Dinner',
+            label: 'Displayed',
+            itemTexts: [
+                'Autumn Bitter Greens Salad',
+                'Radicchio & Endive, Warm Bacon Vinaigrette, Candied Pecans, Shaved Pecorino',
+                'Roasted Airline Chicken',
+            ],
+            lineIndex: 1,
+            canDescribeAbove: true,
+        })
+    })
+
+    it('"Describes the line above" is offered only to a line with a line above it', () => {
+        const asked = linesToMatch(classifyBeoLines(WALTON, DISHES, []))
+        expect(asked.map(l => l.canDescribeAbove)).toEqual([false, true, true])
+    })
+
+    it('answered lines, dishes, notes and Not food lines are not asked', () => {
+        const asked = linesToMatch(classifyBeoLines(
+            beo(['Buffet', ['Club Car Wash Buffet\nGarlic Mashed Potatoes\nOreo Cheesecake\n$48/person +25% grat']]),
+            DISHES,
+            [saved('club car wash buffet', 'not_food')],
+        ))
+        expect(asked.map(l => l.key)).toEqual(['oreo cheesecake'])
+    })
+
+    it('a wording on the BEO twice is asked once; a line above in either place offers "Describes"', () => {
+        const asked = linesToMatch(classifyBeoLines(
+            beo(['Lunch', ['Chef Choice Soup']], ['Dinner', ['Vodka Rigatoni\nChef Choice Soup']]),
+            DISHES,
+            [],
+        ))
+        expect(asked.map(l => l.key)).toEqual(['chef choice soup', 'vodka rigatoni'])
+        expect(asked[0]).toMatchObject({ category: 'Lunch', lineIndex: 0, canDescribeAbove: true })
+    })
+})
+
+describe('dish order across seasons (the Seasonal menu repeats a name in every season)', () => {
+    // As in orderable_menu_dishes: Classic Caesar Salad, Seasonal, Starter Course, four seasons.
+    const CAESARS = ['winter', 'fall', 'summer', 'spring'].map(season => ({
+        id: `caesar-${season}`, name: 'Classic Caesar Salad', menu_source: 'Seasonal', menu_section: 'Starter Course', season,
+    }))
+
+    it('search lists them by season, whatever order the database returns', () => {
+        expect(searchDishes('caesar', CAESARS).map(d => d.season)).toEqual(['fall', 'spring', 'summer', 'winter'])
+        expect(searchDishes('caesar', [...CAESARS].reverse()).map(d => d.season)).toEqual(['fall', 'spring', 'summer', 'winter'])
+    })
+
+    it('suggestions too', () => {
+        expect(suggestDishes('Caesar Salad', [...CAESARS].reverse()).map(d => d.season)).toEqual(['fall', 'spring', 'summer'])
+    })
+})
+
+describe('matchRow (the saved answer)', () => {
+    it('a dish answer names its dish; a line on its own has no dish above it', () => {
+        expect(matchRow('tiny tinga taco', 'dish', 'tinga')).toEqual({
+            source_text: 'tiny tinga taco', under_dish_id: null, kind: 'dish', dish_id: 'tinga',
+        })
+    })
+
+    it('any other answer names no dish', () => {
+        expect(matchRow('bqt staff', 'not_food', 'tinga')).toEqual({
+            source_text: 'bqt staff', under_dish_id: null, kind: 'not_food', dish_id: null,
+        })
     })
 })

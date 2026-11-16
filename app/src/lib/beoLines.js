@@ -152,6 +152,38 @@ export function beoLineKeys(sections) {
     return [...new Set(keys)]
 }
 
+// The lines the matching box asks about: each unanswered wording once, in BEO order, with
+// its BEO item for context. "Describes the line above" only makes sense for a line that
+// has a line above it, in any of the places the wording appears.
+export function linesToMatch(items) {
+    const byKey = new Map()
+    for (const item of items) {
+        item.lines.forEach((line, lineIndex) => {
+            if (line.kind !== 'to_match') return
+            const seen = byKey.get(line.key)
+            if (seen) {
+                byKey.set(line.key, { ...seen, canDescribeAbove: seen.canDescribeAbove || lineIndex > 0 })
+                return
+            }
+            byKey.set(line.key, {
+                key: line.key,
+                text: line.text,
+                category: item.category,
+                label: item.label,
+                itemTexts: item.lines.map(l => l.text),
+                lineIndex,
+                canDescribeAbove: lineIndex > 0,
+            })
+        })
+    }
+    return [...byKey.values()]
+}
+
+// The beo_dish_matches row for one answer to a line on its own. Only a dish answer names a dish.
+export function matchRow(key, kind, dishId = null) {
+    return { source_text: key, under_dish_id: null, kind, dish_id: kind === 'dish' ? dishId : null }
+}
+
 // Words that never make two names alike ("&" is dropped as punctuation).
 const STOP_WORDS = new Set(['and', 'with', 'of', 'the', 'a', 'on', 'in', 'or'])
 
@@ -186,11 +218,13 @@ function overlap(a, b) {
     return shared
 }
 
-// Dish order for lists: by name, then menu, then section (the same name sits on two menus).
+// Dish order for lists: by name, then menu, section and season (the same name sits on two
+// menus, and the Seasonal menu repeats a name in every season).
 function byNameThenMenu(a, b) {
     return a.name.localeCompare(b.name)
         || (a.menu_source ?? '').localeCompare(b.menu_source ?? '')
         || (a.menu_section ?? '').localeCompare(b.menu_section ?? '')
+        || (a.season ?? '').localeCompare(b.season ?? '')
 }
 
 // The dishes a BEO line could be, best first: most shared words, ties by name.

@@ -167,8 +167,22 @@ section), Pick another dish (search), Not food, Not on a menu, Describes the lin
       nothing.
 - [ ] Walton Heath: Not on a menu + Describes the line above → AI-labeled groups; the description line reaches the
       AI with its salad (request body).
-- [ ] A failed save shows an error and leaves the line unanswered.
+- [x] A failed save shows an error and leaves the line unanswered.
 - [ ] (from T4) A BEO whose lines are all answered and on a menu makes no AI call (network tab).
+
+**Built (11-16), waiting on Ryan's real answers for criteria 1, 2 and 4:** `BeoLineMatcher.jsx` (box + one line each),
+`saveMatch` (upsert on `source_text,under_dish_id`; a rolled-back anon SQL test showed the null `under_dish_id` row is
+UPDATED, not duplicated), Generate asks first (`askFirst`), Build list → `askFirst: false`. Pure, test first:
+`linesToMatch` (one per wording, BEO item for context, "Describes the line above" only where a line sits above),
+`matchRow`; plus a SEASON tie-break in dish order (the Seasonal menu repeats a name in all 4 seasons, so the order
+came from the DB). 296 tests; 6 mutations, each caught. Dish labels show menu · section · season.
+Browser (dev, live DB; every `beo_dish_matches` write blocked in the page): Walton Heath → box with 8 lines and NO AI
+call; "Describes" missing on the first line only; the forced failed save showed "Not saved: …", line stayed
+unanswered (0 answered), request body correct; search "caesar" lists Classic Caesar fall/spring/summer/winter; Cancel
+closes; 375px no sideways scroll; 0 console errors; 0 rows in `beo_dish_matches` after. Celebration of Life is gone:
+criterion 1 → any BEO with near misses. Criterion 4 candidates: Rusty Drewing Meeting (BQT Staff + its timing line)
+or Edwards: Thanksgiving Take Out (one line, Pumpkin Cinnamon Cheesecake).
+Seen, not changed: each line repeats its whole BEO item for context, long on an 8-line dinner club at phone width.
 
 **Verification:** T (any new pure helper) · B · C (answers are Ryan's real answers) · **Dependencies:** T4
 **Files:** `BeoLineMatcher.jsx` (new), `EventsBanquetsPage.jsx`, `beoOrderData.js` · **Scope:** M
