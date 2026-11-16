@@ -237,37 +237,11 @@
 - 10-17 → 10-19 — P3 Completion Check: the Costing Arithmetic Hand-Checked; Wrong Cheese, Apple, Lamb and Hot Dog Matches Fixed — shipped `specCost` matched hand math on 3 dishes to 4 places; checking their lines found cubed-cheese packs on shredded/sliced names, Fuji on gala, a lamb leg on rack of lamb — all split/re-picked (owner). 364/364 confirmed, 0 orphans. P4 faces it: only 78 of 364 dishes cost fully (unit conversion per mapping). → [full](docs/changelog/2026-10.md#2026-10-17--10-19--p3-completion-check-the-costing-arithmetic-hand-checked-wrong-cheese-apple-lamb-and-hot-dog-matches-fixed)
 - 10-19 → 10-25 — P4 Slice 1 (Case Yield): Requirements, Owner Data Fixes, Design — then PARKED — per-ingredient CASE YIELD (usable, typed by the owner, no drafts: rules would have drafted 9 of 30 wrong), `unitFit`'s pack-count guess to go, re-pick clears it. 517 lines / 101 names need a yield; 88 dishes cost fully. Owner fixed celery, cayenne, breadsticks, corn syrup, Bourbon Pecan Pie. Parked 10-25 for products-first. → [full](docs/changelog/2026-10.md#2026-10-19--10-25--p4-slice-1-case-yield-requirements-owner-data-fixes-design--then-parked)
 - 10-25 → 10-26 — "Generate from BEO" Shows the Catalog Product Behind Each Item (step A) — owner re-sequenced: products on the order list first. `event_order_items.product_id` (ON DELETE SET NULL); `productsForItemNames` reads CONFIRMED matches only: exact → singular/plural → leading prep words dropped (fixed list, "fresh"/"whole" out). A hand pick is that BEO row only. Homecoming Dinner 26/28. Known wrong: diced tomatoes → fresh, shredded mozzarella → pearls. → [full](docs/changelog/2026-10.md#2026-10-25--10-26--generate-from-beo-shows-the-catalog-product-behind-each-item)
+- 10-31 → 11-01 — Old Skill Bundle Removed; Five Vendored Skills and Live-Safety Permissions Added — owner removed the everything-claude-code bundle (`2968f78`); 5 skills vendored by hand from pinned commits (`dcfd7e6`, never `npx skills add`); `.claude/rules/skills-and-live-safety.md` (ask before live SQL, deploys, push, installs); `settings.json` 13 "ask" rules that override any local allow; 15 risky allows removed from `settings.local.json`. → [full](docs/changelog/2026-10.md#2026-10-31--11-01--old-skill-bundle-removed-five-vendored-skills-and-live-safety-permissions-added)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-31 → 11-01 — Old Skill Bundle Removed; Five Vendored Skills and Live-Safety Permissions Added
-
-**File(s) Changed:** 256 deletions (`2968f78`); `.claude/skills/` (new, 5 skills), `.claude/rules/skills-and-live-safety.md`
-(new), `.claude/settings.json` (new), `.gitignore` (`dcfd7e6`); `.claude/settings.local.json` (replaced, not in git)
-**Type:** `config` — no app code, nothing pushed.
-**Summary:** Owner's cleanup plus a new skills setup, prepared and reviewed 10-29 in a Cowork session (`_skills-setup/APPLY.md`)
-and applied here, every file checked against the manifest's SHA-256 before and after copying.
-
-- **`2968f78` (owner's cleanup):** the everything-claude-code commands and skills in `.claude/`, `SuperClaude Guides/`, root
-  `package.json` (it held only the `fallow` dev tool), `.fallow/`, `app/sample-data/*` and other scratch files. Both
-  `settings.local.json` files and `supabase/.temp/*` were untracked but stay on disk. Vercel builds from `app/`, so the live site is unaffected.
-- **Vendored skills (`dcfd7e6`):** `supabase`, `debugging-and-error-recovery`, `code-review-and-quality`,
-  `deprecation-and-migration`, `security-and-hardening`, copied by hand from pinned commits with local edits. Sources are in
-  `.claude/skills/VENDORED_SKILLS.md`. Never install skills with `npx skills add` or a marketplace.
-- **`.claude/rules/skills-and-live-safety.md`:** ask Ryan before live-data SQL or migrations, edge function deploys and
-  secrets, `git push` and history rewrites, and any install.
-- **`.claude/settings.json`:** 13 "ask" rules (Supabase `execute_sql`, `apply_migration`, `deploy_edge_function`, the branch
-  and project calls, `git push`) and bypass-permissions mode disabled. "Ask" overrides "always allow", so these prompt
-  even when a local file allows them. Read-only `SELECT`s through the connector prompt too.
-- **`settings.local.json`:** 15 risky "always allow" entries removed (live SQL, migrations, deploys, secrets, installs,
-  `git checkout *`, `git filter-repo`). It's now ignored by the repo's `.gitignore` as well as the global ignore, so
-  it never shows in `git status`.
-- `_skills-setup/` deleted after the copy (step 6). The repo converts line endings to CRLF on checkout, so a later SHA-256
-  check against the old manifest would fail even with the content unchanged.
-
----
 
 ### 2026-11-02 → 11-04 — agent-skills Workflow + Vitest; npm Audit to 0 (SheetJS From Its CDN)
 
