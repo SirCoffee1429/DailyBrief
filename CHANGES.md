@@ -231,29 +231,11 @@
 - 10-15 → 10-16 — Ingredient Products: Search, and Split Dishes Off to Another Name; Eggs Fixed — one NAME = one product for every dish, so a wrong match is fixed by SPLITTING dishes to another name, never re-picking. Split refuses clashes by name, checks moved = ticked, and no match outlives its last dish. Data: `egg patty` (4 sandwiches) vs `egg` (77 dishes → shell eggs); orphan peanut/raisin matches deleted. `626f9ee`. → [full](docs/changelog/2026-10.md#2026-10-15--10-16--ingredient-products-search-and-split-dishes-off-to-another-name-eggs-fixed)
 - 10-17 — Owner Finished the Spec and Ingredient Review; Spring–Winter to Be Redrafted From Their Books — ALL 364 orderable dishes confirmed, 373 ingredient names (325 to a product), 0 orphans: P3 data complete. Spring/summer/winter (83 dishes) were specced WITHOUT books → redraft each season from its book when it arrives (owner). → [full](docs/changelog/2026-10.md#2026-10-17--owner-finished-the-spec-and-ingredient-review-springwinter-to-be-redrafted-from-their-books)
 - 10-17 → 10-19 — P3 Completion Check: the Costing Arithmetic Hand-Checked; Wrong Cheese, Apple, Lamb and Hot Dog Matches Fixed — shipped `specCost` matched hand math on 3 dishes to 4 places; checking their lines found cubed-cheese packs on shredded/sliced names, Fuji on gala, a lamb leg on rack of lamb — all split/re-picked (owner). 364/364 confirmed, 0 orphans. P4 faces it: only 78 of 364 dishes cost fully (unit conversion per mapping). → [full](docs/changelog/2026-10.md#2026-10-17--10-19--p3-completion-check-the-costing-arithmetic-hand-checked-wrong-cheese-apple-lamb-and-hot-dog-matches-fixed)
+- 10-19 → 10-25 — P4 Slice 1 (Case Yield): Requirements, Owner Data Fixes, Design — then PARKED — per-ingredient CASE YIELD (usable, typed by the owner, no drafts: rules would have drafted 9 of 30 wrong), `unitFit`'s pack-count guess to go, re-pick clears it. 517 lines / 101 names need a yield; 88 dishes cost fully. Owner fixed celery, cayenne, breadsticks, corn syrup, Bourbon Pecan Pie. Parked 10-25 for products-first. → [full](docs/changelog/2026-10.md#2026-10-19--10-25--p4-slice-1-case-yield-requirements-owner-data-fixes-design--then-parked)
 
 ---
 
 ## Detailed Entries
-
-### 2026-10-19 → 10-25 — P4 Slice 1 (Case Yield): Requirements, Owner Data Fixes, Design — then PARKED
-
-**File(s) Changed:** `claudedocs/requirements_p4_unit_conversion_2026-10-19.md` (new), `claudedocs/design_p4_case_yield_2026-10-25.md`
-(new), data (owner through Dish Ingredients / Ingredient Products) **Type:** `docs` — `/sc:brainstorm` + `/sc:design`, no code.
-
-- **Requirements (10-19):** a per-ingredient **case yield** (what ONE case gives in the dishes' unit), usable (trim baked in);
-  `unitFit`'s pack-count guess **removed**; a re-pick **clears** the yield; mixed-unit names respecced to one unit kind.
-- **Owner fixes the gap list surfaced (10-20, 10-24):** `celery` was on CELERY ROOT → CELERY SIZE 30 #865031; `cayenne pepper`
-  was on a hot sauce → PEPPER CAYENNE GROUND #877906; `pickles` on a `1/5 GA` pail is right. `breadsticks` respecced to
-  `each`, `corn syrup` to `floz` on every line; all three Bourbon Pecan Pie specs rewritten from a standard 9-inch pie
-  (the WHOLE pie had been specced smaller than one slice).
-- **Design (10-25), re-measured:** 2,698 lines; **517 lines / 101 names / 270 dishes need a yield**; 37 mixed-unit names;
-  **88 dishes cost fully today** (78 on 10-19), 76 once the pack-count path goes. Q-1 answered **no drafts — the owner types
-  every yield**: the FR-5 rules would have drafted 30, 9 of them wrong (mustard/ketchup `N/M OZ` are net weight, crostini
-  `20/13 OZ` is 20 baguettes). Requirements D7/NFR-3 amended to match.
-- **PARKED 10-25 by the owner** — see the next entry. The design doc is ready for `/sc:implement` when it resumes.
-
----
 
 ### 2026-10-25 → 10-26 — "Generate from BEO" Shows the Catalog Product Behind Each Item
 
