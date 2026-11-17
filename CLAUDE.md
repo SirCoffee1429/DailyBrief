@@ -90,8 +90,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   same-day end date is collapsed to null in CODE — prompt wording never held, since it
   asks Gemini to contradict the page
 - **The BEO table is parsed from the PDF's coordinates, not the model** (`process-beo` v26,
-  `beoGeometricParser.ts`): columns fixed (label x<=60, centre 60-500, qty ~538), and
-  **line spacing is the signal**, not font — ~11pt wrapped, ~17pt row, ~25pt section
+  `beoGeometricParser.ts`): columns fixed (label x<=60, centre 60-500, qty ~538); **spacing is the signal** (~11 wrap, ~17
+  row, ~25 section) **AND font**: headings share the `Qty` cell's `fontName` — spacing alone makes a last dish a heading
 - **An item starts on a qty OR a left-column label** (Qty prints once per section, none at
   headcount 0); a centre line with neither opens one, never vanishes (SUMMARY take-out pages)
 - **Page 2+ of a BEO CONTINUES its table with no section header** — state carries across an
@@ -118,8 +118,8 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Supplier order guide in BEO order lists (`claudedocs/design_beo_order_guide_2026-09-15.md`) — P1 SHIPPED, P2/P3 DONE (364
   dishes confirmed, 373 ingredients matched; spring–winter specced WITHOUT books — REDRAFT each from its book; drafter v21).
   **10-25 owner: the order list showing PRODUCTS comes first** — A built (`event_order_items.product_id`); B (`spec/beo-order-
-  from-specs.md`) T0–T5 built: Generate asks unknown lines first (`BeoLineMatcher`), builds confirmed dishes from specs,
-  AI only for the rest (`ai_guess` DEFAULT TRUE, so old-code rows count as AI). Open items: CHANGES.md "Open Threads".
+  from-specs.md`) T0–T5 done: Generate asks unknown lines first (`BeoLineMatcher`), builds confirmed dishes from specs, AI
+  for the rest (`ai_guess` DEFAULT TRUE). Street Dinners: new menu monthly = always AI. Open: CHANGES.md "Open Threads".
   Case yields PARKED (`design_p4_case_yield_2026-10-25.md`). Inference stays OUT of the per-BEO path
 
 ---

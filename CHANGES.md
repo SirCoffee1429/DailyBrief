@@ -22,9 +22,9 @@
 
 ---
 
-## Open Threads (last checked 2026-11-16, after Task 5)
+## Open Threads (last checked 2026-11-17, after Task 5's real answers)
 
-- **Not pushed:** local `main` is **96 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **98 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
   - the product on each order row (step A), order guide B Tasks 0–5;
@@ -32,16 +32,21 @@
   - the npm audit fixes and SheetJS 0.20.3.
 
   Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
-- **Order guide B:** Task 5 (the lines-to-match box) is BUILT; its last 3 checks wait for Ryan's real answers
-  (near misses → Build list; Walton Heath Not on a menu + Describes; a BEO with no AI call: Edwards or Rusty Drewing).
-  Ryan to choose: answer on the dev server himself, or give the answers in chat. Then T6, T7, Checkpoint C, T8.
-  Status in `tasks/todo.md`.
+- **Order guide B:** Task 5 DONE (all 4 checks passed on Ryan's real answers, 11-16). Next: T6 Part of / Its own
+  dish, T7 Change match, Checkpoint C, T8. Status in `tasks/todo.md`.
+- **BEO parser loses a dish read as a heading (found 11-16, NOT fixed, waiting on Ryan's go):** a last dish with a
+  blank line above it and a labelled row below becomes a CATEGORY (Street Dinner desserts in Oct AND Nov, "Cookies
+  Platter" 9/23). Proposed: a heading must be in the `Qty` cell's font. Plan: parser change + test → old-vs-new diff
+  on 10 packets → deploy `process-beo` (ask) → re-import Screaming Eagle (ask). Also seen: ~30 heading-font lines
+  read as dish text ("Themed Buffets") — maybe the reverse misread.
+- **BEO PDFs downloaded 11-16:** 8 packets (member contact details) in the gitignored `BEOs/`. Ryan to say whether
+  to delete them after the parser work.
 - **Prep Sheets cleanup (Ryan's call):** back up and move aside `prepsheets/` (still in the repo root); remove the
   worktree `../DailyBrief-prep-sheets`. The branch is fully merged.
 - **Parked by Ryan:**
   - case yields / order quantities (`claudedocs/design_p4_case_yield_2026-10-25.md`);
   - the Prep Sheets Completed tab + 3-day log;
-  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 181 behind main. Production
+  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 183 behind main. Production
     stays `generate-schedule` v17; the newer solver and pins/quotas are not deployed.
 - **Waiting on input:** the spring, summer and winter recipe books. Redraft each season's dishes from its book when it
   arrives.
@@ -51,6 +56,8 @@
   - recipe editor gaps (deferred 10-19);
   - one long PFG word overflows the order row's note column at 375px;
   - the lines-to-match box repeats each line's whole BEO item (long at phone width); offered to show only the line above;
+  - quantity lines ("Quart", "Dozen", "Serves 6-8 People") are asked in the box instead of read as notes;
+  - two "Cheesecake" dishes on From the Bakery (Plated Desserts), 9 and 7 lines;
   - recovering the pre-09-08 changelog entries (see above).
 
 ---
@@ -239,40 +246,14 @@
 - 10-25 → 10-26 — "Generate from BEO" Shows the Catalog Product Behind Each Item (step A) — owner re-sequenced: products on the order list first. `event_order_items.product_id` (ON DELETE SET NULL); `productsForItemNames` reads CONFIRMED matches only: exact → singular/plural → leading prep words dropped (fixed list, "fresh"/"whole" out). A hand pick is that BEO row only. Homecoming Dinner 26/28. Known wrong: diced tomatoes → fresh, shredded mozzarella → pearls. → [full](docs/changelog/2026-10.md#2026-10-25--10-26--generate-from-beo-shows-the-catalog-product-behind-each-item)
 - 10-31 → 11-01 — Old Skill Bundle Removed; Five Vendored Skills and Live-Safety Permissions Added — owner removed the everything-claude-code bundle (`2968f78`); 5 skills vendored by hand from pinned commits (`dcfd7e6`, never `npx skills add`); `.claude/rules/skills-and-live-safety.md` (ask before live SQL, deploys, push, installs); `settings.json` 13 "ask" rules that override any local allow; 15 risky allows removed from `settings.local.json`. → [full](docs/changelog/2026-10.md#2026-10-31--11-01--old-skill-bundle-removed-five-vendored-skills-and-live-safety-permissions-added)
 
+
+### November 2026
+
+- 11-02 → 11-04 — agent-skills Workflow + Vitest; npm Audit to 0 (SheetJS From Its CDN) — `addyosmani/agent-skills` vendored by hand (`3528bdd`: 25 skills, 4 agents, 9 commands; `/plan-tasks`, `/review-change`; no `/build auto`; superpowers OFF here); Vitest (`npm test`, dates 9/9); `npm audit fix` (`3107002`, lockfile only — needs a separate `npm install`); xlsx pinned to the SheetJS CDN 0.20.3 tarball (`41c59ce`, never `npm i xlsx`), audit 0; old vs new SheetJS identical on 28 files except CRLF → LF in cells. → [full](docs/changelog/2026-11.md#2026-11-02--11-04--agent-skills-workflow--vitest-npm-audit-to-0-sheetjs-from-its-cdn)
+
 ---
 
 ## Detailed Entries
-
-### 2026-11-02 → 11-04 — agent-skills Workflow + Vitest; npm Audit to 0 (SheetJS From Its CDN)
-
-**File(s) Changed:** `.claude/` (agents, commands, references, skills, rules, settings), `CLAUDE.md`, `app/package.json`,
-`app/package-lock.json`, `app/src/lib/dates.test.js` (new) **Type:** `config` + `test` + `chore` (deps) — 3 commits, **none pushed**.
-**Summary:** Adopted `addyosmani/agent-skills` as DailyBrief's workflow, added a test runner, and cleared every `npm audit`
-warning. Pushing `main` would put the new vite, react-router and xlsx in the live bundle — the owner's call.
-
-- **`3528bdd` — agent-skills pack** vendored by hand at `301b02b`: 25 skills, 4 agents, 9 commands, shared references, each with
-  a DailyBrief local-rules block (`VENDORED_SKILLS.md`). `/plan` → `/plan-tasks`, `/review` → `/review-change` (built-in clashes);
-  `/build` does one task (no `/build auto`); agents only via `/ship` or on request. Superpowers OFF for this project only
-  (`.claude/settings.json` `enabledPlugins`) — owner confirmed 11-03 it no longer loads. `/constraints` (writes `CONSTRAINTS.md`)
-  is installed but not run: owner skipped it; no agent reads that file.
-- **Vitest:** `npm test` in `app/`; first suite pins `lib/dates.js` (9/9).
-- **`3107002` — `npm audit fix`:** 10 advisories fixed within existing semver ranges (vite 6.4.5, react-router 7.18.5, postcss,
-  @babel/core, nanoid, ws, …); only the lockfile changed. **On this machine node_modules stayed old until a separate
-  `npm install`** — the first test/build had checked old code; re-run after.
-- **`41c59ce` — xlsx:** npm's `xlsx` stops at 0.18.5 (CVE-2023-30533 prototype pollution, CVE-2024-22363 ReDoS); SheetJS ships
-  fixes only on its CDN, so `app/package.json` pins `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. `npm audit`: **0**.
-  Upgrade by the next CDN tarball URL, never `npm i xlsx`.
-- **Checked:** old vs new SheetJS on all 28 repo `.xlsx` files with the app's read options — the only change is CRLF → LF inside
-  multi-line cells (recipe assembly text); nothing splits on `\r`. The app's own parsers (`lib/catalogParse.js`) gave identical
-  numbers on both. In the browser (`/office/catalog`, preview only, **nothing saved** — the local app writes to the LIVE DB):
-  S2S Walkin 169 rows / 169 products / 0 varies / 0 unpriced; master list 1,381 products / 20 categories / 347 item groups; no
-  console errors. `npm test` 9/9, `npm run build` passes.
-- **Gotcha:** stopping a backgrounded `npm run dev` can leave Vite's node process holding 5173 and serving old deps — kill it by
-  PID, restart with `--force`.
-- **Seen, not investigated:** at ~9pm 11-03 the FOH brief header showed Wed Nov 4 while Kitchen showed Tue Nov 3 — possibly the
-  `defaultBriefingDate()` after-5pm rule applied to one view and not the other.
-
----
 
 ### 2026-11-04 — Specs Save to `spec/<feature>.md`, Matching CLAUDE.md
 
@@ -475,3 +456,35 @@ confirmed spec and products. Only the lines no spec covers go to the AI, and its
   Browser with every `beo_dish_matches` write blocked in the page: Walton Heath → 8 lines, no AI call; forced failed
   save; search; Cancel; 375px; 0 console errors; 0 saved answers after.
 - **Open:** criteria 1, 2 and 4 need Ryan's real answers (they are saved for good). See Open Threads.
+
+---
+
+### 2026-11-16 → 11-17 — Task 5 Passed on Ryan's Real Answers; BEO Parser Found Losing Street Dinner Desserts
+
+**File(s) Changed:** `tasks/todo.md` (Task 5 results), `CHANGES.md` (Open Threads; the 11-02 → 11-04 entry moved to
+`docs/changelog/2026-11.md`, new). No app code. **Type:** `docs` (verification + investigation) — NOT pushed.
+
+- **Task 5 checks, on the dev server against the live DB.** Ryan answered the lines himself. I checked the result in
+  SQL, the function logs and the shipped code (read-only):
+  - **Club Car Wash** (in place of the deleted Celebration of Life): 15 answers saved. 7 groups built from specs, with
+    the near miss "Chopped Ceasar Salad" built as Caesar Salad. 1 AI group: Becca's rolls, answered Not on a menu, and
+    no rolls dish exists. One AI call. The shipped `classifyBeoLines` finds 0 lines left to ask.
+  - **Screaming Eagle Dinner Club** (in place of the deleted Walton Heath): 2 AI groups. Their ingredients (radicchio,
+    endive, pecorino; mushrooms, wild rice, broccolini) appear only on the second lines, so each description reached
+    the AI with its dish. The allergy lines were answered Not food and kept out.
+  - **No AI call:** Rusty Drewing (both lines Not food). The logs show no call, 0 rows and a "No food items found"
+    alert, which is true. A read-only run over all 34 BEOs found none that is all on a menu: the Thanksgiving
+    take-out menu isn't loaded. Ryan counted Rusty Drewing as passing.
+- **Street Dinners** (Ryan): a new menu every month, so they will never match a menu and are always AI-built.
+  Build list without answering sends each whole item to the AI, the same as Not on a menu + Describes.
+- **Dessert lost from the order list: `process-beo`'s parser, not order guide B.**
+  - On today's packet, "Pumpkin Pot de Creme" sits on its own row (gap 23) and "Allergies!!" comes next with a label.
+    `isCategoryHeader` therefore makes the dessert a CATEGORY. The gate passes it, because category names vouch by
+    containment.
+  - A survey of 10 packets (Sept–Nov) found the same in October ("Apple Cider Cheesecake with Salted Carmel"),
+    "Cookies Platter" and "3 bottles Meiomi" (9/23), "Corkage Fees" and some golf-shop lines.
+  - **Font DOES separate them.** Real headings use the `Qty` cell's font (`fontName`, per document). Dish lines use
+    another. The 08-30 note said otherwise, probably from `fontFamily`, which reads "sans-serif" for every font.
+  - Fix proposed, not built: Ryan to say go. The diagnostic scripts were throwaway (the Serena note has the method).
+    8 packets were downloaded to the gitignored `BEOs/` via `supabase storage cp` (it needs a RELATIVE destination
+    path on Windows).

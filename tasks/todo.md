@@ -163,12 +163,32 @@ section), Pick another dish (search), Not food, Not on a menu, Describes the lin
 (insert/upsert `beo_dish_matches`, error shown). **Build list** builds with what's answered.
 
 **Acceptance criteria:**
-- [ ] Celebration of Life: answer the three near misses → Build list → all three from specs; Generate again asks
-      nothing.
-- [ ] Walton Heath: Not on a menu + Describes the line above → AI-labeled groups; the description line reaches the
-      AI with its salad (request body).
+- [x] Celebration of Life: answer the three near misses → Build list → all three from specs; Generate again asks
+      nothing. *(11-16, on Club Car Wash New Managers Dinner instead — Celebration of Life deleted)*
+- [x] Walton Heath: Not on a menu + Describes the line above → AI-labeled groups; the description line reaches the
+      AI with its salad (request body). *(11-16, on Screaming Eagle Dinner Club instead — Walton Heath deleted)*
 - [x] A failed save shows an error and leaves the line unanswered.
-- [ ] (from T4) A BEO whose lines are all answered and on a menu makes no AI call (network tab).
+- [x] (from T4) A BEO whose lines are all answered and on a menu makes no AI call (network tab). *(11-16: no live
+      BEO can — see below; Ryan counted Rusty Drewing as passing)*
+
+**Ryan's real answers (11-16, dev server, live DB), checked by SQL + function logs + the shipped code read-only:**
+- **Club Car Wash:** 15 answers saved. List = 7 groups from specs (Wings, Tenderloin, Garlic Mashed, Mac & Cheese,
+  Roasted Vegetables, Caesar Salad ← near miss "Chopped Ceasar Salad", Cheesecake) + 1 AI group, Becca's rolls
+  (answered Not on a menu; no rolls dish exists, so AI is correct). ONE `generate-order-items` POST (20:13 UTC).
+  The shipped `classifyBeoLines` now finds 0 `to_match` lines on it, so Generate again opens no box.
+- **Screaming Eagle Dinner Club** (a Street Dinner: Ryan writes a new menu every month, so it is ALWAYS AI-built):
+  2 AI groups. Salad → radicchio, endive, bacon, pecans, pecorino; chicken → airline chicken, wild mushrooms, cream,
+  wild rice, broccolini. Those ingredients exist only in the second lines, so each description reached the AI with
+  its dish. Libby Reid + the allergy line answered Not food; no allergy row. One POST (00:17 UTC 11-17).
+  Ryan answered the chicken's second line Not on a menu rather than Describes: same BEO item, so the same request.
+- **Criterion 4:** Rusty Drewing (BQT Staff + timing line, both Not food) → no AI call in the logs, 0 rows, "No food
+  items found" alert (true: nothing to order). But no live BEO is all-menu: a read-only run over all 34 BEOs found
+  the 15 Thanksgiving take-outs have 0 menu dishes (that menu isn't loaded), and Club Car Wash is all-menu but for
+  the rolls. The "no AI call" branch is unit-tested (T4) and shown live by Rusty Drewing.
+- **Found, not fixed:** Screaming Eagle's dessert ("Pumpkin Pot de Creme Maple Chantilly, Candied Pecans") was
+  parsed as a CATEGORY heading, so it never reaches the order list (`process-beo`); quantity lines ("Quart",
+  "Dozen", "Serves 6-8 People") are asked, not taken as notes; two "Cheesecake" rows on From the Bakery (Plated
+  Desserts), 9 and 7 lines.
 
 **Built (11-16), waiting on Ryan's real answers for criteria 1, 2 and 4:** `BeoLineMatcher.jsx` (box + one line each),
 `saveMatch` (upsert on `source_text,under_dish_id`; a rolled-back anon SQL test showed the null `under_dish_id` row is
