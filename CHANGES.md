@@ -34,11 +34,10 @@
   Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
 - **Order guide B:** Task 5 DONE (all 4 checks passed on Ryan's real answers, 11-16). Next: T6 Part of / Its own
   dish, T7 Change match, Checkpoint C, T8. Status in `tasks/todo.md`.
-- **BEO parser loses a dish read as a heading (found 11-16, NOT fixed, waiting on Ryan's go):** a last dish with a
-  blank line above it and a labelled row below becomes a CATEGORY (Street Dinner desserts in Oct AND Nov, "Cookies
-  Platter" 9/23). Proposed: a heading must be in the `Qty` cell's font. Plan: parser change + test → old-vs-new diff
-  on 10 packets → deploy `process-beo` (ask) → re-import Screaming Eagle (ask). Also seen: ~30 heading-font lines
-  read as dish text ("Themed Buffets") — maybe the reverse misread.
+- **BEO parser heading fix (11-17): built + tested, NOT deployed.** A heading must now be in the `Qty` cell's font;
+  on 10 packets exactly the 7 misreads change (282 events identical). Left: deploy `process-beo` v27 (ask) →
+  re-import Screaming Eagle 11/17 (ask; live row still has the dessert as a category). Not touched: header lines
+  that carry a qty ("Themed Buffets | 1") become item text, and the gate's category-name containment hole.
 - **BEO PDFs downloaded 11-16:** 8 packets (member contact details) in the gitignored `BEOs/`. Ryan to say whether
   to delete them after the parser work.
 - **Prep Sheets cleanup (Ryan's call):** back up and move aside `prepsheets/` (still in the repo root); remove the
@@ -488,3 +487,32 @@ confirmed spec and products. Only the lines no spec covers go to the AI, and its
   - Fix proposed, not built: Ryan to say go. The diagnostic scripts were throwaway (the Serena note has the method).
     8 packets were downloaded to the gitignored `BEOs/` via `supabase storage cp` (it needs a RELATIVE destination
     path on Windows).
+
+---
+
+### 2026-11-17 — BEO Parser: A Category Heading Must Be in the Heading Font (Street Dinner Desserts Kept)
+
+**File(s) Changed:** `supabase/functions/process-beo/beoGeometricParser.ts`,
+`supabase/functions/process-beo/beoGeometricParser_test.ts` (new). **Type:** `fix` — built and tested, NOT deployed
+(`process-beo` is still v26).
+**Summary:** A plated meal's LAST course, printed on its own row with a labelled row below ("Allergies!!"), was read
+as a category heading, so it never reached the order list. `isCategoryHeader` now also requires the line to be printed
+in the section header's `Qty` cell font.
+
+- **Survey first (10 packets, Sept–Nov, the shipped parser instrumented in a scratch copy):** 414 rows read as
+  headings; 407 in the heading font (`fontName` `g_dN_f3`; body is `f4`, notes `f5`), and the other 7 all wrong:
+  Pumpkin Pot de Creme x3 (same Screaming Eagle event in 3 packets), Apple Cider Cheesecake (Oct Screaming Eagle),
+  Italian Cannolis + a "Please have GF noodles…" note (Mid Mo Mahjong), "3 bottles meiomi pinot noir" (9/23).
+  The 11-16 "Cookies Platter" / "Corkage Fees" hits were my loose containment match, not misreads.
+- **Code:** `Cell.font` from pdf.js `fontName`; `headFont` set from the section header's Qty cell and carried across
+  pages with `qtyX` (continuation pages print headers without a section header); only a header's FIRST line is
+  checked (its wrapped remainder, "Minimum order of 10 per item", is body font). `assemble` exported for the test.
+- **Tests (test first):** 4 Deno tests on rows copied from the real pages (contact rows left out): the dessert stays
+  in its Plated Food item, "Street Dinner" is still a category, a continuation page keeps "Bar Services" and drops
+  "Italian Cannolis" as a heading, a two-line header still joins. RED 3 of 4 before the fix for the bug's own reason.
+  Mutation: not carrying the font across pages → 1 fails. `every` → `some` survives: no real row mixes fonts.
+- **Old vs new on all 10 packets:** exactly those 7 events change, 282 identical; every packet still passes the gate
+  with the same item counts. The dessert joins the plated item (as the entrée already did), the cannolis + GF note join
+  Themed Buffets, the Meiomi joins the Beverages wine line.
+- **Live:** only Screaming Eagle 11/17 is affected (dessert as a category, 12 order rows). Deploy + re-import need
+  Ryan's OK. `deno check index.ts` shows 11 type errors, all in `index.ts`, the same before this change.

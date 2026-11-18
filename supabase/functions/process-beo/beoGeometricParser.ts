@@ -22,7 +22,9 @@ const NEW_ROW_GAP = 14;
 const TIME_RANGE = /^\d{1,2}:\d{2}\s*[ap]m\s*-\s*\d{1,2}:\d{2}\s*[ap]m$/i;
 const DATE_RANGE = /(\d{2}\/\d{2}\/\d{4})\s*-\s*(\d{2}\/\d{2}\/\d{4})/;
 
-export interface Cell { x: number; text: string; }
+// `font` is pdf.js's per-document font name ("g_d0_f3"), not a family: every font
+// reports fontFamily "sans-serif", so the family cannot tell a heading from a dish.
+export interface Cell { x: number; text: string; font: string; }
 export interface Row { y: number; gap: number; cells: Cell[]; }
 export interface BeoItem { label: string; description: string; qty: string; }
 export interface BeoCategory { name: string; items: BeoItem[]; }
@@ -77,7 +79,7 @@ async function loadRows(bytes: Uint8Array): Promise<Row[][]> {
       if (!it.str.trim()) continue;
       const y = Math.round(it.transform[5]);
       if (!byY.has(y)) byY.set(y, []);
-      byY.get(y)!.push({ x: Math.round(it.transform[4]), text: it.str.trim() });
+      byY.get(y)!.push({ x: Math.round(it.transform[4]), text: it.str.trim(), font: it.fontName });
     }
     const ys = [...byY.keys()].sort((a, b) => b - a);
     pages.push(ys.map((y, i) => ({
@@ -201,8 +203,18 @@ function droppedLines(pages: Row[][], events: BeoEventOut[]): string[] {
 // stops: it must NOT walk on past an intervening row to find a label further down. Doing
 // so misread free text as a header and threw away everything under it — a whole custom
 // dinner menu ("Pacific salmon rollup…") became an empty category and vanished.
-function isCategoryHeader(rows: Row[], i: number, qtyX: number | null): boolean {
+//
+// The line must ALSO be printed in the heading font, the one the section header's `Qty`
+// cell uses. Spacing and the label alone made a plated meal's LAST course a header: on
+// a Street Dinner each course sits on its own row with no label, so "Pumpkin Pot de
+// Creme" followed by the "Allergies!!" row looked exactly like a header followed by its
+// first row, and the dessert never reached the order list. Across 10 packets (Sept–Nov)
+// 407 of 414 header reads were in the heading font; the other 7 were all dishes or notes.
+// Only the first line is checked: a header's wrapped remainder ("Minimum order of 10 per
+// item") is printed in the body font.
+function isCategoryHeader(rows: Row[], i: number, qtyX: number | null, headFont: string | null): boolean {
   if (rows[i].gap < NEW_ROW_GAP) return false;
+  if (!midCells(rows[i], qtyX).every((c) => c.font === headFont)) return false;
   for (let j = i + 1; j < rows.length; j++) {
     const r = rows[j];
     if (isFooter(r) || isSectionHeader(r)) return false;
@@ -222,12 +234,16 @@ interface TableState {
   item: BeoItem | null;
   lastLabel: string;
   qtyX: number | null;
+  // The section header's Qty-cell font; carried across pages with qtyX, since a
+  // continuation page prints its headers without a section header of its own.
+  headFont: string | null;
   notes: boolean;
 }
 const freshState = (): TableState =>
-  ({ section: null, category: null, item: null, lastLabel: "", qtyX: null, notes: false });
+  ({ section: null, category: null, item: null, lastLabel: "", qtyX: null, headFont: null, notes: false });
 
-function assemble(pages: Row[][]): BeoEventOut[] {
+// Exported for beoGeometricParser_test.ts, which feeds it rows copied from real packets.
+export function assemble(pages: Row[][]): BeoEventOut[] {
   const events = new Map<string, BeoEventOut>();
   // Where each event's table stood at the foot of its last page (see isFreshPage).
   const tables = new Map<string, TableState>();
@@ -294,7 +310,7 @@ function assemble(pages: Row[][]): BeoEventOut[] {
     }
 
     const fresh = isFreshPage(rows) || !tables.has(key);
-    let { section, category, item, lastLabel, qtyX, notes } = fresh ? freshState() : tables.get(key)!;
+    let { section, category, item, lastLabel, qtyX, headFont, notes } = fresh ? freshState() : tables.get(key)!;
 
     // A continuation page is read from below its page header, minus the contact e-mail
     // line that interleaves with the resumed table. Its first table row is measured as a
@@ -312,7 +328,9 @@ function assemble(pages: Row[][]): BeoEventOut[] {
       if (isFooter(row)) break;
 
       if (isSectionHeader(row)) {
-        qtyX = row.cells.find((c) => c.text === "Qty")!.x + 2;
+        const qty = row.cells.find((c) => c.text === "Qty")!;
+        qtyX = qty.x + 2;
+        headFont = qty.font;
         const day = leftCell(row)?.text || "";
         // The repeated club-contact line can share a baseline with this row, so take
         // only the first centre cell.
@@ -376,7 +394,7 @@ function assemble(pages: Row[][]): BeoEventOut[] {
         continue;
       }
 
-      if (isCategoryHeader(body, i, qtyX)) {
+      if (isCategoryHeader(body, i, qtyX, headFont)) {
         // Keep the wrapped remainder of a multi-line header rather than discarding it:
         // "Quick Lunch Bites" / "Minimum order of 10 per item" is one header, and the
         // second line is a real instruction to the kitchen.
@@ -410,7 +428,7 @@ function assemble(pages: Row[][]): BeoEventOut[] {
       category.items.push(item);
     }
 
-    tables.set(key, { section, category, item, lastLabel, qtyX, notes });
+    tables.set(key, { section, category, item, lastLabel, qtyX, headFont, notes });
   }
 
   for (const ev of events.values()) {
