@@ -516,3 +516,14 @@ in the section header's `Qty` cell font.
   Themed Buffets, the Meiomi joins the Beverages wine line.
 - **Live:** only Screaming Eagle 11/17 is affected (dessert as a category, 12 order rows). Deploy + re-import need
   Ryan's OK. `deno check index.ts` shows 11 type errors, all in `index.ts`, the same before this change.
+
+### 2026-11-19 — Prep Notes Show on the "To prep" List (SHIPPED alone, `7d51971`)
+
+**File(s) Changed:** `app/src/components/PrepToDo.jsx` **Type:** `fix`
+**Summary:** A note added to a prep item on the full list never showed in the red/yellow "To prep" box at the top, so
+the crew missed it. The box now shows the note (same orange `.prep-note` style) under the item name; display only —
+notes are still added/edited on the line below. The data was already loaded (`ITEM_COLUMNS` has `note`).
+- **Checked:** tests + build on the branch and on merged main; no live red/yellow item had a note, so the shipped
+  `PrepToDo` was rendered in the dev page with a sample item (nothing written): note shows, no-note row unchanged.
+- **Shipped alone** (worktree variant): branch `prep-todo-notes` off `origin/main` → pushed `prep-todo-notes:main`,
+  Vercel production READY on `7d51971`; merged back into local main (`27f66ee`). Local main stays 100 ahead.
