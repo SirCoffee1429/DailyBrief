@@ -25,7 +25,7 @@ export default function PrepToDo({ items, lineState, onRecord, onRefuse }) {
     )
 }
 
-// One row: the item, how much to prep, Done and Partial. Partial's box closes once its save went through.
+// One row: the item, how much to prep, its note if it has one, Done and Partial. Partial's box closes once its save went through.
 function ToDoRow({ item, status, state, onRecord, onRefuse }) {
     const [partialOpen, setPartialOpen] = useState(false)
 
@@ -39,6 +39,10 @@ function ToDoRow({ item, status, state, onRecord, onRefuse }) {
                 <span className="prep-line-name">{item.name}</span>
                 <strong className="prep-todo-need">{status.prep}</strong>
             </div>
+            {/* The item's note, shown here too so it isn't missed; it's added and edited on the line below. */}
+            {item.note && (
+                <p className="prep-note"><i className="fa-regular fa-note-sticky" /> {item.note}</p>
+            )}
             <div className="prep-actions-row">
                 <button
                     type="button" className="prep-act prep-act-done" title="Prepped back up to par"
