@@ -22,9 +22,9 @@
 
 ---
 
-## Open Threads (last checked 2026-11-17, after Task 5's real answers)
+## Open Threads (last checked 2026-11-19, after the To prep notes fix shipped alone)
 
-- **Not pushed:** local `main` is **98 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **102 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
   - the product on each order row (step A), order guide B Tasks 0–5;
@@ -40,6 +40,8 @@
   that carry a qty ("Themed Buffets | 1") become item text, and the gate's category-name containment hole.
 - **BEO PDFs downloaded 11-16:** 8 packets (member contact details) in the gitignored `BEOs/`. Ryan to say whether
   to delete them after the parser work.
+- **`.claude/launch.json` (11-19):** untracked; made for the browser preview (`npm --prefix app run dev`, 5173).
+  Ryan to say keep (commit) or delete.
 - **Prep Sheets cleanup (Ryan's call):** back up and move aside `prepsheets/` (still in the repo root); remove the
   worktree `../DailyBrief-prep-sheets`. The branch is fully merged.
 - **Parked by Ryan:**
@@ -249,65 +251,12 @@
 ### November 2026
 
 - 11-02 → 11-04 — agent-skills Workflow + Vitest; npm Audit to 0 (SheetJS From Its CDN) — `addyosmani/agent-skills` vendored by hand (`3528bdd`: 25 skills, 4 agents, 9 commands; `/plan-tasks`, `/review-change`; no `/build auto`; superpowers OFF here); Vitest (`npm test`, dates 9/9); `npm audit fix` (`3107002`, lockfile only — needs a separate `npm install`); xlsx pinned to the SheetJS CDN 0.20.3 tarball (`41c59ce`, never `npm i xlsx`), audit 0; old vs new SheetJS identical on 28 files except CRLF → LF in cells. → [full](docs/changelog/2026-11.md#2026-11-02--11-04--agent-skills-workflow--vitest-npm-audit-to-0-sheetjs-from-its-cdn)
+- 11-04 — Specs Save to `spec/<feature>.md` — the vendored pack saved `SPEC.md` in the root; `/spec`, `/plan-tasks` and the skill now save/read `spec/<feature>.md` (paths only, nothing else read a spec by path), logged as a local edit in `VENDORED_SKILLS.md` (`7010efc`). → [full](docs/changelog/2026-11.md#2026-11-04--specs-save-to-specfeaturemd-matching-claudemd)
+- 11-04 → 11-09 — Station Prep Sheets Built on Its Own Branch — paper sheets → one live list per station (par vs Have, Red <50% / Yellow <75%, Done/Partial/notes, Finish count), office overview ranked 2×red+yellow, dashboard tile, Setup edit + spreadsheet upload; migration `20261105174946_prep_sheets` on prod 11-05, Fall 26 loaded (172 items); T1–T11 + `/ship` fixes, 184 tests; shipped 11-10. → [full](docs/changelog/2026-11.md#2026-11-04--in-progress--station-prep-sheets-built-on-its-own-ship-branch)
 
 ---
 
 ## Detailed Entries
-
-### 2026-11-04 — Specs Save to `spec/<feature>.md`, Matching CLAUDE.md
-
-**File(s) Changed:** `.claude/commands/spec.md`, `.claude/commands/plan-tasks.md`,
-`.claude/skills/spec-driven-development/SKILL.md`, `.claude/skills/VENDORED_SKILLS.md` **Type:** `config`
-**Summary:** The vendored pack saved specs as `SPEC.md` (or `SPEC-<module>.md`) in the project root; CLAUDE.md says
-`spec/<feature>.md`. Save paths changed to match. Owner's condition: paths only, no loss of function.
-
-- `/spec` saves to `spec/<feature>.md` (creates `spec/`); `/plan-tasks` reads it from there; the skill's multi-module
-  case saves the capability map and module specs in `spec/`.
-- Checked first: nothing else in `.claude/` (commands, agents, skills, references) reads a spec by path; `/build` reads
-  `tasks/todo.md`, unchanged. No `SPEC.md`, `spec/` or `tasks/` existed, so nothing to move.
-- Logged as a local edit in `VENDORED_SKILLS.md` so a future upstream re-copy re-applies it. Committed `7010efc`, not pushed.
-
----
-
-### 2026-11-04 → (in progress) — Station Prep Sheets, Built on Its Own Ship Branch
-
-**File(s) Changed:** on branch `prep-sheets` (worktree `../DailyBrief-prep-sheets`, off `origin/main` `7ac0e01`):
-`spec/prep-sheets.md`, `tasks/plan.md`, `tasks/todo.md`, `app/src/lib/prepSheets.js` + test, `app/package.json`/lockfile
-**Type:** `feature` — in progress, **not pushed**; ships alone (push `prep-sheets:main`, then merge back here).
-**Summary:** The five paper station prep sheets (`prepsheets/`, Fall 26) become one running list per station: on-hand vs
-par, automatic Red <50% / Yellow <75% / Green, to-prep, Done/Partial, notes, Finish count, all live. Plus an office
-overview ranked by 2 × red + yellow, a Kitchen dashboard tile, setup editing and spreadsheet upload. Spec approved 11-04.
-
-- **T1 `bad3fd0`:** `parsePar`/`colorFor`/`toPrep`/`quickValues`/`stationScore`, 79 tests covering every real par.
-  Vitest 5.1.0 added to the branch (Ryan's OK) so tests run where the code ships.
-- **T2 `dddb1fd`:** `lib/prepSheetUpload.js` reads a sheet into preview lines (station name from the file name; blank-par
-  row = section only if the next line has a par; typo fixes). 172 items across the five sheets, 0 unparsed; 112 tests.
-- **T3:** migration `20261105174946_prep_sheets` **applied to prod 11-05 (Ryan's OK)**: 4 tables, 8 policies, realtime on 3,
-  RPCs `prep_record`/`prep_finish_count`/`prep_replace_station`. Smoke test passed before and after (as anon), and left 0 rows.
-- **T4 `1ee44a8`:** `/office/prep/setup`: station list + upload preview (Section/Item switch, unreadable pars flagged) →
-  Confirm → `prep_replace_station`. Browser-checked on a throwaway `ZZ Test` station (still in prod, retired at the end).
-- **Fall 26 loaded into prod (11-05, Ryan's OK)** through the page: Fry 27 / Grill 12 / Lunch 63 / Salad 51 / Sautee 19 = 172
-  items, SQL-checked against the hand count. Not visible on the live site until the code ships.
-- **T5 `7ce378b`:** `/kitchen/prep` (Kitchen nav "Prep Sheets"): station tabs, then each line with par, Have box + Out/¼/½/¾/Full,
-  color chip and "prep N unit". Every count saves at once via `prep_record`, under a roster name remembered on the device.
-  Browser-checked on `ZZ Test` at 375px (Salmon 4/12/15 → Red/Yellow/Green, reload keeps counts + name); 144 tests.
-- **T6 `8175acf`:** Done (= par) / Partial (+ made) / note (edit, clear) per line with "name, time" of the last change;
-  station header "Last count: End of Night, Ryan Coffee, 10:36pm" + Finish count picker. Line split to `PrepLine.jsx`; 157 tests.
-- **T7 `fd26efe` (11-06):** live updates per open station; a Have box being typed in is never overwritten. Checkpoints
-  B and C passed (Ryan). **T8 `859c3cf`:** `/office/prep` overview, ranked, live. **T9 `181507c`:** dashboard tile (11-07).
-- **T10 `835d3d0`:** Setup "Edit a station" (stations, sections, items: rename/move/re-par/retire/add). **11-08 Checkpoint D
-  fixes (Ryan):** office name list = managers + Ryan, larger notes, Finish count Morning→Night Start→End of Night, solid red
-  (sheet, overview, tile), tile under Features (`afa0c49`…`6dc5928`). Checkpoint D passed (Ryan).
-- **11-09 T11 review + `/ship`:** ZZ Test retired (SQL, Ryan's OK). Self-review fixed a crash when a save lands after a station
-  switch (`00e51ab`) and made station tabs follow Setup live (`d8bd43b`). `/ship` (code, security, tests): no Critical/High;
-  Ryan picked 4 fixes: screens reload on every live (re)join (a slept tablet catches up), a late answer for a station already
-  left is dropped, new Setup items saved at the bottom (`da76e75`), fraction pars "1/2 gal" = 0.5 read as amounts, ranges
-  flagged (`d8f8992`; all 55 live pars read as stored). 184 tests. Deferred: DB text/number caps + add-only history (need a
-  migration), stale-row ordering, order-save rename race. Main's `prepsheets/` = the committed blobs byte-for-byte (worktree
-  copies differ only in .xls timestamps). **Next:** Ryan says "push" → `prep-sheets:main`, live check, back up + move aside
-  `prepsheets/`, merge back (xlsx → main's CDN 0.20.3), remove worktree. Nothing pushed yet.
-
----
 
 ### 2026-11-09 — Prep Overview Cards Colored by How Far Behind Each Station Is
 
