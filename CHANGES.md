@@ -22,9 +22,9 @@
 
 ---
 
-## Open Threads (last checked 2026-11-19, after the To prep notes fix shipped alone)
+## Open Threads (last checked 2026-11-20, after `process-beo` v27 went live)
 
-- **Not pushed:** local `main` is **102 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **104 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
   - the product on each order row (step A), order guide B Tasks 0–5;
@@ -34,10 +34,9 @@
   Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
 - **Order guide B:** Task 5 DONE (all 4 checks passed on Ryan's real answers, 11-16). Next: T6 Part of / Its own
   dish, T7 Change match, Checkpoint C, T8. Status in `tasks/todo.md`.
-- **BEO parser heading fix (11-17): built + tested, NOT deployed.** A heading must now be in the `Qty` cell's font;
-  on 10 packets exactly the 7 misreads change (282 events identical). Left: deploy `process-beo` v27 (ask) →
-  re-import Screaming Eagle 11/17 (ask; live row still has the dessert as a category). Not touched: header lines
-  that carry a qty ("Themed Buffets | 1") become item text, and the gate's category-name containment hole.
+- **BEO parser heading fix: LIVE as `process-beo` v27 (11-19).** Screaming Eagle 11/17 is NOT re-imported: the
+  event is over (Ryan). Not touched: header lines that carry a qty ("Themed Buffets | 1") become item text, and the
+  gate's category-name containment hole.
 - **BEO PDFs downloaded 11-16:** 8 packets (member contact details) in the gitignored `BEOs/`. Ryan to say whether
   to delete them after the parser work.
 - **`.claude/launch.json` (11-19):** untracked; made for the browser preview (`npm --prefix app run dev`, 5173).
@@ -476,3 +475,19 @@ notes are still added/edited on the line below. The data was already loaded (`IT
   `PrepToDo` was rendered in the dev page with a sample item (nothing written): note shows, no-note row unchanged.
 - **Shipped alone** (worktree variant): branch `prep-todo-notes` off `origin/main` → pushed `prep-todo-notes:main`,
   Vercel production READY on `7d51971`; merged back into local main (`27f66ee`). Local main stays 100 ahead.
+
+---
+
+### 2026-11-19 — BEO Parser Heading Fix Deployed (`process-beo` v27)
+
+**File(s) Changed:** none in the repo (deploy of `cc7f844`); `CHANGES.md` (Open Threads). **Type:** `fix` (deploy)
+**Summary:** The 11-17 fix (a category heading must be printed in the `Qty` cell's font) is live, so a plated meal's
+last course on its own row now reaches the order list.
+
+- **Deploy:** `supabase functions deploy process-beo --use-api` from disk (no Docker). `get_edge_function` shows v27,
+  `verify_jwt` false as before, and the repo's TypeScript, including `headFont`. `index.ts` was unchanged since v26.
+- **Check (read-only, `parseOnly`, nothing written):** all 10 packets in `BEOs/` through the DEPLOYED function vs the
+  repo parser run locally. All 10 parsed geometrically (no Gemini fallback), all 10 identical to local, same event and
+  item counts. Pumpkin Pot de Creme, Apple Cider Cheesecake, Italian Cannolis and the Meiomi line are items in every
+  packet, a category in none. The 4 Deno tests pass.
+- **Not re-imported:** Screaming Eagle 11/17. The event is over (Ryan), so its live row is left as is.

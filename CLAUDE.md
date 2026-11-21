@@ -89,7 +89,7 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - A BEO's `Event Date(s)` row ALWAYS prints a range (one day reads `08/21 - 08/21`); the
   same-day end date is collapsed to null in CODE — prompt wording never held, since it
   asks Gemini to contradict the page
-- **The BEO table is parsed from the PDF's coordinates, not the model** (`process-beo` v26,
+- **The BEO table is parsed from the PDF's coordinates, not the model** (`process-beo` v27,
   `beoGeometricParser.ts`): columns fixed (label x<=60, centre 60-500, qty ~538); **spacing is the signal** (~11 wrap, ~17
   row, ~25 section) **AND font**: headings share the `Qty` cell's `fontName` — spacing alone makes a last dish a heading
 - **An item starts on a qty OR a left-column label** (Qty prints once per section, none at
