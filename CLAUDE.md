@@ -155,9 +155,8 @@ DailyBrief runs the `addyosmani/agent-skills` workflow (vendored 11-02, `VENDORE
 
 ## Change Tracking & Session Init
 
-- All changes are logged at `CHANGES.md`; at the start of every session (or whenever a
-  new model is loaded) you MUST read all files in `.agents
-ules`
+- All changes are logged in `CHANGES.md`. At the start of every session (or when a new
+  model is loaded), read both files in `.agents/rules/` (`up-to-speed.md`, `changes-made.md`)
 
 ## Your Behavior
 

@@ -31,5 +31,6 @@ Rules:
 - One entry per session minimum, more if changes span multiple features
 - If the file does not exist, create it with a `# DailyBrief — Change Log`
   header first
-- Do not edit or delete previous entries, only append new ones
+- Never delete an entry. Moving old entries to `docs/changelog/` with a link, and
+  rewriting Open Threads, are allowed.
 - If a change is reverted, log the reversion as its own entry

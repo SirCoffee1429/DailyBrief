@@ -9,7 +9,9 @@ perform the following steps before doing anything else:
 
 ### Step 1 — Read the Change Log
 
-Read 3 most recent entries of: `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`
+Read the **Open Threads** list at the top of `C:\Old Hawthorne Projects\DailyBrief\CHANGES.md`,
+then its 3 most recent entries (entries are in date order, so the newest are at the END
+of the file).
 
 ### Step 2 — Build Your Context
 
@@ -19,10 +21,10 @@ After reading the file, summarize the following before proceeding with any task:
 summarize what was done.
 
 **Current Status:** What is in progress, incomplete, or was the last thing
-worked on.
+worked on — Open Threads is the full list of unfinished work.
 
 **Immediate Next Step:** What the developer is likely picking up from based on
-the last CHANGES.md entry.
+Open Threads and the last CHANGES.md entry.
 
 ### Step 4 — Confirm Before Proceeding
 

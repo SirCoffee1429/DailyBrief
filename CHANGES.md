@@ -491,3 +491,8 @@ last course on its own row now reaches the order list.
   item counts. Pumpkin Pot de Creme, Apple Cider Cheesecake, Italian Cannolis and the Meiomi line are items in every
   packet, a category in none. The 4 Deno tests pass.
 - **Not re-imported:** Screaming Eagle 11/17. The event is over (Ryan), so its live row is left as is.
+
+### 2026-11-22 — Prompt Audit Fixes: Start-up Path, Change-Log Rule, Open Threads at Start-up
+
+**File(s) Changed:** `CLAUDE.md`, `.agents/rules/changes-made.md`, `.agents/rules/up-to-speed.md` **Type:** `config`
+**Summary:** From the prompt audit (H1, H4, M5): the start-up path read `.agents`↵`ules` (a `\r` became a line break), now `.agents/rules/`; "only append" now reads "never delete; moving to `docs/changelog/` and rewriting Open Threads are allowed" (Ryan OK'd); start-up reads Open Threads first, newest entries at the END.
