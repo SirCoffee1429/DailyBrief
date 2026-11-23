@@ -486,3 +486,11 @@ prioritizer (no tools, from 04-11) said "Two dashboards" and "V2 overhaul in pro
 exists" list adds FOH, BEO ingestion, prep sheets, schedule/time off, recipe books, and the catalog → order-list work as
 "built on `main`, not yet live". Also (11-22, not in git): output style Proactive → user-level Concise, so CLAUDE.md's ask-first
 rules win; and the 11-09 entry moved to `docs/changelog/2026-11.md`.
+
+### 2026-11-23 — Safety Rules Only Load From the Repo Root; Local Supabase Write Allows Removed
+
+**File(s) Changed:** `CLAUDE.md`; `app/.claude/settings.local.json` (gitignored, not in git) **Type:** `config`
+**Summary:** Prompt audit F12. Claude Code reads `.claude/settings.json` from the folder a session STARTS in, so sessions
+started in `app/` never loaded the root file (superpowers off, ask before Supabase writes / `git push`), and
+`app/.claude/settings.local.json` allowed `apply_migration` + `execute_sql` with no prompt. Both allows removed (Ryan OK'd);
+`CLAUDE.md` now says to start at the repo root. Nothing was written to Supabase or pushed while the gap was open this session.

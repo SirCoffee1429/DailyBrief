@@ -148,6 +148,7 @@ DailyBrief runs the `addyosmani/agent-skills` workflow (vendored 11-02, `VENDORE
 - **Toolset:** the pack (`.claude/skills|agents|commands|references`) + `supabase` skill + SuperClaude `/sc:*` (save/load + gaps).
   Superpowers is OFF here (`.claude/settings.json`). Never `npx skills add`/marketplace. `.claude/settings.json` ASKS before
   Supabase writes and `git push`, overriding any local allow (`.claude/rules/skills-and-live-safety.md`). **Commits:** no `Co-Authored-By` trailer
+  **Start Claude Code at the repo root:** it reads `.claude/settings.json` from the START folder — from `app/` none of the above loads
 - **Codex is advisory only.** `AGENTS.md`, `.codex/`, `.agents/skills/` (untracked) are Codex's; `AGENTS.md`'s "make no
   changes" rule is for Codex and does NOT apply here, and its `~/.Codex/...` paths are really `~/.claude/...`.
 
