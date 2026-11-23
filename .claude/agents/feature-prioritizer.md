@@ -14,10 +14,11 @@ things that actually move revenue.
 
 ## Product Context (Always Apply)
 
-**What DailyBrief is:** A web app for country club kitchens. Two dashboards —
+**What DailyBrief is:** A web app for country club kitchens. Three dashboards —
 Kitchen crew (briefings, tasks, recipes, sales, AI assistant, 86'd items,
-events) and Office/Management (all of the above + briefing editor, workbook
-upload, sales analytics, management board, weekly features schedule).
+events), Front of house (brief, events, recipes, AI assistant) and
+Office/Management (all of the above + briefing editor, workbook upload, sales
+analytics, management board, weekly features schedule, catalog, menus).
 
 **Stack:** React 19 + Vite, Supabase (Postgres + Edge Functions + Storage),
 Gemini Flash (AI/RAG), Google Weather API, Postmark (email/PDF ingestion),
@@ -37,12 +38,13 @@ point a club manager would write a check for.
 4. Kitchen-to-management communication (briefings, tasks, 86'd items board)
 5. Clean, fast dashboard UX designed for a busy kitchen environment
 
-**What already exists** (do NOT recommend shipping these):
+**What already exists** (as of 2026-11 — do NOT recommend shipping these):
 
 - Kitchen dashboard with briefings, tasks, recipes count, sales, weather, 86'd
   items, events tile, weekly features
-- Office dashboard (V2 overhaul in progress) with stats bar, sidebar nav,
+- Office dashboard with stats bar, sidebar nav,
   management board, sales widget, weekly features calendar
+- Front-of-house dashboard (cyan sidebar)
 - Recipe browser with search + category filter
 - Workbook library (upload, edit, delete, categorize Excel files)
 - In-app recipe creator with ingredient cost table
@@ -53,6 +55,14 @@ point a club manager would write a check for.
 - Weekly features schedule (Mon–Sun, lunch/dinner slots)
 - Postmark webhooks for sales PDF and banquet PDF ingestion
 - Office password gate (chef21)
+- BEO ingestion from the daily ReserveCloud packet (emailed link), with a review queue
+- Station prep sheets with a "To prep" box
+- Crew schedule, crew availability and time off (the auto-scheduler is not live)
+- Seasonal recipe books (`house_recipes`) feeding dish specs
+- Built on `main` but not yet live: supplier catalog (`supplier_products`, from
+  vendor price files + PFG purchase history); menus (`menu_dishes`) read from the
+  club's PDF/.docx menus; dish specs with ingredients matched to supplier products;
+  BEO order lists that show supplier products, built from confirmed dish specs
 
 ---
 

@@ -130,7 +130,7 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
   ONE change while main holds unpushed work: branch off `origin/main`, push `<branch>:main`, MERGE back
 - **`auto-scheduler`** — BOH schedule generator, **local only, never pushed**. Prod `generate-schedule` v17 (`7dfe506`)
   stays as is (owner, 09-28): deploy nothing newer, never merge/push unasked; merge `main` INTO it at a scheduler session's start.
-- **`prep-sheets`** — Station Prep Sheets in worktree `../DailyBrief-prep-sheets` (off `origin/main`), ships ALONE; status in its `tasks/todo.md`
+- **`prep-sheets`** — Station Prep Sheets; shipped 11-10 and merged into `main`. Worktree `../DailyBrief-prep-sheets` stays until Ryan removes it
 
 ---
 

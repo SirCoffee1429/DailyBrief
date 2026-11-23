@@ -252,30 +252,11 @@
 - 11-02 → 11-04 — agent-skills Workflow + Vitest; npm Audit to 0 (SheetJS From Its CDN) — `addyosmani/agent-skills` vendored by hand (`3528bdd`: 25 skills, 4 agents, 9 commands; `/plan-tasks`, `/review-change`; no `/build auto`; superpowers OFF here); Vitest (`npm test`, dates 9/9); `npm audit fix` (`3107002`, lockfile only — needs a separate `npm install`); xlsx pinned to the SheetJS CDN 0.20.3 tarball (`41c59ce`, never `npm i xlsx`), audit 0; old vs new SheetJS identical on 28 files except CRLF → LF in cells. → [full](docs/changelog/2026-11.md#2026-11-02--11-04--agent-skills-workflow--vitest-npm-audit-to-0-sheetjs-from-its-cdn)
 - 11-04 — Specs Save to `spec/<feature>.md` — the vendored pack saved `SPEC.md` in the root; `/spec`, `/plan-tasks` and the skill now save/read `spec/<feature>.md` (paths only, nothing else read a spec by path), logged as a local edit in `VENDORED_SKILLS.md` (`7010efc`). → [full](docs/changelog/2026-11.md#2026-11-04--specs-save-to-specfeaturemd-matching-claudemd)
 - 11-04 → 11-09 — Station Prep Sheets Built on Its Own Branch — paper sheets → one live list per station (par vs Have, Red <50% / Yellow <75%, Done/Partial/notes, Finish count), office overview ranked 2×red+yellow, dashboard tile, Setup edit + spreadsheet upload; migration `20261105174946_prep_sheets` on prod 11-05, Fall 26 loaded (172 items); T1–T11 + `/ship` fixes, 184 tests; shipped 11-10. → [full](docs/changelog/2026-11.md#2026-11-04--in-progress--station-prep-sheets-built-on-its-own-ship-branch)
+- 11-09 — Prep Overview Cards Colored by How Far Behind Each Station Is — `stationScore` adds `need` = (2×red+yellow) ÷ (2×counted), Red ≥50% / Yellow ≥25% / Green; overview ranked by `need`; "N% behind" replaces "Score N" (`99b61dc`). → [full](docs/changelog/2026-11.md#2026-11-09--prep-overview-cards-colored-by-how-far-behind-each-station-is)
 
 ---
 
 ## Detailed Entries
-
-### 2026-11-09 — Prep Overview Cards Colored by How Far Behind Each Station Is
-
-**File(s) Changed:** on branch `prep-sheets`: `app/src/lib/prepSheets.js` + test, `app/src/pages/PrepOverview.jsx`,
-`app/src/prepSheets.css`, `spec/prep-sheets.md`, `tasks/todo.md` **Type:** `feature` — `99b61dc`, **not pushed** (ships with
-prep sheets). **Summary:** Ryan wanted each overview card wholly red/yellow/green, but the raw score can't be cut the same
-way for every station (Lunch maxes at 126, Sautee at 38, and both move as items change).
-
-- `stationScore` adds `need` = (2 × red + yellow) ÷ (2 × counted items), 0 = all green, 1 = all red, and `color`: Red ≥ 50 %,
-  Yellow ≥ 25 %, Green below, null (grey) when nothing is counted. Not-counted items stay out of the maximum. Ryan picked
-  this over "share of red items" (ignores yellow) and "any red = red" (4 of 5 stations red today).
-- `rankStations` sorts by `need` (ties by name, nothing counted last), so size no longer decides the order.
-- Card: tint + thick left edge like the sheet's lines; "N% behind" (rounded down, so it never reads past its color's cutoff)
-  replaces "Score N", raw score in the hover title. Kitchen tile unchanged.
-- **Gotcha:** index.css loads after `prepSheets.css`, so `.card:hover` (same specificity) greyed the colored edge — rules
-  scoped under `.prep-overview`.
-- Checked: T 188 (9 new/changed failed first) · B · browser (office unlocked by Ryan): Lunch 100 / Sautee 100 / Salad 50 red,
-  Fry 27 yellow, Grill 0 green — matches SQL; hover keeps the edge; 375px no sideways scroll; 0 console errors.
-
----
 
 ### 2026-11-10 — Station Prep Sheets SHIPPED to Production; `have_before` Migration; Test Data Wiped
 
@@ -496,3 +477,12 @@ last course on its own row now reaches the order list.
 
 **File(s) Changed:** `CLAUDE.md`, `.agents/rules/changes-made.md`, `.agents/rules/up-to-speed.md` **Type:** `config`
 **Summary:** From the prompt audit (H1, H4, M5): the start-up path read `.agents`↵`ules` (a `\r` became a line break), now `.agents/rules/`; "only append" now reads "never delete; moving to `docs/changelog/` and rewriting Open Threads are allowed" (Ryan OK'd); start-up reads Open Threads first, newest entries at the END.
+
+### 2026-11-23 — Prompt Audit Fixes: Prep-Sheets Branch Line, Feature-Prioritizer Product List
+
+**File(s) Changed:** `CLAUDE.md`, `.claude/agents/feature-prioritizer.md` **Type:** `config`
+**Summary:** Prompt audit H2 + H3. `CLAUDE.md` said `prep-sheets` "ships ALONE"; it shipped 11-10 and is merged. The
+prioritizer (no tools, from 04-11) said "Two dashboards" and "V2 overhaul in progress"; now three dashboards, and its "already
+exists" list adds FOH, BEO ingestion, prep sheets, schedule/time off, recipe books, and the catalog → order-list work as
+"built on `main`, not yet live". Also (11-22, not in git): output style Proactive → user-level Concise, so CLAUDE.md's ask-first
+rules win; and the 11-09 entry moved to `docs/changelog/2026-11.md`.
