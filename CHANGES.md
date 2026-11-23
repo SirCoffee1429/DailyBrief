@@ -22,9 +22,9 @@
 
 ---
 
-## Open Threads (last checked 2026-11-20, after `process-beo` v27 went live)
+## Open Threads (last checked 2026-11-23, after the prompt audit fixes)
 
-- **Not pushed:** local `main` is **104 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **108 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
   - the product on each order row (step A), order guide B Tasks 0–5;
@@ -37,6 +37,12 @@
 - **BEO parser heading fix: LIVE as `process-beo` v27 (11-19).** Screaming Eagle 11/17 is NOT re-imported: the
   event is over (Ryan). Not touched: header lines that carry a qty ("Themed Buffets | 1") become item text, and the
   gate's category-name containment hole.
+- **Start Claude Code at the repo root (11-23):** started in `app/`, it never loads `.claude/settings.json` (the ask
+  rules for Supabase writes and `git push`, superpowers off). Ryan to restart from `DailyBrief/` and check superpowers
+  is gone. The Supabase write allows in `app/.claude/settings.local.json` were removed.
+- **Prompt audit leftovers (Ryan's call):** "Your Behavior" rewrites M6–M11 (dead code, comments, generic lines);
+  `CLAUDE.md` items 7–8 vs the global "Surgical Changes" rules; `AGENTS.md` is a stale 08-17 copy (refresh or
+  delete if Codex is still used).
 - **BEO PDFs downloaded 11-16:** 8 packets (member contact details) in the gitignored `BEOs/`. Ryan to say whether
   to delete them after the parser work.
 - **`.claude/launch.json` (11-19):** untracked; made for the browser preview (`npm --prefix app run dev`, 5173).
@@ -253,35 +259,11 @@
 - 11-04 — Specs Save to `spec/<feature>.md` — the vendored pack saved `SPEC.md` in the root; `/spec`, `/plan-tasks` and the skill now save/read `spec/<feature>.md` (paths only, nothing else read a spec by path), logged as a local edit in `VENDORED_SKILLS.md` (`7010efc`). → [full](docs/changelog/2026-11.md#2026-11-04--specs-save-to-specfeaturemd-matching-claudemd)
 - 11-04 → 11-09 — Station Prep Sheets Built on Its Own Branch — paper sheets → one live list per station (par vs Have, Red <50% / Yellow <75%, Done/Partial/notes, Finish count), office overview ranked 2×red+yellow, dashboard tile, Setup edit + spreadsheet upload; migration `20261105174946_prep_sheets` on prod 11-05, Fall 26 loaded (172 items); T1–T11 + `/ship` fixes, 184 tests; shipped 11-10. → [full](docs/changelog/2026-11.md#2026-11-04--in-progress--station-prep-sheets-built-on-its-own-ship-branch)
 - 11-09 — Prep Overview Cards Colored by How Far Behind Each Station Is — `stationScore` adds `need` = (2×red+yellow) ÷ (2×counted), Red ≥50% / Yellow ≥25% / Green; overview ranked by `need`; "N% behind" replaces "Score N" (`99b61dc`). → [full](docs/changelog/2026-11.md#2026-11-09--prep-overview-cards-colored-by-how-far-behind-each-station-is)
+- 11-10 — Station Prep Sheets SHIPPED to Production; `have_before` Migration; Test Data Wiped — pushed `prep-sheets:main`, `prep_entries.have_before` migration (Ryan's OK), test data wiped, Vercel production READY; Completed tab parked as a second push. → [full](docs/changelog/2026-11.md#2026-11-10--station-prep-sheets-shipped-to-production-have_before-migration-test-data-wiped)
 
 ---
 
 ## Detailed Entries
-
-### 2026-11-10 — Station Prep Sheets SHIPPED to Production; `have_before` Migration; Test Data Wiped
-
-**File(s) Changed:** `supabase/migrations/20261110163331_prep_entries_have_before.sql`, `spec/prep-sheets.md`,
-`tasks/todo.md` (branch `prep-sheets`, `4fb529b`); merge `7c2f0f0` on main **Type:** `feature` + `migration` + `data`
-**Summary:** Prep sheets are live (`origin/main` `7ac0e01..4fb529b`, 28 commits, fast-forward; Vercel production READY).
-Ryan chose to ship it now and add a "Completed" tab + 3-day prep log as a second push (spec Addition 11-10, approved).
-
-- **Migration `20261110163331` (Ryan's OK):** `prep_entries.have_before` (nullable) + `prep_record` replaced with the same
-  signature/grants, saving the count before each change, so Completed can tell "made 16" from a recount. Live function
-  matched the repo copy line for line first. Check as anon inside a rolled-back transaction: count 0→1, done 1→1,
-  partial 1→3, each with the right before-value; 0 rows kept. Applied BEFORE the push so day-one history is complete.
-- **Test data wiped (Ryan's OK):** counts/notes/stamps blanked on 175 items, 23 Finish counts and 420 history rows
-  (all Ryan's and my test saves) deleted, so the crew starts grey. After: 5 stations, 172 items, 0 / 0 / 0.
-- **Live check:** kitchen sheet all "Not counted", "Last count: No count finished yet"; dashboard tile 0/0 on all five.
-  Office overview not opened (gate). Only console error came from a Chrome ad-blocker extension.
-- **Merged back into main (`7c2f0f0`):** only the lockfile conflicted → main's (vitest 5.1.0 + SheetJS CDN 0.20.3);
-  `package.json` identical; App/Office/Kitchen/Dashboard auto-merged (15 lines). T 197 · B. Main's own backlog stays
-  unpushed (79). `prepsheets/` backed up to `../DailyBrief-prepsheets-backup-2026-11-10` (hash-identical to the
-  committed files). Worktree kept: the Completed tab is built there next and ships alone the same way.
-- **Decided for the Completed tab:** prep day 5:00am–4:59am (kitchen closes 10pm, End of Night in by midnight); prepped
-  = Done, Partial, or a typed count that rose from a counted value; one tab after the station tabs for all stations;
-  3-day log = prep entries only, Finish counts as dividers.
-
----
 
 ### 2026-11-11 — "To prep" Box SHIPPED: Red + Yellow Items, Most Needed First; Completed Tab Parked
 
