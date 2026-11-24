@@ -118,8 +118,10 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Supplier order guide in BEO order lists (`claudedocs/design_beo_order_guide_2026-09-15.md`) — P1 SHIPPED, P2/P3 DONE (364
   dishes confirmed, 373 ingredients matched; spring–winter specced WITHOUT books — REDRAFT each from its book; drafter v21).
   **10-25 owner: the order list showing PRODUCTS comes first** — A built (`event_order_items.product_id`); B (`spec/beo-order-
-  from-specs.md`) T0–T5 done: Generate asks unknown lines first (`BeoLineMatcher`), builds confirmed dishes from specs, AI
-  for the rest (`ai_guess` DEFAULT TRUE). Street Dinners: new menu monthly = always AI. Open: CHANGES.md "Open Threads".
+  from-specs.md`) BUILT on main, NOT live (T0–T8 done 11-24): Generate asks unknown lines first (`BeoLineMatcher`), builds
+  confirmed dishes from specs, AI for the rest (`ai_guess` DEFAULT TRUE); Part of / Its own dish; Change match. Saved answers
+  are read whole + matched in code — never put BEO wording in a PostgREST `in()` (an inner `"` mis-splits SILENTLY).
+  Street Dinners: new menu monthly = always AI. Open: CHANGES.md "Open Threads".
   Case yields PARKED (`design_p4_case_yield_2026-10-25.md`). Inference stays OUT of the per-BEO path
 
 ---

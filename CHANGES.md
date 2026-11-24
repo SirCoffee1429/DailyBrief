@@ -22,18 +22,20 @@
 
 ---
 
-## Open Threads (last checked 2026-11-23, after the prompt audit fixes)
+## Open Threads (last checked 2026-11-24, after order guide B Task 8)
 
-- **Not pushed:** local `main` is **108 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **113 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
-  - the product on each order row (step A), order guide B Tasks 0–5;
+  - the product on each order row (step A), order guide B (ALL of it, Tasks 0–8);
   - changing a saved schedule's week;
   - the npm audit fixes and SheetJS 0.20.3.
 
   Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
-- **Order guide B:** Task 5 DONE (all 4 checks passed on Ryan's real answers, 11-16). Next: T6 Part of / Its own
-  dish, T7 Change match, Checkpoint C, T8. Status in `tasks/todo.md`.
+- **Order guide B: DONE 11-24** (Tasks 0–8, Checkpoint C accepted by Ryan). It goes live when main is pushed. No live
+  BEO had a line on a menu dish on 11-23, so the first real one after the push is worth a look.
+- **The claude.ai Supabase connector can't see DailyBrief (11-23):** it lists only Schedule App, PrepMaster and CADOR.
+  Ryan to reconnect it to the account that owns `chajwmoohmiugdgvqjyo`; until then no SQL checks from Claude.
 - **BEO parser heading fix: LIVE as `process-beo` v27 (11-19).** Screaming Eagle 11/17 is NOT re-imported: the
   event is over (Ryan). Not touched: header lines that carry a qty ("Themed Buffets | 1") become item text, and the
   gate's category-name containment hole.
@@ -476,3 +478,22 @@ rules win; and the 11-09 entry moved to `docs/changelog/2026-11.md`.
 started in `app/` never loaded the root file (superpowers off, ask before Supabase writes / `git push`), and
 `app/.claude/settings.local.json` allowed `apply_migration` + `execute_sql` with no prompt. Both allows removed (Ryan OK'd);
 `CLAUDE.md` now says to start at the repo root. Nothing was written to Supabase or pushed while the gap was open this session.
+
+### 2026-11-23 → 11-24 — Order Guide B Finished: Part of / Its own dish, Change match, Review Fixes
+
+**File(s) Changed:** `app/src/lib/beoLines.js` (+test), `app/src/lib/beoOrderData.js` (+ new `beoOrderData.test.js`),
+`app/src/components/BeoLineMatcher.jsx`, `app/src/pages/EventsBanquetsPage.jsx`, `tasks/todo.md`, `CLAUDE.md`
+**Type:** `feature` + `fix` **Summary:** B's last tasks, on local `main`, NOT pushed (`027d7e8`, `d48c427`, `38e69d8`).
+
+- **T6:** a dish name typed under another dish (Caesar Salad under Build Your Pasta Bar) is asked **Part of <dish>** /
+  **Its own dish**, saved for that pair only (`linesToMatch` pairs, `matchRow(…, underDishId)`). Proven by a rolled-back
+  SQL test Ryan ran himself: Its own dish REPLACED Part of (1 row), nothing kept.
+- **T7:** **Change match** on each spec-built group (`lineToChange`) reopens its first BEO line in the box; the answer
+  replaces the saved one and Build list runs a normal Generate. Checked on a stand-in BEO kept in the browser tab (no
+  live BEO has a menu dish line); no writes left the tab.
+- **Checkpoint C:** Ryan accepted the Tasks 4–7 evidence (the spec's BEOs were deleted).
+- **T8 review fixes (Ryan picked 1 + 2):** `fetchSavedMatches` no longer sends BEO wording in an `in()` filter: an
+  inner `"` was mis-split SILENTLY (checked read-only live), so `Assorted 9" Pies, Pecan` would never find its answer.
+  It now reads the table in 1000-row pages and matches in code. The box's top line no longer claims unanswered lines go
+  to the AI when they don't (Change match, pair questions). 314 tests, build OK. Accepted as is: page size (2,206 lines),
+  open table like the rest of the app, a rare on-screen merge of same-named AI/spec groups.

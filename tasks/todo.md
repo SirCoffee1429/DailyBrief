@@ -298,6 +298,7 @@ CLAUDE.md's Future Plans line, CHANGES.md. No push: B ships whenever main is pus
       line is asked; the pair note hidden when changing. Rendered in 4 cases, 0 writes, 0 console errors.
       Accepted as is (FYI): `EventsBanquetsPage.jsx` 2,206 lines; anon-open table like the rest of the app; an AI
       dish named exactly like a spec dish on the same BEO would merge with it on screen. 314 tests, build OK.)*
-- [ ] Docs say B is built on main, not live
+- [x] Docs say B is built on main, not live *(11-24: CLAUDE.md Future Plans, CHANGES.md entry + Open Threads,
+      order-guide memory)*
 
 **Verification:** T · B · **Dependencies:** Checkpoint C · **Scope:** S
