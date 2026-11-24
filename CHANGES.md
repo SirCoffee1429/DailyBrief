@@ -22,9 +22,9 @@
 
 ---
 
-## Open Threads (last checked 2026-11-24, after order guide B Task 8)
+## Open Threads (last checked 2026-11-24, session save after order guide B)
 
-- **Not pushed:** local `main` is **113 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **115 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
   - the product on each order row (step A), order guide B (ALL of it, Tasks 0–8);
@@ -39,22 +39,22 @@
 - **BEO parser heading fix: LIVE as `process-beo` v27 (11-19).** Screaming Eagle 11/17 is NOT re-imported: the
   event is over (Ryan). Not touched: header lines that carry a qty ("Themed Buffets | 1") become item text, and the
   gate's category-name containment hole.
-- **Start Claude Code at the repo root (11-23):** started in `app/`, it never loads `.claude/settings.json` (the ask
-  rules for Supabase writes and `git push`, superpowers off). Ryan to restart from `DailyBrief/` and check superpowers
-  is gone. The Supabase write allows in `app/.claude/settings.local.json` were removed.
+- **`research-superpowers` plugin loads in DailyBrief sessions (seen 11-23):** a different plugin from superpowers (which
+  IS off — the 11-23 session started at the repo root and loaded none of its skills). Its start-up hook adds a research
+  skill index to every session. Ryan to say whether to turn it off for this project.
 - **Prompt audit leftovers (Ryan's call):** "Your Behavior" rewrites M6–M11 (dead code, comments, generic lines);
   `CLAUDE.md` items 7–8 vs the global "Surgical Changes" rules; `AGENTS.md` is a stale 08-17 copy (refresh or
   delete if Codex is still used).
-- **BEO PDFs downloaded 11-16:** 8 packets (member contact details) in the gitignored `BEOs/`. Ryan to say whether
+- **BEO PDFs in the gitignored `BEOs/`:** 10 packets now (8 downloaded 11-16), with member contact details. Ryan to say whether
   to delete them after the parser work.
 - **`.claude/launch.json` (11-19):** untracked; made for the browser preview (`npm --prefix app run dev`, 5173).
-  Ryan to say keep (commit) or delete.
+  Ryan to say keep (commit) or delete. Also untracked, Ryan's: `Vendor Data/Purchase History_Worksheet_9_30_2026 1_28 AM.xlsx`.
 - **Prep Sheets cleanup (Ryan's call):** back up and move aside `prepsheets/` (still in the repo root); remove the
   worktree `../DailyBrief-prep-sheets`. The branch is fully merged.
 - **Parked by Ryan:**
   - case yields / order quantities (`claudedocs/design_p4_case_yield_2026-10-25.md`);
   - the Prep Sheets Completed tab + 3-day log;
-  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 183 behind main. Production
+  - the auto-scheduler: branch `auto-scheduler` is local only, 5 commits of its own and 200 behind main. Production
     stays `generate-schedule` v17; the newer solver and pins/quotas are not deployed.
 - **Waiting on input:** the spring, summer and winter recipe books. Redraft each season's dishes from its book when it
   arrives.
@@ -66,6 +66,8 @@
   - the lines-to-match box repeats each line's whole BEO item (long at phone width); offered to show only the line above;
   - quantity lines ("Quart", "Dozen", "Serves 6-8 People") are asked in the box instead of read as notes;
   - two "Cheesecake" dishes on From the Bakery (Plated Desserts), 9 and 7 lines;
+  - an AI dish named exactly like a spec-built dish on the same BEO would show merged with it (AI tag, no Change match;
+    accepted in the B review 11-24);
   - recovering the pre-09-08 changelog entries (see above).
 
 ---
@@ -262,87 +264,12 @@
 - 11-04 → 11-09 — Station Prep Sheets Built on Its Own Branch — paper sheets → one live list per station (par vs Have, Red <50% / Yellow <75%, Done/Partial/notes, Finish count), office overview ranked 2×red+yellow, dashboard tile, Setup edit + spreadsheet upload; migration `20261105174946_prep_sheets` on prod 11-05, Fall 26 loaded (172 items); T1–T11 + `/ship` fixes, 184 tests; shipped 11-10. → [full](docs/changelog/2026-11.md#2026-11-04--in-progress--station-prep-sheets-built-on-its-own-ship-branch)
 - 11-09 — Prep Overview Cards Colored by How Far Behind Each Station Is — `stationScore` adds `need` = (2×red+yellow) ÷ (2×counted), Red ≥50% / Yellow ≥25% / Green; overview ranked by `need`; "N% behind" replaces "Score N" (`99b61dc`). → [full](docs/changelog/2026-11.md#2026-11-09--prep-overview-cards-colored-by-how-far-behind-each-station-is)
 - 11-10 — Station Prep Sheets SHIPPED to Production; `have_before` Migration; Test Data Wiped — pushed `prep-sheets:main`, `prep_entries.have_before` migration (Ryan's OK), test data wiped, Vercel production READY; Completed tab parked as a second push. → [full](docs/changelog/2026-11.md#2026-11-10--station-prep-sheets-shipped-to-production-have_before-migration-test-data-wiped)
+- 11-11 — "To prep" Box SHIPPED — each station sheet opens with its Red + Yellow items, lowest have ÷ par first, Done / Partial on the row (`toPrepList`, 7 tests first; `PrepPartialForm` shared with the line); live as `ccb0bb1`; the Completed tab + 3-day log parked (Ryan). → [full](docs/changelog/2026-11.md#2026-11-11--to-prep-box-shipped-red--yellow-items-most-needed-first-completed-tab-parked)
+- 11-12 → 11-15 — Order Guide B Tasks 0–4 — migration `beo_dish_matches` + `event_order_items.ai_guess` / `beo_text` (Ryan's OK); `classifyBeoLines`, `suggestDishes`, `buildOrderList`; Generate builds confirmed dishes from their specs and sends only the rest to the AI ("AI guess"); spec rows md5-identical on regenerate while the AI groups churned (the reason for B); Checkpoint B OK'd on Club Car Wash. → [full](docs/changelog/2026-11.md#2026-11-12--11-15--order-guide-step-b-generate-builds-the-beo-order-list-from-confirmed-dish-specs-tasks-04-not-pushed)
 
 ---
 
 ## Detailed Entries
-
-### 2026-11-11 — "To prep" Box SHIPPED: Red + Yellow Items, Most Needed First; Completed Tab Parked
-
-**File(s) Changed:** on branch `prep-sheets`: `app/src/lib/prepSheets.js` + test, `app/src/components/PrepToDo.jsx` (new),
-`app/src/components/PrepPartialForm.jsx` (new), `app/src/components/PrepLine.jsx`, `app/src/pages/PrepSheets.jsx`,
-`app/src/prepSheets.css`, `spec/prep-sheets.md`, `tasks/todo.md`; merges `3265fd5`, `1d6d405` on main
-**Type:** `feature` **Summary:** Ryan: scrolling a 63-line sheet to find the red lines was a pain. He wanted to see
-exactly what to prep and how much, most needed first, and to work through it without scrolling away and back. So each
-station's sheet now opens with a "To prep: N" box. Live as `ccb0bb1` (`origin/main` `4fb529b..ccb0bb1`, 5 commits,
-fast-forward; Vercel production READY).
-
-- **The box:** only Red and Yellow items (Ryan, 11-11), ordered by have ÷ par, lowest first. Units differ, so the amount
-  to prep can't rank them. Equal shares keep sheet order. Each row shows the name, "prep N unit", and Done / Partial right
-  on it. Done drops the row, Partial re-sorts it. It saves through the page's `record()`, so the name check and errors
-  are the same as the line's. The full sheet below is unchanged (End of Night still counts in sheet order).
-- **Code:** `toPrepList` is pure, with 7 tests written first. The "Made N" form moved into `PrepPartialForm.jsx`, which
-  the line and the box share. No database change.
-- **Parked (Ryan, 11-11):** the Completed tab + 3-day log (spec Addition 11-10). Only its `have_before` column had
-  shipped.
-- **Seen, left as is (Ryan):** after Done, the next row slides up under the finger, so a quick double-tap could mark it
-  Done too.
-- **Checked:**
-  - T 195 · B.
-  - Browser on `ZZ Test`, re-activated with Ryan's OK and retired again: order, Done, Partial, the no-name refusal, a live
-    re-sort from a second tab, one `prep_entries` row per save, 375px.
-  - `/review-change` approve; `/ship` GO (code, security 0 findings, tests). Not browser-tested, accepted by Ryan: a
-    Partial box open while its row re-sorts or leaves; a refused or failed Partial in the box.
-  - Live (read-only): all five stations show the box with real counts. Grill's order matches SQL.
-  - Main after merge: T 204 · B.
-
----
-
-### 2026-11-12 → 11-15 — Order Guide Step B: Generate Builds the BEO Order List From Confirmed Dish Specs (Tasks 0–4; NOT pushed)
-
-**File(s) Changed:** `spec/beo-order-from-specs.md` (new), `tasks/plan.md`, `tasks/todo.md` (prep-sheets plan archived to
-`tasks/archive/`), `app/src/lib/beoLines.js` + test + `beoLines.dishNames.fixture.js`, `app/src/lib/beoOrderList.js` + test,
-`app/src/lib/beoOrderData.js`, `app/src/pages/EventsBanquetsPage.jsx`, `supabase/migrations/20261115162620_beo_dish_matches.sql`
-(all new except the page). Commits `72a132d`, `84eb733`, `147f4d8`, `4540f04`, `bab888a`, `b5d50b6`, `008d5c6`.
-**Type:** `feature` + `migration` **Summary:** Before, "Generate from BEO" sent the whole BEO to Gemini, which invented
-its own dishes and ingredient names each run. Now every BEO line that is a confirmed menu dish is built from that dish's
-confirmed spec and products. Only the lines no spec covers go to the AI, and its groups are tagged "AI guess".
-
-- **Spec approved by Ryan 11-12:**
-  - A line equal to exactly ONE orderable dish name auto-matches.
-  - The beverage keywords are copied into the app as WHOLE words (the function's substring check drops "Steak Dinner").
-  - B ships with main's backlog.
-  - Grey BEO lines go under each spec-built dish.
-  - A dish name typed under another dish is asked "Part of / Its own dish". Plan: Tasks 0–8, 3 checkpoints.
-- **Task 1, `classifyBeoLines`:** an item's first-line dish makes its other lines description (rule 2a); otherwise
-  each line on its own: saved answer → plain note → exact unique name → to match (2b). 65 tests on real BEO lines.
-- **Task 2, `suggestDishes` / `searchDishes`:** word overlap with accent folding and singulars. All four real near
-  misses rank FIRST against the 364 real names (fixture).
-- **Task 3, `buildOrderList`:** one group per dish, in spec order, with grey `beo_text`. A dish whose spec isn't
-  confirmed or has no lines goes to the AI. 14 tests (live Pasta Bar spec, 15 lines).
-- **Task 0, migration (applied 16:26 UTC with Ryan's OK):**
-  - `beo_dish_matches`: 5 kinds, pair answers keyed by `under_dish_id`, `nulls not distinct`, cascade on
-    `menu_dishes`, plus 2 checks beyond the spec (now in it).
-  - `event_order_items.ai_guess` (DEFAULT TRUE, so rows from the live old code count as AI) and `beo_text`.
-  - Checked: SELECT, plus a rolled-back anon test (7 good rows, 10 bad refused, 0 kept).
-  - Minutes later all 29 order rows were gone. The logs show 4 old BEOs deleted from the office page, and order rows
-    cascade with their BEO. Ryan confirmed it was his cleanup.
-- **Task 4, Generate:**
-  - Steps: dishes (count-checked) → saved matches → classify → spec lines (count-checked) → products →
-    `generatedRows` (AI groups numbered after the spec groups) → `replaceGeneratedRows` (delete and insert errors are
-    now checked; the old code checked neither).
-  - No AI call when nothing is left for it. 288 tests; 5 mutations, each caught.
-  - Browser, live DB: American Outdoor Brands built 4 dishes from specs (30 lines, 28 with a product); Club Car Wash
-    built Garlic Mashed Potatoes from mid-item.
-  - Regenerate: spec rows md5-identical and the hand-added row kept. The AI groups changed between the same two runs
-    (Oreo Cheesecake 5 lines → 2), which is the reason for B.
-  - 375px and 0 console errors.
-- **Checkpoint B:** Ryan checked Club Car Wash: "everything looks good".
-- **Left on live:** the generated order lists on American Outdoor Brands and Club Car Wash.
-- **Moved to Task 5:** the live "no AI call" check. No current BEO is fully matched until its lines can be answered.
-- **Next:** T5 the matching box, T6 Part of / Its own dish, T7 Change match, Checkpoint C, T8 review.
-
----
 
 ### 2026-11-16 — Open Threads List Added; Order Guide B Task 5 (the Lines-to-Match Box) Built
 
