@@ -213,10 +213,18 @@ Seen, not changed: each line repeats its whole BEO item for context, long on an 
 `under_dish_id`. Its own dish → built as its own group.
 
 **Acceptance criteria:**
-- [ ] Mid Mo Mahjong: Caesar Salad → Part of → asked never again for that pair; Caesar elsewhere unaffected.
-- [ ] Its own dish (checked in a rolled-back SQL test or on a test pair with Ryan's OK) → a separate Caesar group.
+- [x] Mid Mo Mahjong: Caesar Salad → Part of → asked never again for that pair; Caesar elsewhere unaffected.
+      *(Mid Mo deleted: unit round trip + rolled-back SQL below)*
+- [x] Its own dish (checked in a rolled-back SQL test or on a test pair with Ryan's OK) → a separate Caesar group.
+      *(separate group: `beoOrderList.test.js`; the save: rolled-back SQL below)*
 
-**Built (11-23), waiting on Ryan for the live check:** `linesToMatch` now also returns each `ask_part_of` line once
+**Live check (11-23, Ryan ran it in the Supabase SQL editor; the Supabase connector can't see this project now):**
+one transaction as `anon`, the box's own upsert (`on conflict (source_text, under_dish_id)`), Caesar Salad under
+Build Your Pasta Bar. After Part of: 1 row `part_of_dish`, no dish. After Its own dish: still 1 row, `dish` = Caesar
+Salad (Custom Buffets): REPLACED, not added. Ended by `raise exception` (P0001), so the transaction rolled back and
+nothing was kept.
+
+**Built (11-23):** `linesToMatch` now also returns each `ask_part_of` line once
 per pair (`id` = wording + dish above; carries `dishId`, `underDishId`; no "Describes"); `matchRow` takes
 `underDishId`. The box shows "<line> under <dish>" with **Part of <dish>** / **Its own dish** only, and "Left
 unanswered, it counts as part of <dish> this time." `beoOrderData.js` needed no change (the upsert key already holds
