@@ -5,8 +5,8 @@ import { supabase } from './supabase.js'
 // that could be cut short checks its count, because PostgREST stops at 1000 rows without
 // an error and a short dish list would quietly send real dishes to the AI.
 
-// Names per request: each one rides in the request URL.
-const KEYS_PER_REQUEST = 100
+// Rows per request: PostgREST's cap.
+const PAGE_SIZE = 1000
 
 // Throws unless every row came back.
 function checkComplete(what, data, count) {
@@ -24,15 +24,21 @@ export async function fetchOrderableDishes() {
 }
 
 // The saved answers for these line wordings (normalised), standalone and under a dish.
+// Reads the whole (small) table and picks in code: a wording sent in the request breaks it
+// when it holds a `"` and a comma (`9" pies, pecan`), since the client quotes but never
+// escapes. Paged, since PostgREST stops at 1000 rows without an error.
 export async function fetchSavedMatches(keys) {
+    const wanted = new Set(keys)
     const matches = []
-    for (let i = 0; i < keys.length; i += KEYS_PER_REQUEST) {
+    for (let from = 0; ; from += PAGE_SIZE) {
         const { data, error } = await supabase
             .from('beo_dish_matches')
             .select('source_text, under_dish_id, kind, dish_id')
-            .in('source_text', keys.slice(i, i + KEYS_PER_REQUEST))
+            .order('id')
+            .range(from, from + PAGE_SIZE - 1)
         if (error) throw error
-        matches.push(...(data || []))
+        matches.push(...(data || []).filter(m => wanted.has(m.source_text)))
+        if (!data || data.length < PAGE_SIZE) break
     }
     return matches
 }

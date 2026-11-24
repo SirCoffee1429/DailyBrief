@@ -22,19 +22,24 @@ function dishMeta(dish) {
 // asked Part of / Its own dish. Each answer is saved at once and used on every future BEO with the
 // same wording (a pair answer only under that dish). Build list builds with what is answered;
 // unanswered lines go to the AI this time (a pair counts as part of its dish) and are asked again next time.
-export default function BeoLineMatcher({ lines, dishes, building, onBuild, onCancel }) {
+// `changing`: opened by Change match on a built dish; an unanswered line stays as it is.
+export default function BeoLineMatcher({ lines, dishes, building, changing = false, onBuild, onCancel }) {
     const [answers, setAnswers] = useState({}) // line id -> { kind, dish }
     const answered = lines.filter(line => answers[line.id]).length
+    // What happens to a line left unanswered. A pair line says it on its own line.
+    const unansweredNote = changing ? 'Leave it unanswered to keep it as it is.'
+        : lines.some(line => !line.underDishId) ? 'Lines left unanswered go to the AI this time.'
+        : ''
 
     return (
         <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(52, 211, 153, 0.18)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                    {lines.length} BEO {lines.length === 1 ? 'line' : 'lines'} to match
+                    {changing ? 'Change match' : `${lines.length} BEO ${lines.length === 1 ? 'line' : 'lines'} to match`}
                     <span style={{ marginLeft: '8px', fontWeight: 400, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{answered} answered</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Each answer is saved and used on every future BEO with the same wording. Lines left unanswered go to the AI this time.
+                    Each answer is saved and used on every future BEO with the same wording. {unansweredNote}
                 </div>
             </div>
 
@@ -45,6 +50,7 @@ export default function BeoLineMatcher({ lines, dishes, building, onBuild, onCan
                     dishes={dishes}
                     answer={answers[line.id]}
                     disabled={building}
+                    changing={changing}
                     onAnswered={answer => setAnswers(prev => ({ ...prev, [line.id]: answer }))}
                 />
             ))}
@@ -67,7 +73,7 @@ export default function BeoLineMatcher({ lines, dishes, building, onBuild, onCan
 // One line to match: its BEO item for context, then suggested dishes, a dish search, and the
 // three non-dish answers. A dish name under another dish (`underDishId`) gets only Part of /
 // Its own dish. Only a saved answer counts, so a failed save leaves the line as it was.
-function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
+function MatchLine({ line, dishes, answer, disabled, changing, onAnswered }) {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState(null)
     const [searchOpen, setSearchOpen] = useState(false)
@@ -132,7 +138,7 @@ function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
                             Its own dish
                         </button>
                     </div>
-                    {!answer && <div className="catalog-row-lists">Left unanswered, it counts as part of {underName} this time.</div>}
+                    {!answer && !changing && <div className="catalog-row-lists">Left unanswered, it counts as part of {underName} this time.</div>}
                 </>
             )}
 

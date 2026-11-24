@@ -1835,6 +1835,7 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                         lines={matchingFor.lines}
                         dishes={matchingFor.dishes}
                         building={isGenerating}
+                        changing={Boolean(matchingFor.changing)}
                         onBuild={() => buildFromMatcher(beo)}
                         onCancel={() => setMatchingFor(null)}
                     />

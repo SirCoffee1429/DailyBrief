@@ -273,7 +273,11 @@ Seen, not changed: "No catalog product" on the stand-in rows is the stand-in's d
 **Scope:** S
 
 ### Checkpoint C (Ryan)
-- [ ] Spec Success Criteria 1–7 walked through on real BEOs
+- [x] Spec Success Criteria 1–7 walked through on real BEOs
+      *(11-24, Ryan accepted what Tasks 4–7 showed instead: the BEOs the spec names were deleted, and none of the 36
+      live BEOs has a line on a menu dish. 1 on Club Car Wash + American Outdoor Brands; 2 unit-tested only
+      (Generate again on the SAME BEO asked nothing); 3 unit tests + the T7 stand-in BEO; 4 on Screaming Eagle;
+      5 on Club Car Wash (SQL); 6 unit-tested + Rusty Drewing + the T7 stand-in; 7 every task.)*
 
 ## Phase 4: Finish
 
@@ -283,7 +287,17 @@ Seen, not changed: "No catalog product" on the stand-in rows is the stand-in's d
 CLAUDE.md's Future Plans line, CHANGES.md. No push: B ships whenever main is pushed (Ryan, 11-12).
 
 **Acceptance criteria:**
-- [ ] Review findings resolved or accepted by Ryan; T · B green on main
+- [x] Review findings resolved or accepted by Ryan; T · B green on main
+      *(11-24: review of all of B (T0–T7). Ryan picked 1 + 2, fixed. **1:** `fetchSavedMatches` put BEO wording
+      in the URL (`.in`); postgrest-js 2.98 wraps a value with `,()` in `"…"` but never escapes an inner `"`.
+      Checked live, read-only: no error, a SILENT MIS-SPLIT (a crafted wording came back as `bqt staff`'s answer),
+      so `Assorted 9" Pies, Pecan` would never find its own answer and be asked every time. Now reads the whole
+      table in 1000-row pages (ordered by id) and picks in code; `beoOrderData.test.js` (4, fake client with no
+      `.in`); 2 mutations caught; live: 21/21 answers, all 36 BEOs read. **2:** box top line: "Change match" title
+      + "Leave it unanswered to keep it as it is" when changing; the "go to the AI" line only when a non-pair
+      line is asked; the pair note hidden when changing. Rendered in 4 cases, 0 writes, 0 console errors.
+      Accepted as is (FYI): `EventsBanquetsPage.jsx` 2,206 lines; anon-open table like the rest of the app; an AI
+      dish named exactly like a spec dish on the same BEO would merge with it on screen. 314 tests, build OK.)*
 - [ ] Docs say B is built on main, not live
 
 **Verification:** T · B · **Dependencies:** Checkpoint C · **Scope:** S
