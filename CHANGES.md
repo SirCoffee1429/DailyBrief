@@ -24,7 +24,7 @@
 
 ## Open Threads (last checked 2026-11-24, session save after order guide B)
 
-- **Not pushed:** local `main` is **115 commits** ahead of `origin/main` (production;
+- **Not pushed:** local `main` is **116 commits** ahead of `origin/main` (production;
   `git rev-list --count origin/main..main`). Not live yet:
   - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
   - the product on each order row (step A), order guide B (ALL of it, Tasks 0–8);
@@ -34,8 +34,6 @@
   Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
 - **Order guide B: DONE 11-24** (Tasks 0–8, Checkpoint C accepted by Ryan). It goes live when main is pushed. No live
   BEO had a line on a menu dish on 11-23, so the first real one after the push is worth a look.
-- **The claude.ai Supabase connector can't see DailyBrief (11-23):** it lists only Schedule App, PrepMaster and CADOR.
-  Ryan to reconnect it to the account that owns `chajwmoohmiugdgvqjyo`; until then no SQL checks from Claude.
 - **BEO parser heading fix: LIVE as `process-beo` v27 (11-19).** Screaming Eagle 11/17 is NOT re-imported: the
   event is over (Ryan). Not touched: header lines that carry a qty ("Themed Buffets | 1") become item text, and the
   gate's category-name containment hole.
