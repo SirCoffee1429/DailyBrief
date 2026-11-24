@@ -216,6 +216,21 @@ Seen, not changed: each line repeats its whole BEO item for context, long on an 
 - [ ] Mid Mo Mahjong: Caesar Salad → Part of → asked never again for that pair; Caesar elsewhere unaffected.
 - [ ] Its own dish (checked in a rolled-back SQL test or on a test pair with Ryan's OK) → a separate Caesar group.
 
+**Built (11-23), waiting on Ryan for the live check:** `linesToMatch` now also returns each `ask_part_of` line once
+per pair (`id` = wording + dish above; carries `dishId`, `underDishId`; no "Describes"); `matchRow` takes
+`underDishId`. The box shows "<line> under <dish>" with **Part of <dish>** / **Its own dish** only, and "Left
+unanswered, it counts as part of <dish> this time." `beoOrderData.js` needed no change (the upsert key already holds
+`under_dish_id`; the read already returns pair rows). 303 tests (+9, incl. a round trip: the saved row read back by
+`classifyBeoLines` turns Caesar into grey Pasta Bar text / its own dish, and asks nothing). The "separate Caesar group"
+was already unit-tested in `beoOrderList.test.js` (T3). Mutation: 4 breaks, each caught (1-5 tests).
+Browser (dev, live DB read-only): **none of the 36 live BEOs has a dish name under another dish** (Mid Mo Mahjong
+was deleted), so the shipped box was rendered in the dev page with the Mid Mo Pasta Bar text and the real dish list,
+every `beo_dish_matches` write intercepted: Part of → body `{caesar salad, under_dish_id: <Pasta Bar>, part_of_dish,
+dish_id null}`; Its own dish → `{…, dish, dish_id: <Caesar Salad, Custom Buffets>}`; a forced failed save → "Not
+saved: …", the earlier answer kept; 375px no sideways scroll; 0 console errors but the forced one; 0 pair rows after.
+Seen, not changed: the box's top line still says unanswered lines "go to the AI", which is not true for a pair line
+(its own line says what happens).
+
 **Verification:** T · B · C · **Dependencies:** T5 · **Files:** `BeoLineMatcher.jsx`, `beoOrderData.js` ·
 **Scope:** S
 

@@ -152,36 +152,43 @@ export function beoLineKeys(sections) {
     return [...new Set(keys)]
 }
 
-// The lines the matching box asks about: each unanswered wording once, in BEO order, with
-// its BEO item for context. "Describes the line above" only makes sense for a line that
-// has a line above it, in any of the places the wording appears.
+// The lines the matching box asks about, in BEO order, with their BEO item for context:
+// each unanswered wording once, and each dish name typed under another dish once per pair
+// (asked "Part of" / "Its own dish", so it carries both dish ids). `id` tells the two apart.
+// "Describes the line above" only makes sense for a line on its own that has a line above
+// it, in any of the places the wording appears.
 export function linesToMatch(items) {
-    const byKey = new Map()
+    const byId = new Map()
     for (const item of items) {
         item.lines.forEach((line, lineIndex) => {
-            if (line.kind !== 'to_match') return
-            const seen = byKey.get(line.key)
+            if (line.kind !== 'to_match' && line.kind !== 'ask_part_of') return
+            const isPair = line.kind === 'ask_part_of'
+            const id = `${line.key}\u0000${isPair ? line.underDishId : ''}`
+            const seen = byId.get(id)
             if (seen) {
-                byKey.set(line.key, { ...seen, canDescribeAbove: seen.canDescribeAbove || lineIndex > 0 })
+                if (!isPair) byId.set(id, { ...seen, canDescribeAbove: seen.canDescribeAbove || lineIndex > 0 })
                 return
             }
-            byKey.set(line.key, {
+            byId.set(id, {
+                id,
                 key: line.key,
                 text: line.text,
                 category: item.category,
                 label: item.label,
                 itemTexts: item.lines.map(l => l.text),
                 lineIndex,
-                canDescribeAbove: lineIndex > 0,
+                canDescribeAbove: !isPair && lineIndex > 0,
+                ...(isPair && { dishId: line.dishId, underDishId: line.underDishId }),
             })
         })
     }
-    return [...byKey.values()]
+    return [...byId.values()]
 }
 
-// The beo_dish_matches row for one answer to a line on its own. Only a dish answer names a dish.
-export function matchRow(key, kind, dishId = null) {
-    return { source_text: key, under_dish_id: null, kind, dish_id: kind === 'dish' ? dishId : null }
+// The beo_dish_matches row for one answer. Only a dish answer names a dish; an answer to a
+// dish name under another dish also names that dish (`underDishId`), so it holds for the pair only.
+export function matchRow(key, kind, dishId = null, underDishId = null) {
+    return { source_text: key, under_dish_id: underDishId, kind, dish_id: kind === 'dish' ? dishId : null }
 }
 
 // Words that never make two names alike ("&" is dropped as punctuation).

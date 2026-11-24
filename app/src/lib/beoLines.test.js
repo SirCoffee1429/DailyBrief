@@ -463,6 +463,7 @@ describe('linesToMatch (what the box asks)', () => {
             'roasted airline chicken',
         ])
         expect(asked[1]).toEqual({
+            id: 'radicchio & endive, warm bacon vinaigrette, candied pecans, shaved pecorino\u0000',
             key: 'radicchio & endive, warm bacon vinaigrette, candied pecans, shaved pecorino',
             text: 'Radicchio & Endive, Warm Bacon Vinaigrette, Candied Pecans, Shaved Pecorino',
             category: 'Street Dinner',
@@ -500,6 +501,43 @@ describe('linesToMatch (what the box asks)', () => {
         expect(asked.map(l => l.key)).toEqual(['chef choice soup', 'vodka rigatoni'])
         expect(asked[0]).toMatchObject({ category: 'Lunch', lineIndex: 0, canDescribeAbove: true })
     })
+
+    // Mid Mo Mahjong's Pasta Bar, with Caesar Salad typed under it (rule 2a).
+    const PASTA = 'Build Your Pasta Bar\nCavatappi Pasta\nCaesar Salad\nBreadsticks'
+
+    it('a dish name under another dish is asked as a pair: which dish it is, and the dish above it', () => {
+        const asked = linesToMatch(classifyBeoLines(beo(['Themed Buffets', [PASTA]]), DISHES, []))
+        expect(asked).toEqual([{
+            id: 'caesar salad\u0000pasta',
+            key: 'caesar salad',
+            text: 'Caesar Salad',
+            category: 'Themed Buffets',
+            label: 'Displayed',
+            itemTexts: ['Build Your Pasta Bar', 'Cavatappi Pasta', 'Caesar Salad', 'Breadsticks'],
+            lineIndex: 2,
+            canDescribeAbove: false,
+            dishId: 'caesar',
+            underDishId: 'pasta',
+        }])
+    })
+
+    it('the same pair twice is asked once; under a different dish it is its own question', () => {
+        const asked = linesToMatch(classifyBeoLines(
+            beo(['Lunch', [PASTA, 'Bagels Bar\nCaesar Salad']], ['Dinner', [PASTA]]),
+            DISHES,
+            [],
+        ))
+        expect(asked.map(l => [l.key, l.underDishId])).toEqual([['caesar salad', 'pasta'], ['caesar salad', 'bagels']])
+    })
+
+    it('a pair answered once is not asked again; the same line under another dish still is', () => {
+        const asked = linesToMatch(classifyBeoLines(
+            beo(['Lunch', [PASTA, 'Bagels Bar\nCaesar Salad']]),
+            DISHES,
+            [saved('caesar salad', 'part_of_dish', null, 'pasta')],
+        ))
+        expect(asked.map(l => [l.key, l.underDishId])).toEqual([['caesar salad', 'bagels']])
+    })
 })
 
 describe('dish order across seasons (the Seasonal menu repeats a name in every season)', () => {
@@ -529,5 +567,30 @@ describe('matchRow (the saved answer)', () => {
         expect(matchRow('bqt staff', 'not_food', 'tinga')).toEqual({
             source_text: 'bqt staff', under_dish_id: null, kind: 'not_food', dish_id: null,
         })
+    })
+
+    it('"Part of" saves the dish it sits under and names no dish', () => {
+        expect(matchRow('caesar salad', 'part_of_dish', 'caesar', 'pasta')).toEqual({
+            source_text: 'caesar salad', under_dish_id: 'pasta', kind: 'part_of_dish', dish_id: null,
+        })
+    })
+
+    it('"Its own dish" saves the dish and the dish it sits under', () => {
+        expect(matchRow('caesar salad', 'dish', 'caesar', 'pasta')).toEqual({
+            source_text: 'caesar salad', under_dish_id: 'pasta', kind: 'dish', dish_id: 'caesar',
+        })
+    })
+
+    // The saved row read back by classifyBeoLines: the box and the classifier agree on the pair.
+    it.each([
+        ['part_of_dish', { kind: 'description', dishId: 'pasta' }],
+        ['dish', { kind: 'dish', dishId: 'caesar', underDishId: 'pasta' }],
+    ])('a saved %s pair answer is what classifyBeoLines reads back', (kind, expected) => {
+        const sections = beo(['Themed Buffets', ['Build Your Pasta Bar\nCaesar Salad']])
+        const [question] = linesToMatch(classifyBeoLines(sections, DISHES, []))
+        const row = matchRow(question.key, kind, question.dishId, question.underDishId)
+        const [pasta] = classifyBeoLines(sections, DISHES, [row])
+        expect(pasta.lines[1]).toMatchObject(expected)
+        expect(linesToMatch([pasta])).toEqual([])
     })
 })

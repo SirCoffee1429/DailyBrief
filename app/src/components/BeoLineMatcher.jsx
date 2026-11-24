@@ -17,13 +17,14 @@ function dishMeta(dish) {
     return [dish.menu_source, dish.menu_section, dish.season].filter(Boolean).join(' · ')
 }
 
-// The "lines to match" box (spec/beo-order-from-specs.md, rule 3): each BEO line that is not
-// yet a known dish, with the ways to answer it. Each answer is saved at once and used on every
-// future BEO with the same wording. Build list builds with what is answered; unanswered lines
-// go to the AI this time and are asked again next time.
+// The "lines to match" box (spec/beo-order-from-specs.md, rules 2a and 3): each BEO line that is
+// not yet a known dish, with the ways to answer it, and each dish name typed under another dish,
+// asked Part of / Its own dish. Each answer is saved at once and used on every future BEO with the
+// same wording (a pair answer only under that dish). Build list builds with what is answered;
+// unanswered lines go to the AI this time (a pair counts as part of its dish) and are asked again next time.
 export default function BeoLineMatcher({ lines, dishes, building, onBuild, onCancel }) {
-    const [answers, setAnswers] = useState({}) // line key -> { kind, dish }
-    const answered = lines.filter(line => answers[line.key]).length
+    const [answers, setAnswers] = useState({}) // line id -> { kind, dish }
+    const answered = lines.filter(line => answers[line.id]).length
 
     return (
         <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(52, 211, 153, 0.18)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -39,12 +40,12 @@ export default function BeoLineMatcher({ lines, dishes, building, onBuild, onCan
 
             {lines.map(line => (
                 <MatchLine
-                    key={line.key}
+                    key={line.id}
                     line={line}
                     dishes={dishes}
-                    answer={answers[line.key]}
+                    answer={answers[line.id]}
                     disabled={building}
-                    onAnswered={answer => setAnswers(prev => ({ ...prev, [line.key]: answer }))}
+                    onAnswered={answer => setAnswers(prev => ({ ...prev, [line.id]: answer }))}
                 />
             ))}
 
@@ -64,22 +65,28 @@ export default function BeoLineMatcher({ lines, dishes, building, onBuild, onCan
 }
 
 // One line to match: its BEO item for context, then suggested dishes, a dish search, and the
-// three non-dish answers. Only a saved answer counts, so a failed save leaves the line as it was.
+// three non-dish answers. A dish name under another dish (`underDishId`) gets only Part of /
+// Its own dish. Only a saved answer counts, so a failed save leaves the line as it was.
 function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState(null)
     const [searchOpen, setSearchOpen] = useState(false)
     const [query, setQuery] = useState('')
-    const suggestions = useMemo(() => suggestDishes(line.text, dishes), [line.text, dishes])
+    const isPair = Boolean(line.underDishId)
+    const suggestions = useMemo(() => (isPair ? [] : suggestDishes(line.text, dishes)), [isPair, line.text, dishes])
     const results = searchOpen ? searchDishes(query, dishes).slice(0, SEARCH_LIMIT) : []
     const busy = disabled || saving
+    // For a pair: the dish the line sits under, and the dish its name is
+    const underDish = isPair ? dishes.find(d => d.id === line.underDishId) : null
+    const ownDish = isPair ? dishes.find(d => d.id === line.dishId) : null
+    const underName = underDish?.name ?? line.itemTexts[0]
 
     // Saves the answer, then shows it.
     async function answerWith(kind, dish = null) {
         setSaving(true)
         setError(null)
         try {
-            await saveMatch(matchRow(line.key, kind, dish?.id))
+            await saveMatch(matchRow(line.key, kind, dish?.id, line.underDishId))
             onAnswered({ kind, dish })
             setSearchOpen(false)
         } catch (err) {
@@ -98,7 +105,10 @@ function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
         <div style={{ border: '1px solid var(--border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-sm)', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {/* The line, and the BEO item it sits in */}
             <div>
-                <div style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{line.text}</div>
+                <div style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+                    {line.text}
+                    {isPair && <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> under {underName}</span>}
+                </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>
                     {[line.category, line.label].filter(Boolean).join(' · ')}
                     {line.itemTexts.length > 1 && (
@@ -110,6 +120,21 @@ function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
                     )}
                 </div>
             </div>
+
+            {/* A dish name under another dish: part of that dish, or a dish of its own */}
+            {isPair && (
+                <>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        <button className={buttonClass(isAnswer('part_of_dish'))} disabled={busy} onClick={() => answerWith('part_of_dish')}>
+                            Part of {underName}
+                        </button>
+                        <button className={buttonClass(isAnswer('dish', ownDish))} disabled={busy || !ownDish} onClick={() => answerWith('dish', ownDish)}>
+                            Its own dish
+                        </button>
+                    </div>
+                    {!answer && <div className="catalog-row-lists">Left unanswered, it counts as part of {underName} this time.</div>}
+                </>
+            )}
 
             {/* Suggested dishes, most shared words first */}
             {suggestions.length > 0 && (
@@ -130,7 +155,7 @@ function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
             )}
 
             {/* The other answers */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {!isPair && <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 <button className={buttonClass(searchOpen)} disabled={busy} onClick={() => setSearchOpen(open => !open)}>
                     Pick another dish
                 </button>
@@ -141,7 +166,7 @@ function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
                             {label}
                         </button>
                     ))}
-            </div>
+            </div>}
 
             {/* Search over every orderable dish */}
             {searchOpen && (
@@ -164,7 +189,9 @@ function MatchLine({ line, dishes, answer, disabled, onAnswered }) {
             {answer && !saving && (
                 <div style={{ fontSize: '0.8rem', color: '#34d399' }}>
                     <i className="fa-solid fa-check" style={{ marginRight: '4px' }} />
-                    {answer.kind === 'dish' ? `${answer.dish.name} (${dishMeta(answer.dish)})` : ANSWER_LABELS[answer.kind]}
+                    {answer.kind === 'part_of_dish' ? `Part of ${underName}`
+                        : answer.kind === 'dish' ? `${isPair ? 'Its own dish: ' : ''}${answer.dish.name} (${dishMeta(answer.dish)})`
+                        : ANSWER_LABELS[answer.kind]}
                 </div>
             )}
         </div>
