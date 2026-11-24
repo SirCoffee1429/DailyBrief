@@ -162,27 +162,46 @@ export function linesToMatch(items) {
     for (const item of items) {
         item.lines.forEach((line, lineIndex) => {
             if (line.kind !== 'to_match' && line.kind !== 'ask_part_of') return
-            const isPair = line.kind === 'ask_part_of'
-            const id = `${line.key}\u0000${isPair ? line.underDishId : ''}`
-            const seen = byId.get(id)
+            const asked = boxLine(item, line, lineIndex)
+            const seen = byId.get(asked.id)
             if (seen) {
-                if (!isPair) byId.set(id, { ...seen, canDescribeAbove: seen.canDescribeAbove || lineIndex > 0 })
+                if (!asked.underDishId) byId.set(asked.id, { ...seen, canDescribeAbove: seen.canDescribeAbove || asked.canDescribeAbove })
                 return
             }
-            byId.set(id, {
-                id,
-                key: line.key,
-                text: line.text,
-                category: item.category,
-                label: item.label,
-                itemTexts: item.lines.map(l => l.text),
-                lineIndex,
-                canDescribeAbove: !isPair && lineIndex > 0,
-                ...(isPair && { dishId: line.dishId, underDishId: line.underDishId }),
-            })
+            byId.set(asked.id, asked)
         })
     }
     return [...byId.values()]
+}
+
+// "Change match": the BEO line a spec-built group came from (the first line of its grey
+// BEO text), as the box asks it. A dish answered "Its own dish" under another dish comes back
+// as that pair. Null when that line is no longer a dish on this BEO.
+export function lineToChange(items, beoText) {
+    const key = normaliseLine(String(beoText ?? '').split('\n')[0])
+    for (const item of items) {
+        const lineIndex = item.lines.findIndex(line => line.kind === 'dish' && line.key === key)
+        if (lineIndex >= 0) return boxLine(item, item.lines[lineIndex], lineIndex)
+    }
+    return null
+}
+
+// One line as the box shows it, with its BEO item for context. A line under another dish
+// (`underDishId`) is a pair: asked Part of / Its own dish, so it carries both dish ids and
+// never "Describes the line above". `id` tells a pair from the same wording on its own.
+function boxLine(item, line, lineIndex) {
+    const isPair = Boolean(line.underDishId)
+    return {
+        id: `${line.key}\u0000${isPair ? line.underDishId : ''}`,
+        key: line.key,
+        text: line.text,
+        category: item.category,
+        label: item.label,
+        itemTexts: item.lines.map(l => l.text),
+        lineIndex,
+        canDescribeAbove: !isPair && lineIndex > 0,
+        ...(isPair && { dishId: line.dishId, underDishId: line.underDishId }),
+    }
 }
 
 // The beo_dish_matches row for one answer. Only a dish answer names a dish; an answer to a

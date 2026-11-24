@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { localDateString, formatDateOnly } from '../lib/dates.js'
 import { productsForItemNames } from '../lib/orderProducts.js'
-import { beoLineKeys, classifyBeoLines, linesToMatch } from '../lib/beoLines.js'
+import { beoLineKeys, classifyBeoLines, linesToMatch, lineToChange } from '../lib/beoLines.js'
 import { matchedDishIds, buildOrderList, generatedRows } from '../lib/beoOrderList.js'
 import { fetchOrderableDishes, fetchSavedMatches, fetchSpecLines, replaceGeneratedRows } from '../lib/beoOrderData.js'
 import PendingBeoPanel from '../components/PendingBeoPanel.jsx'
@@ -382,10 +382,36 @@ export default function EventsBanquetsPage({ readOnly = false }) {
         }
     }
 
-    // Build list from the lines-to-match box: answered lines build from their specs, the rest go to the AI this time
+    // Build list from the lines-to-match box: answered lines build from their specs, the rest go to the AI this time.
+    // After Change match it is a normal Generate instead, so lines the change left unknown are asked.
     async function buildFromMatcher(beo) {
+        if (matchingFor?.changing) {
+            setMatchingFor(null)
+            await generateOrderItems(beo)
+            return
+        }
         await generateOrderItems(beo, { askFirst: false })
         setMatchingFor(null)
+    }
+
+    // Change match: reopens the BEO line a spec-built group came from (the first line of its grey text) in the box.
+    // The new answer replaces the saved one (same wording, same dish above); Build list regenerates with it.
+    async function changeMatch(beo, beoText) {
+        try {
+            const [dishes, savedMatches] = await Promise.all([
+                fetchOrderableDishes(),
+                fetchSavedMatches(beoLineKeys(beo.sections)),
+            ])
+            const line = lineToChange(classifyBeoLines(beo.sections, dishes, savedMatches), beoText)
+            if (!line) {
+                alert('That line is no longer a menu dish on this BEO. Regenerate the list.')
+                return
+            }
+            setMatchingFor({ beoId: beo.id, dishes, lines: [line], changing: true })
+        } catch (err) {
+            console.error('Error opening Change match:', err)
+            alert('Could not open Change match. Check console for details.')
+        }
     }
 
     // Call Gemini to generate kitchen prep tasks from BEO food items, insert into event_tasks
@@ -1852,6 +1878,16 @@ export default function EventsBanquetsPage({ readOnly = false }) {
                                             >
                                                 AI guess
                                             </span>
+                                        )}
+                                        {beoText && !isAiGuess && (
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => changeMatch(beo, beoText)}
+                                                disabled={isGenerating || isMatching}
+                                                style={{ fontSize: '0.7rem', padding: '1px 6px', marginLeft: 'auto', flexShrink: 0 }}
+                                            >
+                                                Change match
+                                            </button>
                                         )}
                                     </div>
                                     {beoText && (

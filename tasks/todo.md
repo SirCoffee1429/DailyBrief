@@ -248,8 +248,26 @@ Seen, not changed: the box's top line still says unanswered lines "go to the AI"
 box; the new answer replaces the saved one (same key). Regenerate applies it.
 
 **Acceptance criteria:**
-- [ ] Changing a match then Regenerate shows the new dish; the old answer is gone from `beo_dish_matches`.
-- [ ] An exact-name match (no saved row) can be changed too: the new answer is saved and wins.
+- [x] Changing a match then Regenerate shows the new dish; the old answer is gone from `beo_dish_matches`.
+- [x] An exact-name match (no saved row) can be changed too: the new answer is saved and wins.
+
+**Done (11-23):** `lineToChange(items, beoText)` (beoLines.js, test first) finds the FIRST line of a group's grey text
+among the BEO's `dish` lines and returns it in the box's shape (shared `boxLine` with `linesToMatch`); an "Its own
+dish" answer comes back as its pair; null if that line is no longer a dish. Page: a **Change match** button on
+groups with `beo_text` and no AI tag → reads dishes + saved answers, opens the box with that one line
+(`changing: true`); its Build list is a NORMAL Generate (asks first), so lines a change leaves unknown are asked.
+310 tests (+7: exact-name / first line / saved / pair / gone → null / exact changed → new answer wins / changed to
+Not on a menu). Mutation: 3 breaks caught; a 4th (empty-text guard) changed nothing, so the guard was removed.
+Browser (dev, office unlocked by Ryan): **no live BEO has any line on a menu dish** (all 36 checked with the shipped
+code; Club Car Wash and American Outdoor Brands are gone), so a stand-in BEO "TEST Task 7 (not real)" (Pasta Bar +
+Caesar Salad, Garlic Mashed Potatoes) was added IN THE TAB ONLY: dish/spec reads real, every write and the AI call
+kept in the page (0 other writes went out). Real Generate → Caesar asked as a pair (T6 in the page) → Part of →
+Build list → 2 spec groups, 0 AI calls, 2 Change match buttons. Change match on Garlic Mashed (exact, no saved
+answer) → box with that line + suggestions → Roasted Garlic Yukon (fall) → list shows it. Change match again → back
+to Garlic Mashed Potatoes → 1 answer for that wording (replaced), list shows it. 343px (375 phone): no sideways scroll,
+button on the heading line. No console errors (tracking began after the flow; no error alert during it). The replace
+in the REAL table is the same upsert Ryan's rolled-back SQL test showed replacing (T6).
+Seen, not changed: "No catalog product" on the stand-in rows is the stand-in's doing (its rows lack the product join).
 
 **Verification:** B · C · **Dependencies:** T5 · **Files:** `EventsBanquetsPage.jsx`, `BeoLineMatcher.jsx` ·
 **Scope:** S

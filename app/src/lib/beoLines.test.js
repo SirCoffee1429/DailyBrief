@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes, beoLineKeys, linesToMatch, matchRow } from './beoLines.js'
+import { normaliseLine, isBeverageCategory, isPlainNote, classifyBeoLines, suggestDishes, searchDishes, beoLineKeys, linesToMatch, lineToChange, matchRow } from './beoLines.js'
 import { ORDERABLE_DISH_NAMES } from './beoLines.dishNames.fixture.js'
 
 // Orderable dishes, names exactly as in orderable_menu_dishes (11-12). Ids are readable
@@ -537,6 +537,69 @@ describe('linesToMatch (what the box asks)', () => {
             [saved('caesar salad', 'part_of_dish', null, 'pasta')],
         ))
         expect(asked.map(l => [l.key, l.underDishId])).toEqual([['caesar salad', 'bagels']])
+    })
+})
+
+describe('lineToChange (Change match reopens a spec-built group\'s first BEO line)', () => {
+    const CAR_WASH = beo(['Buffet', ['Club Car Wash Buffet\nGarlic Mashed Potatoes\nOreo Cheesecake']])
+
+    it('an exact-name dish mid-item (no saved answer) can be reopened, with its BEO item', () => {
+        const items = classifyBeoLines(CAR_WASH, DISHES, [])
+        expect(lineToChange(items, 'Garlic Mashed Potatoes')).toEqual({
+            id: 'garlic mashed potatoes\u0000',
+            key: 'garlic mashed potatoes',
+            text: 'Garlic Mashed Potatoes',
+            category: 'Buffet',
+            label: 'Displayed',
+            itemTexts: ['Club Car Wash Buffet', 'Garlic Mashed Potatoes', 'Oreo Cheesecake'],
+            lineIndex: 1,
+            canDescribeAbove: true,
+        })
+    })
+
+    it('reads the FIRST line of the group\'s BEO text (a first-line dish and its grey lines)', () => {
+        const items = classifyBeoLines(beo(['Bites', ['Bacon-Wrapped Scallops\nWith Herbed Parmesan, Red Pepper Coulis\n20 pieces']]), DISHES, [])
+        const line = lineToChange(items, 'Bacon-Wrapped Scallops\nWith Herbed Parmesan, Red Pepper Coulis\n20 pieces')
+        expect(line).toMatchObject({ key: 'bacon-wrapped scallops', lineIndex: 0, canDescribeAbove: false })
+    })
+
+    it('a near miss matched by a saved answer can be reopened', () => {
+        const items = classifyBeoLines(beo(['Bites', ['Tiny Tinga Taco\nPulled Chicken']]), DISHES, [saved('tiny tinga taco', 'dish', 'tinga')])
+        expect(lineToChange(items, 'Tiny Tinga Taco\nPulled Chicken')).toMatchObject({ id: 'tiny tinga taco\u0000', lineIndex: 0 })
+    })
+
+    it('an "Its own dish" answer reopens as its pair question', () => {
+        const items = classifyBeoLines(
+            beo(['Themed Buffets', ['Build Your Pasta Bar\nCavatappi Pasta\nCaesar Salad']]),
+            DISHES,
+            [saved('caesar salad', 'dish', 'caesar', 'pasta')],
+        )
+        expect(lineToChange(items, 'Caesar Salad')).toMatchObject({
+            id: 'caesar salad\u0000pasta', dishId: 'caesar', underDishId: 'pasta', canDescribeAbove: false,
+        })
+    })
+
+    it('a line no longer on the BEO, or no longer a dish, gives null', () => {
+        const items = classifyBeoLines(CAR_WASH, DISHES, [])
+        expect(lineToChange(items, 'Bacon-Wrapped Scallops')).toBeNull()
+        expect(lineToChange(items, 'Oreo Cheesecake')).toBeNull()
+        expect(lineToChange(items, null)).toBeNull()
+    })
+
+    // The new answer, saved under the reopened line's key, is what classifyBeoLines uses next time.
+    it('an exact-name match changed to another dish: the new answer wins', () => {
+        const line = lineToChange(classifyBeoLines(CAR_WASH, DISHES, []), 'Garlic Mashed Potatoes')
+        const row = matchRow(line.key, 'dish', 'fruit', line.underDishId)
+        const regenerated = classifyBeoLines(CAR_WASH, DISHES, [row])
+        expect(regenerated[0].lines[1]).toMatchObject({ kind: 'dish', dishId: 'fruit', by: 'saved' })
+    })
+
+    it('a saved match changed to Not on a menu: the line leaves its dish', () => {
+        const before = classifyBeoLines(beo(['Bites', ['Tiny Tinga Taco']]), DISHES, [saved('tiny tinga taco', 'dish', 'tinga')])
+        const line = lineToChange(before, 'Tiny Tinga Taco')
+        const row = matchRow(line.key, 'not_on_menu', null, line.underDishId)
+        expect(row).toEqual({ source_text: 'tiny tinga taco', under_dish_id: null, kind: 'not_on_menu', dish_id: null })
+        expect(classifyBeoLines(beo(['Bites', ['Tiny Tinga Taco']]), DISHES, [row])[0].lines[0].kind).toBe('not_on_menu')
     })
 })
 
