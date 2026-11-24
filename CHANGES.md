@@ -24,16 +24,11 @@
 
 ## Open Threads (last checked 2026-11-24, session save after order guide B)
 
-- **Not pushed:** local `main` is **116 commits** ahead of `origin/main` (production;
-  `git rev-list --count origin/main..main`). Not live yet:
-  - catalog (P1), menus incl. .docx (P2), dish specs + ingredient products (P3);
-  - the product on each order row (step A), order guide B (ALL of it, Tasks 0–8);
-  - changing a saved schedule's week;
-  - the npm audit fixes and SheetJS 0.20.3.
-
-  Edge Functions and database changes deploy separately and ARE live. Pushing is Ryan's call.
-- **Order guide B: DONE 11-24** (Tasks 0–8, Checkpoint C accepted by Ryan). It goes live when main is pushed. No live
-  BEO had a line on a menu dish on 11-23, so the first real one after the push is worth a look.
+- **Pushed 11-24 (`7d51971..8d5276f`, 116 commits, Vercel READY on `brief-club.vercel.app`):** catalog, menus, dish
+  specs + ingredient products, products on order rows (step A), order guide B, change a schedule's week, npm audit +
+  SheetJS 0.20.3 are LIVE. Not pushed: only the auto-scheduler branch (5 commits) and any docs commits after `8d5276f`.
+- **Order guide B: LIVE 11-24** (Tasks 0–8, Checkpoint C accepted by Ryan). No live BEO had a line on a menu dish on
+  11-23, so the first real packet with menu dishes is B's first real run — worth a look when it's generated.
 - **BEO parser heading fix: LIVE as `process-beo` v27 (11-19).** Screaming Eagle 11/17 is NOT re-imported: the
   event is over (Ryan). Not touched: header lines that carry a qty ("Themed Buffets | 1") become item text, and the
   gate's category-name containment hole.
@@ -422,3 +417,10 @@ started in `app/` never loaded the root file (superpowers off, ask before Supaba
   It now reads the table in 1000-row pages and matches in code. The box's top line no longer claims unanswered lines go
   to the AI when they don't (Change match, pair questions). 314 tests, build OK. Accepted as is: page size (2,206 lines),
   open table like the rest of the app, a rare on-screen merge of same-named AI/spec groups.
+
+### 2026-11-24 — Main Pushed: 116 Commits Live (Order Guide B, Catalog, Menus, Specs, Step A)
+
+**File(s) Changed:** none (push of `7d51971..8d5276f`), `CHANGES.md` **Type:** `config` (deploy) **Summary:** Ryan OK'd
+the push after a check that it carries NO auto-scheduler work (its 5 commits are only on its branch; the merge base was
+already on `origin/main`). Fast-forward, 0 behind. Vercel production READY; the live bundle holds the B code. Edge
+Functions unchanged (`generate-schedule` stays v17).
