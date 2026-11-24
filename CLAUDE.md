@@ -118,7 +118,7 @@ embedded, `match_chunks()` returns the top 15, and only those reach Gemini.
 - Supplier order guide in BEO order lists (`claudedocs/design_beo_order_guide_2026-09-15.md`) — P1 SHIPPED, P2/P3 DONE (364
   dishes confirmed, 373 ingredients matched; spring–winter specced WITHOUT books — REDRAFT each from its book; drafter v21).
   **10-25 owner: the order list showing PRODUCTS comes first** — A built (`event_order_items.product_id`); B (`spec/beo-order-
-  from-specs.md`) DONE 11-24, NOT live: unknown lines asked first, confirmed dishes from specs, AI the rest (`ai_guess`), Change
+  from-specs.md`) LIVE 11-24: unknown lines asked first, confirmed dishes from specs, AI the rest (`ai_guess`), Change
   match. Never put BEO text in a PostgREST `in()` (inner `"` mis-splits SILENTLY). Street Dinners = always AI. Open: CHANGES.md.
   Case yields PARKED (`design_p4_case_yield_2026-10-25.md`). Inference stays OUT of the per-BEO path
 
